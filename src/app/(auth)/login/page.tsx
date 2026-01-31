@@ -28,6 +28,22 @@ export default function LoginPage() {
     }
   };
 
+  const handleGitHubSignIn = async () => {
+    setIsLoading(true);
+
+    const supabase = createClient();
+    const { error: signInError } = await supabase.auth.signInWithOAuth({
+      provider: "github",
+      options: {
+        redirectTo: `${window.location.origin}/callback`,
+      },
+    });
+
+    if (signInError) {
+      setIsLoading(false);
+    }
+  };
+
   return (
     <div className="flex min-h-screen flex-col bg-background">
       <header className="flex h-16 items-center justify-between border-b border-border/50 px-6 lg:px-8">
@@ -49,7 +65,7 @@ export default function LoginPage() {
             </p>
           ) : null}
 
-          <div className="mt-6">
+          <div className="mt-6 space-y-3">
             <Button
               type="button"
               className="w-full"
@@ -57,6 +73,15 @@ export default function LoginPage() {
               disabled={isLoading}
             >
               {isLoading ? "Redirecting..." : "Continue with Google"}
+            </Button>
+            <Button
+              type="button"
+              variant="outline"
+              className="w-full"
+              onClick={handleGitHubSignIn}
+              disabled={isLoading}
+            >
+              {isLoading ? "Redirecting..." : "Continue with GitHub"}
             </Button>
           </div>
         </div>
