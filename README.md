@@ -148,8 +148,51 @@ pnpm dlx shadcn@latest add dropdown-menu
 pnpm dlx shadcn@latest add toast
 ```
 
+## Deployment
+
+### Vercel (Recommended)
+
+```bash
+# Install Vercel CLI
+pnpm add -g vercel
+
+# Login
+vercel login
+
+# Deploy to preview
+vercel
+
+# Deploy to production
+vercel --prod
+```
+
+See [Vercel Deployment Guide](./docs/VERCEL_DEPLOYMENT.md) for detailed instructions on:
+- Setting up environment variables
+- Configuring Supabase auth redirects
+- Managing preview vs production environments
+- Security best practices
+
+### Environment Variables Checklist
+
+Before deploying, ensure these are set in Vercel:
+
+**Required**:
+- ✅ `NEXT_PUBLIC_SUPABASE_URL`
+- ✅ `NEXT_PUBLIC_SUPABASE_ANON_KEY`
+- ✅ `SUPABASE_SERVICE_ROLE_KEY`
+- ✅ `GOOGLE_AI_API_KEY`
+- ✅ `OPENAI_API_KEY`
+- ✅ `ELEVENLABS_API_KEY`
+- ✅ `RESEND_API_KEY`
+
+**Optional** (for analytics):
+- `NEXT_PUBLIC_POSTHOG_KEY`
+- `NEXT_PUBLIC_POSTHOG_HOST`
+- `SENTRY_DSN`
+
 ## Documentation
 
+- [Vercel Deployment Guide](./docs/VERCEL_DEPLOYMENT.md)
 - [Architecture](./_bmad-output/planning-artifacts/architecture.md)
 - [PRD](./_bmad-output/planning-artifacts/prd.md)
 - [Epics & Stories](./_bmad-output/planning-artifacts/epics.md)
