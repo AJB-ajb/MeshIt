@@ -1,7 +1,8 @@
 "use client";
 
-import { useEffect, useMemo, useState } from "react";
+import { useEffect, useMemo, useState, useRef } from "react";
 import { useRouter, useSearchParams } from "next/navigation";
+import type { User } from "@supabase/supabase-js";
 
 import { Button } from "@/components/ui/button";
 import {
@@ -21,6 +22,7 @@ export default function OnboardingPage() {
   const searchParams = useSearchParams();
   const [isLoading, setIsLoading] = useState<Persona | null>(null);
   const [error, setError] = useState<string | null>(null);
+  const hasCheckedUser = useRef(false);
 
   const next = useMemo(() => {
     const value = searchParams.get("next") ?? "";
@@ -28,10 +30,15 @@ export default function OnboardingPage() {
   }, [searchParams]);
 
   useEffect(() => {
+    // Only run once on initial mount
+    if (hasCheckedUser.current) return;
+    hasCheckedUser.current = true;
+    
     const supabase = createClient();
     supabase.auth
       .getUser()
-      .then(({ data: { user } }) => {
+      .then(({ data }: { data: { user: User | null } }) => {
+        const user = data.user;
         if (!user) {
           router.replace("/login");
           return;
@@ -75,10 +82,16 @@ export default function OnboardingPage() {
       return;
     }
 
+    // Use push instead of replace for more reliable navigation
     const destination =
-      next ||
-      (persona === "developer" ? "/onboarding/developer" : "/projects/new");
-    router.replace(destination);
+      persona === "developer" ? "/onboarding/developer" : "/projects/new";
+    
+    // If there's a custom next destination and it's not an onboarding route, use it
+    const finalDestination = next && !next.startsWith("/onboarding") 
+      ? (persona === "developer" ? "/onboarding/developer" : next)
+      : destination;
+    
+    router.push(finalDestination);
   };
 
   return (
