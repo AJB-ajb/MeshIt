@@ -1,17 +1,28 @@
 "use client";
 
-import { Bell, Search } from "lucide-react";
+import Link from "next/link";
+import { Bell, Search, User, Settings, LogOut } from "lucide-react";
+import { useRouter } from "next/navigation";
 
 import { cn } from "@/lib/utils";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { ThemeToggle } from "@/components/ui/theme-toggle";
+import { createClient } from "@/lib/supabase/client";
 
 interface HeaderProps {
   className?: string;
 }
 
 export function Header({ className }: HeaderProps) {
+  const router = useRouter();
+
+  const handleSignOut = async () => {
+    const supabase = createClient();
+    await supabase.auth.signOut();
+    router.replace("/login");
+  };
+
   return (
     <header
       className={cn(
@@ -43,13 +54,41 @@ export function Header({ className }: HeaderProps) {
           <span className="absolute right-1 top-1 h-2 w-2 rounded-full bg-destructive" />
         </Button>
 
-        {/* User avatar placeholder */}
-        <Button variant="ghost" size="icon" className="rounded-full">
-          <div className="flex h-8 w-8 items-center justify-center rounded-full bg-primary text-sm font-medium text-primary-foreground">
-            U
+        {/* User dropdown */}
+        <div className="relative group">
+          <Button variant="ghost" size="icon" className="rounded-full">
+            <div className="flex h-8 w-8 items-center justify-center rounded-full bg-primary text-sm font-medium text-primary-foreground">
+              U
+            </div>
+            <span className="sr-only">User menu</span>
+          </Button>
+          
+          {/* Dropdown menu */}
+          <div className="absolute right-0 top-full mt-2 w-48 origin-top-right rounded-md border border-border bg-popover p-1 shadow-lg opacity-0 invisible group-hover:opacity-100 group-hover:visible transition-all duration-150">
+            <Link
+              href="/profile"
+              className="flex items-center gap-2 rounded-sm px-3 py-2 text-sm hover:bg-accent"
+            >
+              <User className="h-4 w-4" />
+              Profile
+            </Link>
+            <Link
+              href="/settings"
+              className="flex items-center gap-2 rounded-sm px-3 py-2 text-sm hover:bg-accent"
+            >
+              <Settings className="h-4 w-4" />
+              Settings
+            </Link>
+            <div className="my-1 h-px bg-border" />
+            <button
+              onClick={handleSignOut}
+              className="flex w-full items-center gap-2 rounded-sm px-3 py-2 text-sm text-destructive hover:bg-accent"
+            >
+              <LogOut className="h-4 w-4" />
+              Sign out
+            </button>
           </div>
-          <span className="sr-only">User menu</span>
-        </Button>
+        </div>
       </div>
     </header>
   );

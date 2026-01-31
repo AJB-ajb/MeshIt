@@ -12,6 +12,24 @@ export async function GET(request: Request) {
     const { error } = await supabase.auth.exchangeCodeForSession(code);
 
     if (!error) {
+      const {
+        data: { user },
+      } = await supabase.auth.getUser();
+      const persona = user?.user_metadata?.persona;
+      const profileCompleted = user?.user_metadata?.profile_completed;
+
+      if (!persona) {
+        const destination = `/onboarding?next=${encodeURIComponent(next)}`;
+        return NextResponse.redirect(`${origin}${destination}`);
+      }
+
+      if (persona === "developer" && !profileCompleted) {
+        const destination = `/onboarding/developer?next=${encodeURIComponent(
+          next
+        )}`;
+        return NextResponse.redirect(`${origin}${destination}`);
+      }
+
       return NextResponse.redirect(`${origin}${next}`);
     }
   }

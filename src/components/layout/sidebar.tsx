@@ -10,6 +10,8 @@ import {
   Plus,
   Menu,
   X,
+  User,
+  Settings,
 } from "lucide-react";
 
 import { cn } from "@/lib/utils";
@@ -22,6 +24,11 @@ const navigation = [
   { href: "/projects", icon: FolderKanban, label: "Projects" },
   { href: "/matches", icon: Users, label: "Matches" },
   { href: "/messages", icon: MessageSquare, label: "Messages" },
+];
+
+const secondaryNavigation = [
+  { href: "/profile", icon: User, label: "Profile" },
+  { href: "/settings", icon: Settings, label: "Settings" },
 ];
 
 interface SidebarProps {
@@ -95,6 +102,20 @@ export function Sidebar({ className }: SidebarProps) {
             />
           ))}
         </nav>
+
+        {/* Secondary Navigation */}
+        <div className="border-t border-sidebar-border px-4 py-4">
+          <nav className="space-y-1" aria-label="Secondary navigation">
+            {secondaryNavigation.map((item) => (
+              <NavItem
+                key={item.href}
+                href={item.href}
+                icon={item.icon}
+                label={item.label}
+              />
+            ))}
+          </nav>
+        </div>
 
         {/* Footer */}
         <div className="border-t border-sidebar-border p-4">
