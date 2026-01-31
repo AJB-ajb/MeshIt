@@ -3,6 +3,7 @@ stepsCompleted:
   - step-01-init
   - step-02-discovery
   - expedited-synthesis
+  - dev-review-v1.1
 inputDocuments:
   - spec/Mesh.md
   - spec/Matching.md
@@ -23,7 +24,9 @@ classification:
 
 **Author:** IBK  
 **Date:** 2026-01-31  
-**Version:** 1.0 (Expedited)
+**Version:** 1.1 (Dev Review Update)
+
+> **Changelog v1.1:** Updated MVP scope per stakeholder decisions — Voice input/output IN, GitHub integration IN, Real-time notifications IN, In-app notifications IN. Matching algorithm deferred to implementation phase.
 
 ---
 
@@ -91,11 +94,24 @@ MeshIt makes finding collaborators as easy as describing what you need. Post a p
 ## 4. Core Features (MVP Scope)
 
 ### 4.1 User Onboarding & Profile
-- **One-click OAuth** (Google) — no forms, no friction
+- **One-click OAuth** (Google + GitHub) — no forms, no friction
+  - GitHub OAuth enables automatic profile enrichment from repos/commits
+- **Conversational Voice Agent for Profile Creation** (MVP):
+  - 4-5 turn voice conversation to gather profile information
+  - Voice input via OpenAI Whisper (speech-to-text)
+  - AI asks follow-up questions to extract complete profile
+  - Voice output via ElevenLabs (text-to-speech) for conversational UX
+  - Fallback: Text input for users who prefer typing
 - **Natural language profile creation**: User describes themselves in 30 seconds of text/voice
   - "I'm a backend developer with 3 years of Python experience, interested in AI and healthcare tech. I prefer async collaboration and can commit 10-15 hours/week."
 - **AI extracts structured data** from description:
   - Skills, interests, availability, collaboration style, experience level
+- **GitHub Profile Enrichment** (MVP):
+  - On GitHub OAuth login, automatically extract:
+    - Programming languages from repos
+    - Contribution patterns (commit frequency, collaboration style)
+    - Project types and domains
+  - Merge with voice/text profile data
 - **Profile embeddings generated** for matching
 
 ### 4.2 Project Posting
@@ -124,12 +140,20 @@ MeshIt makes finding collaborators as easy as describing what you need. Post a p
   - "Apply" or "Decline"
 
 ### 4.5 Messaging
-- Basic instant messaging between matched users
-- Ability to share external links (WhatsApp, Discord, Slack) for continued collaboration
+- **Basic instant messaging** between matched users (WebSocket via Supabase Realtime)
+- **Purpose:** Initial contact only — not intended as primary communication platform
+- **Handoff to external platforms:** Users share their Slack/Discord/WhatsApp links to continue collaboration
+- **Social auth integration:** LinkedIn, Slack, Discord OAuth enables easy profile sharing
 
 ### 4.6 Notifications
-- Match notifications (push/email)
-- Daily digest for non-urgent matches
+- **Real-time In-App Notifications** (MVP):
+  - Supabase Realtime for instant match notifications
+  - Notification bell/badge in app header
+  - Toast notifications for new matches
+- **Push/Email Notifications** (MVP):
+  - Browser push notifications for matches
+  - Email notifications via Resend
+- Daily digest for non-urgent matches (post-MVP enhancement)
 
 ---
 
@@ -137,21 +161,41 @@ MeshIt makes finding collaborators as easy as describing what you need. Post a p
 
 | Feature | Description | Value |
 |---------|-------------|-------|
-| **GitHub Integration** | Analyze repos/commits for deeper developer skill understanding | Better technical matching for devs |
-| **Voice Explanations** | ElevenLabs audio of why someone matched | Unique UX differentiator |
 | **Collaboration Style Analysis** | Hume AI analysis of communication patterns | Match on working style, not just skills |
 | **Calendar Integration** | Auto-suggest time slots based on availability | Reduce scheduling friction |
 | **Rating System** | Post-project reviews (objective, not reputation-gaming) | Trust building |
+| **Daily Digest Emails** | AI-generated summary of matches | Reduce notification fatigue |
+| **Advanced Matching Algorithm** | Weighted multi-dimensional scoring per spec/Matching.md | Higher match quality |
 
 ---
 
 ## 6. User Flows
 
-### Flow 1: New User Onboarding
+### Flow 1: New User Onboarding (Voice Agent)
 ```
-Landing page → "Sign up with Google" → OAuth
+Landing page → "Sign up with Google/GitHub" → OAuth
         ↓
-"Tell us about yourself" (text box or voice button)
+[If GitHub] Auto-extract profile from repos/commits
+        ↓
+Voice Agent initiates conversation:
+  Turn 1: "Hi! Tell me about yourself - what do you do?"
+  Turn 2: "What skills are you strongest in?"
+  Turn 3: "What kind of projects interest you?"
+  Turn 4: "How many hours per week can you commit?"
+  Turn 5: "Do you prefer sync or async collaboration?"
+        ↓
+AI processes all turns → Shows extracted profile preview
+        ↓
+User confirms/edits → Profile saved → Dashboard
+```
+
+### Flow 1b: New User Onboarding (Text Fallback)
+```
+Landing page → "Sign up with Google/GitHub" → OAuth
+        ↓
+[If GitHub] Auto-extract profile from repos/commits
+        ↓
+"Tell us about yourself" (text box)
         ↓
 AI processes → Shows extracted profile preview
         ↓
@@ -189,19 +233,26 @@ Messaging unlocked
 
 ## 7. Technical Requirements
 
-### 7.1 Tech Stack (From Spec)
+### 7.1 Tech Stack (Final MVP)
 
 | Layer | Technology |
 |-------|------------|
-| **Frontend** | Next.js 16, React 19, TypeScript |
-| **Backend** | Next.js API routes (or FastAPI if separate) |
-| **Database** | PostgreSQL + Prisma 7 |
-| **Vector DB** | Qdrant (for embeddings) |
-| **Auth** | NextAuth.js v5 (Google OAuth) |
-| **AI/LLM** | Gemini 2.0 Flash (extraction), OpenAI text-embedding-3-large (embeddings) |
-| **NLP Pipeline** | LangChain |
+| **Frontend** | Next.js 15, React 19, TypeScript |
+| **Styling** | Tailwind CSS, shadcn/ui |
+| **Backend** | Next.js API routes |
+| **Database** | Supabase PostgreSQL |
+| **Vector DB** | pgvector (Supabase extension) |
+| **Auth** | Supabase Auth (Google + GitHub OAuth) |
+| **AI/LLM** | Gemini 2.0 Flash (extraction), OpenAI text-embedding-3-small (embeddings) |
+| **Voice Input** | OpenAI Whisper (speech-to-text) |
+| **Voice Output** | ElevenLabs (text-to-speech for voice agent) |
+| **Real-time** | Supabase Realtime (notifications, messaging) |
+| **Email** | Resend |
+| **NLP Pipeline** | LangChain.js |
 | **Deployment** | Vercel |
 | **Package Manager** | pnpm |
+| **Analytics** | PostHog |
+| **Error Tracking** | Sentry |
 
 ### 7.2 Key Technical Components
 
@@ -298,34 +349,78 @@ Messages
 ## 11. MVP Scope Boundary
 
 ### ✅ IN SCOPE (MVP)
-- Google OAuth signup
-- Natural language profile creation
-- Natural language project posting
-- Embedding-based matching
-- Match display with explanations
-- Basic messaging
-- Push/email notifications
+- **Auth:** Google + GitHub + LinkedIn + Slack + Discord OAuth via Supabase Auth
+- **Voice Agent Onboarding:** 4-5 turn conversational profile creation
+  - OpenAI Whisper for speech-to-text
+  - ElevenLabs for text-to-speech responses
+- **GitHub Profile Enrichment:** Auto-extract skills from repos on GitHub login
+- **Natural language profile creation** (text fallback)
+- **Profile Editing:** Users can edit AI-extracted profile data
+- **Natural language project posting** (text + voice)
+- **Project Expiration:** Auto-expire based on user-set date, with ability to reactivate
+- **Embedding-based matching** (pgvector cosine similarity, threshold TBD during implementation)
+- **Match display with explanations** (LLM-generated)
+- **Voice match explanations** (ElevenLabs audio output)
+- **Real-time in-app notifications** (Supabase Realtime)
+- **Push/email notifications** (Browser push + Resend)
+- **Basic messaging** (Supabase Realtime WebSocket) — handoff to external platforms (Slack/Discord)
 
 ### ❌ OUT OF SCOPE (Post-MVP)
-- GitHub integration / code analysis
-- Voice input/output
 - Calendar integration
 - Rating system
 - Advanced filtering (location, availability slots)
 - Team composition optimization
 - Miro/Slack integrations
+- Daily digest emails (n8n automation)
+- Weighted multi-dimensional matching (per spec/Matching.md)
 
 ---
 
-## 12. Open Questions for Architect
+## 12. Resolved Architecture Decisions
 
-1. **Vector DB choice**: Qdrant vs Pinecone vs pgvector? Trade-offs for hackathon timeline?
-2. **Embedding model**: text-embedding-3-large (OpenAI) vs alternatives? Cost vs quality?
-3. **Real-time updates**: WebSocket for live match updates or polling?
-4. **Background jobs**: Celery/Redis or Vercel serverless functions?
-5. **LangChain necessity**: Is full LangChain needed or simpler direct API calls sufficient for MVP?
+| Question | Decision | Rationale |
+|----------|----------|-----------|
+| **Vector DB** | pgvector (Supabase) | Single service, no extra infra, good enough for MVP scale |
+| **Embedding model** | text-embedding-3-small | Cost-effective, 1536 dimensions, sufficient quality |
+| **Similarity threshold** | TBD (start ~0.65) | Will tune during implementation based on match quality |
+| **Real-time** | Supabase Realtime (WebSocket) | Built-in, handles notifications + messaging |
+| **Background jobs** | Vercel serverless | No extra infra, sufficient for MVP |
+| **LangChain** | LangChain.js | Structured output parsing, prompt management, future extensibility |
+| **Messaging scope** | Basic handoff | Initial contact only, users move to Slack/Discord for collaboration |
+| **Auth providers** | Google, GitHub, LinkedIn, Slack, Discord | Multiple social logins for easy onboarding + platform sharing |
 
 ---
 
-*PRD Version 1.0 — Expedited synthesis from spec documents and stakeholder interview.*
-*Ready for Architecture review.*
+## 13. Epic Structure (For PM Handoff)
+
+The following epics are recommended for story creation:
+
+| Epic | Description | Dependencies |
+|------|-------------|--------------|
+| **E1: Foundation** | Project setup, Supabase config, auth flow | None |
+| **E2: Voice Agent** | Whisper + ElevenLabs integration, conversational onboarding | E1 |
+| **E3: GitHub Enrichment** | GitHub OAuth, repo analysis, profile merge | E1 |
+| **E4: Profile Management** | Profile CRUD, AI extraction, embedding generation | E1 |
+| **E5: Project Management** | Project CRUD, AI extraction, embedding generation | E1, E4 |
+| **E6: Matching Engine** | Vector search, match generation, explanations | E4, E5 |
+| **E7: Notifications** | Real-time in-app, push, email | E1, E6 |
+| **E8: Messaging** | Real-time chat between matched users | E1, E6 |
+| **E9: UI/UX** | Component library, pages, responsive design | E1 (parallel) |
+
+### Parallel Workstreams
+
+```
+TRACK A (UI/Frontend) ──────────────────────────────────────────────►
+  E9: Components, pages, forms (no backend dependency)
+
+TRACK B (Backend/Infra) ───────────────────────────────────────────►
+  E1 → E4 → E5 → E6 → E7 → E8
+
+TRACK C (AI/Voice) ────────────────────────────────────────────────►
+  E2 (Voice Agent) + E3 (GitHub) can run parallel to Track B after E1
+```
+
+---
+
+*PRD Version 1.1 — Updated with MVP scope decisions per stakeholder review.*
+*Ready for PM to create epics and stories.*
