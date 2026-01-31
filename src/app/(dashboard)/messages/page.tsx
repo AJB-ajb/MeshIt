@@ -199,7 +199,7 @@ export default async function MessagesPage() {
               .slice(0, 2)
               .map((id) => ({
                 name: conv.participantNames.get(id) || "Unknown",
-                initials: getInitials(conv.participantNames.get(id)),
+                initials: getInitials(conv.participantNames.get(id) ?? null),
               })),
             lastMessage: lastMsg ? {
               sender: lastMsg.sender,
