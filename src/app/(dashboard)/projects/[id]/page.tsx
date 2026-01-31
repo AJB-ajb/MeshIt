@@ -30,6 +30,9 @@ import {
   CardTitle,
 } from "@/components/ui/card";
 import { createClient } from "@/lib/supabase/client";
+import { MatchBreakdown } from "@/components/match/match-breakdown";
+import type { ScoreBreakdown, Profile } from "@/lib/supabase/types";
+import { formatScore } from "@/lib/matching/scoring";
 
 type Project = {
   id: string;
@@ -113,6 +116,9 @@ export default function ProjectDetailPage() {
   const [isSaving, setIsSaving] = useState(false);
   const [isDeleting, setIsDeleting] = useState(false);
   const [error, setError] = useState<string | null>(null);
+  const [currentUserProfile, setCurrentUserProfile] = useState<Profile | null>(null);
+  const [matchBreakdown, setMatchBreakdown] = useState<ScoreBreakdown | null>(null);
+  const [isComputingMatch, setIsComputingMatch] = useState(false);
   const [form, setForm] = useState<ProjectFormState>({
     title: "",
     description: "",
@@ -169,11 +175,47 @@ export default function ProjectDetailPage() {
         experienceLevel: data.experience_level || "any",
         status: data.status || "open",
       });
+
+      // Fetch current user's profile for compatibility check (if not owner)
+      if (user && user.id !== data.creator_id) {
+        const { data: profileData } = await supabase
+          .from("profiles")
+          .select("*")
+          .eq("user_id", user.id)
+          .single();
+
+        if (profileData) {
+          setCurrentUserProfile(profileData);
+          // Auto-compute match breakdown
+          computeMatchBreakdown(user.id, data.id);
+        }
+      }
+
       setIsLoading(false);
     };
 
     fetchProject();
   }, [projectId]);
+
+  const computeMatchBreakdown = async (userId: string, targetProjectId: string) => {
+    setIsComputingMatch(true);
+    const supabase = createClient();
+
+    try {
+      const { data, error } = await supabase.rpc("compute_match_breakdown", {
+        profile_user_id: userId,
+        target_project_id: targetProjectId,
+      });
+
+      if (!error && data) {
+        setMatchBreakdown(data as ScoreBreakdown);
+      }
+    } catch (err) {
+      console.error("Failed to compute match breakdown:", err);
+    } finally {
+      setIsComputingMatch(false);
+    }
+  };
 
   const handleChange = (field: keyof ProjectFormState, value: string) => {
     setForm((prev) => ({ ...prev, [field]: value }));
@@ -524,24 +566,82 @@ export default function ProjectDetailPage() {
             </CardContent>
           </Card>
 
-          {/* Matched Collaborators (placeholder for now) */}
-          <Card>
-            <CardHeader>
-              <div className="flex items-center gap-2">
-                <Sparkles className="h-5 w-5 text-blue-500" />
-                <CardTitle>Matched Collaborators</CardTitle>
-              </div>
-              <CardDescription>
-                People who match your project requirements
-              </CardDescription>
-            </CardHeader>
-            <CardContent>
-              <p className="text-sm text-muted-foreground">
-                AI matching will find collaborators once your project is
-                published. Check back soon!
-              </p>
-            </CardContent>
-          </Card>
+          {/* Compatibility Check */}
+          {!isOwner && currentUserProfile && (
+            <Card>
+              <CardHeader>
+                <div className="flex items-center gap-2">
+                  <Sparkles className="h-5 w-5 text-blue-500" />
+                  <CardTitle>Your Compatibility</CardTitle>
+                </div>
+                <CardDescription>
+                  How well you match this project
+                </CardDescription>
+              </CardHeader>
+              <CardContent className="space-y-4">
+                {isComputingMatch ? (
+                  <div className="flex items-center gap-2 text-sm text-muted-foreground">
+                    <Loader2 className="h-4 w-4 animate-spin" />
+                    Computing compatibility...
+                  </div>
+                ) : matchBreakdown ? (
+                  <>
+                    <div className="rounded-lg border border-border bg-muted/30 p-4">
+                      <p className="text-sm text-muted-foreground mb-1">
+                        Overall Match
+                      </p>
+                      <p className="text-2xl font-bold text-success">
+                        {formatScore(
+                          (matchBreakdown.semantic * 0.4 +
+                            matchBreakdown.skills_overlap * 0.3 +
+                            matchBreakdown.experience_match * 0.15 +
+                            matchBreakdown.commitment_match * 0.15)
+                        )}
+                      </p>
+                    </div>
+                    <MatchBreakdown
+                      breakdown={matchBreakdown}
+                      project={{
+                        required_skills: project.required_skills || [],
+                        experience_level: project.experience_level,
+                        commitment_hours: project.commitment_hours,
+                      }}
+                      profile={{
+                        skills: currentUserProfile.skills,
+                        experience_level: currentUserProfile.experience_level,
+                        availability_hours: currentUserProfile.availability_hours,
+                      }}
+                    />
+                  </>
+                ) : (
+                  <p className="text-sm text-muted-foreground">
+                    Complete your profile to see compatibility
+                  </p>
+                )}
+              </CardContent>
+            </Card>
+          )}
+
+          {/* Matched Collaborators (for owners) */}
+          {isOwner && (
+            <Card>
+              <CardHeader>
+                <div className="flex items-center gap-2">
+                  <Sparkles className="h-5 w-5 text-blue-500" />
+                  <CardTitle>Matched Collaborators</CardTitle>
+                </div>
+                <CardDescription>
+                  People who match your project requirements
+                </CardDescription>
+              </CardHeader>
+              <CardContent>
+                <p className="text-sm text-muted-foreground">
+                  AI matching will find collaborators once your project is
+                  published. Check back soon!
+                </p>
+              </CardContent>
+            </Card>
+          )}
         </div>
 
         {/* Sidebar */}
