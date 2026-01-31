@@ -17,6 +17,9 @@ pnpm vercel login
 Add all required environment variables from your `.env` file to Vercel:
 
 ```bash
+# Production URL (Required - for environment detection)
+pnpm vercel env add NEXT_PUBLIC_VERCEL_URL
+
 # Supabase (Required - Critical for auth & middleware)
 pnpm vercel env add NEXT_PUBLIC_SUPABASE_URL
 pnpm vercel env add NEXT_PUBLIC_SUPABASE_ANON_KEY
@@ -42,7 +45,12 @@ pnpm vercel env add SENTRY_ORG
 pnpm vercel env add SENTRY_PROJECT
 ```
 
-**For each variable:**
+**For NEXT_PUBLIC_VERCEL_URL:**
+- Value: `mesh-it.vercel.app` (for production environment only)
+- **IMPORTANT**: Only set this for the **Production** environment, NOT for Preview or Development
+- This determines when the app shows real production data vs test data
+
+**For other variables:**
 - Mark secrets as sensitive (y)
 - Paste the value from your `.env` file
 - Select **Production** and **Preview** environments
@@ -71,6 +79,7 @@ Copy values from your `.env` file for these variables:
 
 | Variable | Description | Get From |
 |----------|-------------|----------|
+| `NEXT_PUBLIC_VERCEL_URL` | Production URL (set to `mesh-it.vercel.app` for production only) | Production environment only |
 | `NEXT_PUBLIC_SUPABASE_URL` | Supabase project URL | [Supabase Dashboard](https://supabase.com/dashboard) → Settings → API |
 | `NEXT_PUBLIC_SUPABASE_ANON_KEY` | Supabase anon/public key | [Supabase Dashboard](https://supabase.com/dashboard) → Settings → API |
 | `SUPABASE_SERVICE_ROLE_KEY` | Supabase service role key (⚠️ sensitive) | [Supabase Dashboard](https://supabase.com/dashboard) → Settings → API |
@@ -92,6 +101,29 @@ Copy values from your `.env` file for these variables:
 | `SENTRY_PROJECT` | Sentry project slug |
 
 ## Troubleshooting
+
+### App Shows "Test Mode" in Production
+
+If your production deployment at `mesh-it.vercel.app` shows the test mode banner:
+
+**Cause:** `NEXT_PUBLIC_VERCEL_URL` is not set or is set incorrectly.
+
+**Solution:**
+```bash
+# Add the environment variable (Production environment only)
+pnpm vercel env add NEXT_PUBLIC_VERCEL_URL
+
+# When prompted:
+# - Value: mesh-it.vercel.app
+# - Environments: Select ONLY "Production" (not Preview or Development)
+
+# Redeploy
+pnpm vercel --prod
+```
+
+After redeployment, the banner will disappear and the app will show "MeshIt" instead of "MeshIt - Test".
+
+**Verification:** Visit `https://mesh-it.vercel.app/api/debug/env` to see environment detection status.
 
 ### MIDDLEWARE_INVOCATION_FAILED Error
 

@@ -2,20 +2,43 @@
  * Environment detection utilities for data isolation and feature toggling.
  * 
  * Key behavior:
- * - Production (VERCEL_ENV=production): Shows only real data (is_test_data=false)
- * - Non-production (dev/preview): Shows only test data (is_test_data=true)
+ * - Production (mesh-it.vercel.app): Shows only real data (is_test_data=false)
+ * - Non-production (dev/preview/other URLs): Shows only test data (is_test_data=true)
  * 
  * This ensures complete isolation between test and production data.
  */
 
 /**
- * Check if the app is running in production (Vercel production environment)
+ * The production URL for the app.
+ */
+const PRODUCTION_URL = "mesh-it.vercel.app";
+
+/**
+ * Check if the app is running in production.
+ * Production is defined as the main deployment URL: https://mesh-it.vercel.app/
+ * 
+ * This checks multiple sources:
+ * 1. NEXT_PUBLIC_VERCEL_URL (available client and server-side)
+ * 2. VERCEL_URL (server-side only)
+ * 3. Request headers (for runtime detection)
  */
 export function isProduction(): boolean {
-  return (
-    process.env.VERCEL_ENV === "production" ||
-    (process.env.VERCEL === "1" && process.env.NODE_ENV === "production")
-  );
+  // Check NEXT_PUBLIC_VERCEL_URL (available everywhere)
+  if (process.env.NEXT_PUBLIC_VERCEL_URL === PRODUCTION_URL) {
+    return true;
+  }
+  
+  // Check VERCEL_URL (server-side)
+  if (process.env.VERCEL_URL === PRODUCTION_URL) {
+    return true;
+  }
+  
+  // For browser environment, check window.location
+  if (typeof window !== "undefined") {
+    return window.location.hostname === PRODUCTION_URL;
+  }
+  
+  return false;
 }
 
 /**
@@ -42,7 +65,12 @@ export function isTestMode(): boolean {
  * Get environment display name for UI and debugging.
  */
 export function getEnvironmentName(): string {
-  if (process.env.VERCEL_ENV === "production") return "Production";
-  if (process.env.VERCEL_ENV === "preview") return "Preview";
+  if (isProduction()) return "Production";
+  
+  // Check for Vercel preview deployments
+  if (process.env.VERCEL_URL && process.env.VERCEL_URL !== PRODUCTION_URL) {
+    return "Preview";
+  }
+  
   return "Development";
 }
