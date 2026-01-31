@@ -1,9 +1,12 @@
-import { Metadata } from "next";
+"use client";
+
+import { useEffect, useState } from "react";
 import Link from "next/link";
-import { Plus, Search, Filter, Users, Calendar, Clock } from "lucide-react";
+import { Plus, Search, Filter, Users, Calendar, Clock, Loader2 } from "lucide-react";
 
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
+import { Badge } from "@/components/ui/badge";
 import {
   Card,
   CardContent,
@@ -11,54 +14,137 @@ import {
   CardHeader,
   CardTitle,
 } from "@/components/ui/card";
+import { createClient } from "@/lib/supabase/client";
 
-export const metadata: Metadata = {
-  title: "Projects",
+type Project = {
+  id: string;
+  title: string;
+  description: string;
+  required_skills: string[];
+  team_size: number;
+  timeline: string;
+  commitment_hours: number;
+  status: string;
+  created_at: string;
+  creator_id: string;
+  profiles?: {
+    full_name: string | null;
+    user_id: string;
+  };
 };
 
-// Mock data for demo
-const projects = [
-  {
-    id: "1",
-    title: "AI Recipe Generator",
-    description:
-      "Build an AI-powered app that suggests recipes based on available ingredients. Looking for someone with experience in AI/ML and frontend development.",
-    skills: ["React", "TypeScript", "AI/ML", "Node.js"],
-    teamSize: "2-3 people",
-    timeline: "4 weeks",
-    commitment: "10-15 hrs/week",
-    matchScore: 92,
-    creator: {
-      name: "Alex Chen",
-      initials: "AC",
-    },
-    createdAt: "2 days ago",
-  },
-  {
-    id: "2",
-    title: "Climate Data Visualization",
-    description:
-      "Create interactive visualizations for climate change data. Need someone strong in data visualization and passionate about environmental causes.",
-    skills: ["D3.js", "Python", "Data Science", "React"],
-    teamSize: "2-4 people",
-    timeline: "6 weeks",
-    commitment: "8-12 hrs/week",
-    matchScore: 88,
-    creator: {
-      name: "Sam Wilson",
-      initials: "SW",
-    },
-    createdAt: "3 days ago",
-  },
-];
+type TabId = "discover" | "my-projects";
 
-const tabs = [
+const tabs: { id: TabId; label: string }[] = [
   { id: "discover", label: "Discover" },
-  { id: "matched", label: "Matched" },
   { id: "my-projects", label: "My Projects" },
 ];
 
+const formatTimeline = (timeline: string) => {
+  switch (timeline) {
+    case "weekend":
+      return "This weekend";
+    case "1_week":
+      return "1 week";
+    case "1_month":
+      return "1 month";
+    case "ongoing":
+      return "Ongoing";
+    default:
+      return timeline;
+  }
+};
+
+const formatDate = (dateString: string) => {
+  const date = new Date(dateString);
+  const now = new Date();
+  const diffMs = now.getTime() - date.getTime();
+  const diffDays = Math.floor(diffMs / (1000 * 60 * 60 * 24));
+
+  if (diffDays === 0) return "Today";
+  if (diffDays === 1) return "Yesterday";
+  if (diffDays < 7) return `${diffDays} days ago`;
+  if (diffDays < 30) return `${Math.floor(diffDays / 7)} weeks ago`;
+  return date.toLocaleDateString();
+};
+
+const getInitials = (name: string | null) => {
+  if (!name) return "U";
+  return name
+    .split(" ")
+    .map((n) => n[0])
+    .join("")
+    .toUpperCase()
+    .slice(0, 2);
+};
+
 export default function ProjectsPage() {
+  const [activeTab, setActiveTab] = useState<TabId>("discover");
+  const [projects, setProjects] = useState<Project[]>([]);
+  const [isLoading, setIsLoading] = useState(true);
+  const [userId, setUserId] = useState<string | null>(null);
+  const [searchQuery, setSearchQuery] = useState("");
+
+  useEffect(() => {
+    const fetchProjects = async () => {
+      setIsLoading(true);
+      const supabase = createClient();
+
+      // Get current user
+      const {
+        data: { user },
+      } = await supabase.auth.getUser();
+      setUserId(user?.id ?? null);
+
+      let query = supabase
+        .from("projects")
+        .select(
+          `
+          *,
+          profiles:creator_id (
+            full_name,
+            user_id
+          )
+        `
+        )
+        .order("created_at", { ascending: false });
+
+      if (activeTab === "my-projects" && user) {
+        query = query.eq("creator_id", user.id);
+      } else {
+        // For discover, show open projects not created by current user
+        query = query.eq("status", "open");
+        if (user) {
+          query = query.neq("creator_id", user.id);
+        }
+      }
+
+      const { data, error } = await query;
+
+      if (error) {
+        console.error("Error fetching projects:", error);
+      } else {
+        setProjects(data || []);
+      }
+
+      setIsLoading(false);
+    };
+
+    fetchProjects();
+  }, [activeTab]);
+
+  const filteredProjects = projects.filter((project) => {
+    if (!searchQuery) return true;
+    const query = searchQuery.toLowerCase();
+    return (
+      project.title.toLowerCase().includes(query) ||
+      project.description.toLowerCase().includes(query) ||
+      project.required_skills.some((skill) =>
+        skill.toLowerCase().includes(query)
+      )
+    );
+  });
+
   return (
     <div className="space-y-6">
       {/* Page header */}
@@ -84,8 +170,9 @@ export default function ProjectsPage() {
           {tabs.map((tab) => (
             <button
               key={tab.id}
+              onClick={() => setActiveTab(tab.id)}
               className={`rounded-md px-4 py-1.5 text-sm font-medium transition-colors ${
-                tab.id === "discover"
+                tab.id === activeTab
                   ? "bg-background text-foreground shadow-sm"
                   : "text-muted-foreground hover:text-foreground"
               }`}
@@ -103,6 +190,8 @@ export default function ProjectsPage() {
               type="search"
               placeholder="Search projects, skills..."
               className="pl-9"
+              value={searchQuery}
+              onChange={(e) => setSearchQuery(e.target.value)}
             />
           </div>
           <Button variant="outline" size="icon">
@@ -112,76 +201,124 @@ export default function ProjectsPage() {
         </div>
       </div>
 
-      {/* Projects grid */}
-      <div className="grid gap-6">
-        {projects.map((project) => (
-          <Card key={project.id} className="overflow-hidden">
-            <CardHeader className="pb-4">
-              <div className="flex items-start justify-between gap-4">
-                <div className="space-y-1">
-                  <div className="flex items-center gap-3">
-                    <CardTitle className="text-xl">{project.title}</CardTitle>
-                    <span className="rounded-full bg-success/10 px-2.5 py-0.5 text-xs font-medium text-success">
-                      {project.matchScore}% match
+      {/* Loading state */}
+      {isLoading ? (
+        <div className="flex min-h-[200px] items-center justify-center">
+          <Loader2 className="h-8 w-8 animate-spin text-muted-foreground" />
+        </div>
+      ) : filteredProjects.length === 0 ? (
+        <Card>
+          <CardContent className="flex min-h-[200px] flex-col items-center justify-center py-12">
+            <p className="text-muted-foreground">
+              {activeTab === "my-projects"
+                ? "You haven't created any projects yet."
+                : "No projects found."}
+            </p>
+            {activeTab === "my-projects" && (
+              <Button asChild className="mt-4">
+                <Link href="/projects/new">
+                  <Plus className="h-4 w-4" />
+                  Create your first project
+                </Link>
+              </Button>
+            )}
+          </CardContent>
+        </Card>
+      ) : (
+        /* Projects grid */
+        <div className="grid gap-6">
+          {filteredProjects.map((project) => {
+            const isOwner = userId === project.creator_id;
+            const creatorName =
+              project.profiles?.full_name || "Unknown";
+
+            return (
+              <Card key={project.id} className="overflow-hidden">
+                <CardHeader className="pb-4">
+                  <div className="flex items-start justify-between gap-4">
+                    <div className="space-y-1">
+                      <div className="flex items-center gap-3">
+                        <CardTitle className="text-xl">
+                          {project.title}
+                        </CardTitle>
+                        {project.status !== "open" && (
+                          <Badge
+                            variant={
+                              project.status === "filled"
+                                ? "default"
+                                : "secondary"
+                            }
+                          >
+                            {project.status}
+                          </Badge>
+                        )}
+                      </div>
+                    </div>
+                    <div className="flex gap-2">
+                      <Button variant="outline" asChild>
+                        <Link href={`/projects/${project.id}`}>
+                          {isOwner ? "Edit" : "View Details"}
+                        </Link>
+                      </Button>
+                      {!isOwner && project.status === "open" && (
+                        <Button>Apply</Button>
+                      )}
+                    </div>
+                  </div>
+                </CardHeader>
+                <CardContent className="space-y-4">
+                  <CardDescription className="text-sm line-clamp-2">
+                    {project.description}
+                  </CardDescription>
+
+                  {/* Skills */}
+                  {project.required_skills.length > 0 && (
+                    <div className="flex flex-wrap gap-2">
+                      {project.required_skills.slice(0, 5).map((skill) => (
+                        <Badge key={skill} variant="secondary">
+                          {skill}
+                        </Badge>
+                      ))}
+                      {project.required_skills.length > 5 && (
+                        <Badge variant="outline">
+                          +{project.required_skills.length - 5}
+                        </Badge>
+                      )}
+                    </div>
+                  )}
+
+                  {/* Meta */}
+                  <div className="flex flex-wrap items-center gap-4 text-sm text-muted-foreground">
+                    <span className="flex items-center gap-1.5">
+                      <Users className="h-4 w-4" />
+                      {project.team_size} people
+                    </span>
+                    <span className="flex items-center gap-1.5">
+                      <Calendar className="h-4 w-4" />
+                      {formatTimeline(project.timeline)}
+                    </span>
+                    <span className="flex items-center gap-1.5">
+                      <Clock className="h-4 w-4" />
+                      {project.commitment_hours} hrs/week
                     </span>
                   </div>
-                </div>
-                <div className="flex gap-2">
-                  <Button variant="outline" asChild>
-                    <Link href={`/projects/${project.id}`}>
-                      View Details
-                    </Link>
-                  </Button>
-                  <Button>Apply</Button>
-                </div>
-              </div>
-            </CardHeader>
-            <CardContent className="space-y-4">
-              <CardDescription className="text-sm">
-                {project.description}
-              </CardDescription>
 
-              {/* Skills */}
-              <div className="flex flex-wrap gap-2">
-                {project.skills.map((skill) => (
-                  <span
-                    key={skill}
-                    className="rounded-md border border-border bg-muted/50 px-2.5 py-0.5 text-xs font-medium"
-                  >
-                    {skill}
-                  </span>
-                ))}
-              </div>
-
-              {/* Meta */}
-              <div className="flex flex-wrap items-center gap-4 text-sm text-muted-foreground">
-                <span className="flex items-center gap-1.5">
-                  <Users className="h-4 w-4" />
-                  {project.teamSize}
-                </span>
-                <span className="flex items-center gap-1.5">
-                  <Calendar className="h-4 w-4" />
-                  {project.timeline}
-                </span>
-                <span className="flex items-center gap-1.5">
-                  <Clock className="h-4 w-4" />
-                  {project.commitment}
-                </span>
-              </div>
-
-              {/* Creator */}
-              <div className="flex items-center gap-2 border-t border-border pt-4">
-                <div className="flex h-8 w-8 items-center justify-center rounded-full bg-muted text-xs font-medium">
-                  {project.creator.initials}
-                </div>
-                <span className="text-sm text-muted-foreground">
-                  Posted by {project.creator.name} • {project.createdAt}
-                </span>
-              </div>
-            </CardContent>
-          </Card>
-        ))}
-      </div>
+                  {/* Creator */}
+                  <div className="flex items-center gap-2 border-t border-border pt-4">
+                    <div className="flex h-8 w-8 items-center justify-center rounded-full bg-muted text-xs font-medium">
+                      {getInitials(creatorName)}
+                    </div>
+                    <span className="text-sm text-muted-foreground">
+                      {isOwner ? "Created by you" : `Posted by ${creatorName}`}{" "}
+                      • {formatDate(project.created_at)}
+                    </span>
+                  </div>
+                </CardContent>
+              </Card>
+            );
+          })}
+        </div>
+      )}
     </div>
   );
 }
