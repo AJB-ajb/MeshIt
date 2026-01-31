@@ -81,6 +81,11 @@ type ProjectFormState = {
   teamSize: string;
   experienceLevel: string;
   status: string;
+  // Hard filters for applicants
+  filterMaxDistance: string;
+  filterMinHours: string;
+  filterMaxHours: string;
+  filterLanguages: string;
 };
 
 const formatTimeline = (timeline: string) => {
@@ -146,6 +151,10 @@ export default function ProjectDetailPage() {
     teamSize: "3",
     experienceLevel: "any",
     status: "open",
+    filterMaxDistance: "",
+    filterMinHours: "",
+    filterMaxHours: "",
+    filterLanguages: "",
   });
 
   // Application state
@@ -195,6 +204,7 @@ export default function ProjectDetailPage() {
       setProject(data);
       const ownerCheck = user?.id === data.creator_id;
       setIsOwner(ownerCheck);
+      const hardFilters = data.hard_filters || {};
       setForm({
         title: data.title,
         description: data.description,
@@ -204,6 +214,12 @@ export default function ProjectDetailPage() {
         teamSize: data.team_size?.toString() || "3",
         experienceLevel: data.experience_level || "any",
         status: data.status || "open",
+        filterMaxDistance: hardFilters.max_distance_km?.toString() || "",
+        filterMinHours: hardFilters.min_hours?.toString() || "",
+        filterMaxHours: hardFilters.max_hours?.toString() || "",
+        filterLanguages: Array.isArray(hardFilters.languages)
+          ? hardFilters.languages.join(", ")
+          : "",
       });
 
       // Check if user has already applied (for non-owners)
@@ -302,6 +318,26 @@ export default function ProjectDetailPage() {
 
     const supabase = createClient();
 
+    // Build hard_filters object (only include set values)
+    const filterMaxDistance = Number(form.filterMaxDistance);
+    const filterMinHours = Number(form.filterMinHours);
+    const filterMaxHours = Number(form.filterMaxHours);
+    const filterLanguages = parseList(form.filterLanguages);
+
+    const hardFilters: Record<string, unknown> = {};
+    if (Number.isFinite(filterMaxDistance) && filterMaxDistance > 0) {
+      hardFilters.max_distance_km = filterMaxDistance;
+    }
+    if (Number.isFinite(filterMinHours) && filterMinHours > 0) {
+      hardFilters.min_hours = filterMinHours;
+    }
+    if (Number.isFinite(filterMaxHours) && filterMaxHours > 0) {
+      hardFilters.max_hours = filterMaxHours;
+    }
+    if (filterLanguages.length > 0) {
+      hardFilters.languages = filterLanguages;
+    }
+
     const { error: updateError } = await supabase
       .from("projects")
       .update({
@@ -313,6 +349,7 @@ export default function ProjectDetailPage() {
         team_size: Number(form.teamSize),
         experience_level: form.experienceLevel,
         status: form.status,
+        hard_filters: Object.keys(hardFilters).length > 0 ? hardFilters : null,
         updated_at: new Date().toISOString(),
       })
       .eq("id", projectId);
@@ -829,61 +866,111 @@ export default function ProjectDetailPage() {
 
               {/* Meta */}
               {isEditing ? (
-                <div className="grid gap-4 sm:grid-cols-2">
-                  <div className="space-y-2">
-                    <label className="text-sm font-medium">Timeline</label>
-                    <select
-                      value={form.timeline}
-                      onChange={(e) => handleChange("timeline", e.target.value)}
-                      className="flex h-10 w-full rounded-md border border-input bg-background px-3 py-2 text-sm"
-                    >
-                      <option value="weekend">This weekend</option>
-                      <option value="1_week">1 week</option>
-                      <option value="1_month">1 month</option>
-                      <option value="ongoing">Ongoing</option>
-                    </select>
+                <>
+                  <div className="grid gap-4 sm:grid-cols-2">
+                    <div className="space-y-2">
+                      <label className="text-sm font-medium">Timeline</label>
+                      <select
+                        value={form.timeline}
+                        onChange={(e) => handleChange("timeline", e.target.value)}
+                        className="flex h-10 w-full rounded-md border border-input bg-background px-3 py-2 text-sm"
+                      >
+                        <option value="weekend">This weekend</option>
+                        <option value="1_week">1 week</option>
+                        <option value="1_month">1 month</option>
+                        <option value="ongoing">Ongoing</option>
+                      </select>
+                    </div>
+                    <div className="space-y-2">
+                      <label className="text-sm font-medium">Commitment</label>
+                      <select
+                        value={form.commitmentHours}
+                        onChange={(e) =>
+                          handleChange("commitmentHours", e.target.value)
+                        }
+                        className="flex h-10 w-full rounded-md border border-input bg-background px-3 py-2 text-sm"
+                      >
+                        <option value="5">5 hrs/week</option>
+                        <option value="10">10 hrs/week</option>
+                        <option value="15">15 hrs/week</option>
+                        <option value="20">20+ hrs/week</option>
+                      </select>
+                    </div>
+                    <div className="space-y-2">
+                      <label className="text-sm font-medium">Team Size</label>
+                      <select
+                        value={form.teamSize}
+                        onChange={(e) => handleChange("teamSize", e.target.value)}
+                        className="flex h-10 w-full rounded-md border border-input bg-background px-3 py-2 text-sm"
+                      >
+                        <option value="2">2 people</option>
+                        <option value="3">3 people</option>
+                        <option value="4">4 people</option>
+                        <option value="5">5 people</option>
+                      </select>
+                    </div>
+                    <div className="space-y-2">
+                      <label className="text-sm font-medium">Status</label>
+                      <select
+                        value={form.status}
+                        onChange={(e) => handleChange("status", e.target.value)}
+                        className="flex h-10 w-full rounded-md border border-input bg-background px-3 py-2 text-sm"
+                      >
+                        <option value="open">Open</option>
+                        <option value="filled">Filled</option>
+                        <option value="closed">Closed</option>
+                      </select>
+                    </div>
                   </div>
-                  <div className="space-y-2">
-                    <label className="text-sm font-medium">Commitment</label>
-                    <select
-                      value={form.commitmentHours}
-                      onChange={(e) =>
-                        handleChange("commitmentHours", e.target.value)
-                      }
-                      className="flex h-10 w-full rounded-md border border-input bg-background px-3 py-2 text-sm"
-                    >
-                      <option value="5">5 hrs/week</option>
-                      <option value="10">10 hrs/week</option>
-                      <option value="15">15 hrs/week</option>
-                      <option value="20">20+ hrs/week</option>
-                    </select>
+
+                  {/* Applicant Filters */}
+                  <div className="border-t pt-4 mt-4">
+                    <h4 className="text-sm font-medium mb-3">Applicant Preferences</h4>
+                    <p className="text-xs text-muted-foreground mb-3">
+                      Applicants outside these preferences will rank lower in your matches.
+                    </p>
+                    <div className="grid gap-4 sm:grid-cols-2">
+                      <div className="space-y-2">
+                        <label className="text-sm font-medium">Max Distance (km)</label>
+                        <Input
+                          type="number"
+                          min="0"
+                          value={form.filterMaxDistance}
+                          onChange={(e) => handleChange("filterMaxDistance", e.target.value)}
+                          placeholder="e.g., 500"
+                        />
+                      </div>
+                      <div className="space-y-2">
+                        <label className="text-sm font-medium">Required Languages</label>
+                        <Input
+                          value={form.filterLanguages}
+                          onChange={(e) => handleChange("filterLanguages", e.target.value)}
+                          placeholder="e.g., en, de"
+                        />
+                      </div>
+                      <div className="space-y-2">
+                        <label className="text-sm font-medium">Min Availability (hrs/week)</label>
+                        <Input
+                          type="number"
+                          min="0"
+                          value={form.filterMinHours}
+                          onChange={(e) => handleChange("filterMinHours", e.target.value)}
+                          placeholder="e.g., 5"
+                        />
+                      </div>
+                      <div className="space-y-2">
+                        <label className="text-sm font-medium">Max Availability (hrs/week)</label>
+                        <Input
+                          type="number"
+                          min="0"
+                          value={form.filterMaxHours}
+                          onChange={(e) => handleChange("filterMaxHours", e.target.value)}
+                          placeholder="e.g., 20"
+                        />
+                      </div>
+                    </div>
                   </div>
-                  <div className="space-y-2">
-                    <label className="text-sm font-medium">Team Size</label>
-                    <select
-                      value={form.teamSize}
-                      onChange={(e) => handleChange("teamSize", e.target.value)}
-                      className="flex h-10 w-full rounded-md border border-input bg-background px-3 py-2 text-sm"
-                    >
-                      <option value="2">2 people</option>
-                      <option value="3">3 people</option>
-                      <option value="4">4 people</option>
-                      <option value="5">5 people</option>
-                    </select>
-                  </div>
-                  <div className="space-y-2">
-                    <label className="text-sm font-medium">Status</label>
-                    <select
-                      value={form.status}
-                      onChange={(e) => handleChange("status", e.target.value)}
-                      className="flex h-10 w-full rounded-md border border-input bg-background px-3 py-2 text-sm"
-                    >
-                      <option value="open">Open</option>
-                      <option value="filled">Filled</option>
-                      <option value="closed">Closed</option>
-                    </select>
-                  </div>
-                </div>
+                </>
               ) : (
                 <div className="grid gap-4 sm:grid-cols-3">
                   <div className="rounded-lg border border-border p-4">

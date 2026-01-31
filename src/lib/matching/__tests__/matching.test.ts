@@ -141,7 +141,7 @@ describe("matchProfileToProjects", () => {
     vi.mocked(createClient).mockResolvedValue(mockClient as any);
     
     await expect(matchProfileToProjects("user-1")).rejects.toThrow(
-      "Profile embedding not found"
+      "Could not generate profile embedding"
     );
   });
 
@@ -306,7 +306,7 @@ describe("matchProjectToProfiles", () => {
     vi.mocked(createClient).mockResolvedValue(mockClient as any);
     
     await expect(matchProjectToProfiles("proj-1")).rejects.toThrow(
-      "Project embedding not found"
+      "Could not generate project embedding"
     );
   });
 });
@@ -338,6 +338,7 @@ describe("createMatchRecords", () => {
           experience_level: null,
           commitment_hours: null,
           timeline: null,
+          hard_filters: null,
           embedding: null,
           status: "open",
           created_at: "",
@@ -345,6 +346,7 @@ describe("createMatchRecords", () => {
           expires_at: "",
         },
         score: 0.85,
+        scoreBreakdown: null,
       },
     ]);
     
@@ -354,6 +356,7 @@ describe("createMatchRecords", () => {
           user_id: "user-1",
           project_id: "proj-1",
           similarity_score: 0.85,
+          score_breakdown: null,
           status: "pending",
         },
       ],
@@ -385,6 +388,7 @@ describe("createMatchRecords", () => {
           experience_level: null,
           commitment_hours: null,
           timeline: null,
+          hard_filters: null,
           embedding: null,
           status: "open",
           created_at: "",
@@ -392,6 +396,7 @@ describe("createMatchRecords", () => {
           expires_at: "",
         },
         score: 0.85,
+        scoreBreakdown: null,
         matchId: "existing-match-id", // Already exists
       },
     ]);
@@ -439,19 +444,25 @@ describe("createMatchRecordsForProject", () => {
           headline: null,
           bio: null,
           location: null,
+          location_lat: null,
+          location_lng: null,
           experience_level: null,
           collaboration_style: null,
+          remote_preference: null,
           availability_hours: null,
           skills: [],
           interests: null,
+          languages: null,
           portfolio_url: null,
           github_url: null,
           project_preferences: {},
+          hard_filters: null,
           embedding: null,
           created_at: "",
           updated_at: "",
         },
         score: 0.9,
+        scoreBreakdown: null,
       },
     ]);
     
@@ -461,6 +472,7 @@ describe("createMatchRecordsForProject", () => {
           project_id: "proj-1",
           user_id: "user-1",
           similarity_score: 0.9,
+          score_breakdown: null,
           status: "pending",
         },
       ],

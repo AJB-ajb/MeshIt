@@ -1,7 +1,91 @@
 /**
- * Vector similarity calculations for matching
+ * Vector similarity and distance calculations for matching
  * Pure functions that can be tested without database dependencies
  */
+
+// ============================================
+// GEOGRAPHIC DISTANCE
+// ============================================
+
+const EARTH_RADIUS_KM = 6371.0;
+
+/**
+ * Converts degrees to radians
+ */
+function toRadians(degrees: number): number {
+  return degrees * (Math.PI / 180);
+}
+
+/**
+ * Calculates the distance in kilometers between two geographic coordinates
+ * using the Haversine formula.
+ * 
+ * @param lat1 Latitude of first point
+ * @param lng1 Longitude of first point
+ * @param lat2 Latitude of second point
+ * @param lng2 Longitude of second point
+ * @returns Distance in kilometers, or null if any coordinate is null
+ */
+export function haversineDistance(
+  lat1: number | null,
+  lng1: number | null,
+  lat2: number | null,
+  lng2: number | null
+): number | null {
+  if (lat1 === null || lng1 === null || lat2 === null || lng2 === null) {
+    return null;
+  }
+
+  const lat1Rad = toRadians(lat1);
+  const lat2Rad = toRadians(lat2);
+  const deltaLat = toRadians(lat2 - lat1);
+  const deltaLng = toRadians(lng2 - lng1);
+
+  const a =
+    Math.sin(deltaLat / 2) * Math.sin(deltaLat / 2) +
+    Math.cos(lat1Rad) * Math.cos(lat2Rad) *
+    Math.sin(deltaLng / 2) * Math.sin(deltaLng / 2);
+
+  const c = 2 * Math.atan2(Math.sqrt(a), Math.sqrt(1 - a));
+
+  return EARTH_RADIUS_KM * c;
+}
+
+/**
+ * Calculates a location match score based on distance and remote preferences.
+ * 
+ * @param distanceKm Distance in kilometers between the two parties
+ * @param remotePreference1 First party's remote preference (0-100)
+ * @param remotePreference2 Second party's remote preference (0-100)
+ * @param maxReferenceDistance Reference distance for normalization (default: 5000km)
+ * @returns Score between 0 and 1, where 1 is perfect match
+ */
+export function calculateLocationScore(
+  distanceKm: number | null,
+  remotePreference1: number | null,
+  remotePreference2: number | null,
+  maxReferenceDistance: number = 5000
+): number {
+  // No distance data = no penalty
+  if (distanceKm === null) {
+    return 1.0;
+  }
+
+  // Calculate remote factor (0-1, higher = distance matters less)
+  const remoteFactor = (
+    (remotePreference1 ?? 50) + (remotePreference2 ?? 50)
+  ) / 200;
+
+  // Effective distance decreases as remote preference increases
+  const effectiveDistance = distanceKm * (1 - remoteFactor);
+
+  // Score based on effective distance
+  return Math.max(0, 1 - effectiveDistance / maxReferenceDistance);
+}
+
+// ============================================
+// VECTOR SIMILARITY
+// ============================================
 
 /**
  * Calculates cosine similarity between two vectors

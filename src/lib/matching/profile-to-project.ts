@@ -104,6 +104,7 @@ export async function matchProfileToProjects(
         experience_level: row.experience_level,
         commitment_hours: row.commitment_hours,
         timeline: row.timeline,
+        hard_filters: row.hard_filters || null,
         embedding: null, // Don't return embedding in response
         status: "open",
         created_at: row.created_at,

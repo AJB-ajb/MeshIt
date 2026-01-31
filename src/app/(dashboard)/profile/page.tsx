@@ -22,11 +22,15 @@ type ProfileFormState = {
   headline: string;
   bio: string;
   location: string;
+  locationLat: string;
+  locationLng: string;
   experienceLevel: string;
   collaborationStyle: string;
+  remotePreference: string;
   availabilityHours: string;
   skills: string;
   interests: string;
+  languages: string;
   projectTypes: string;
   preferredRoles: string;
   preferredStack: string;
@@ -34,6 +38,11 @@ type ProfileFormState = {
   timelinePreference: string;
   portfolioUrl: string;
   githubUrl: string;
+  // Hard filters
+  filterMaxDistance: string;
+  filterMinHours: string;
+  filterMaxHours: string;
+  filterLanguages: string;
 };
 
 const defaultFormState: ProfileFormState = {
@@ -41,11 +50,15 @@ const defaultFormState: ProfileFormState = {
   headline: "",
   bio: "",
   location: "",
+  locationLat: "",
+  locationLng: "",
   experienceLevel: "intermediate",
   collaborationStyle: "async",
+  remotePreference: "50",
   availabilityHours: "",
   skills: "",
   interests: "",
+  languages: "",
   projectTypes: "",
   preferredRoles: "",
   preferredStack: "",
@@ -53,6 +66,11 @@ const defaultFormState: ProfileFormState = {
   timelinePreference: "1_month",
   portfolioUrl: "",
   githubUrl: "",
+  // Hard filters
+  filterMaxDistance: "",
+  filterMinHours: "",
+  filterMaxHours: "",
+  filterLanguages: "",
 };
 
 const parseList = (value: string) =>
@@ -92,17 +110,24 @@ export default function ProfilePage() {
 
         if (data) {
           const preferences = data.project_preferences ?? {};
+          const hardFilters = data.hard_filters ?? {};
           setForm({
             fullName: data.full_name ?? "",
             headline: data.headline ?? "",
             bio: data.bio ?? "",
             location: data.location ?? "",
+            locationLat: data.location_lat?.toString() ?? "",
+            locationLng: data.location_lng?.toString() ?? "",
             experienceLevel: data.experience_level ?? "intermediate",
             collaborationStyle: data.collaboration_style ?? "async",
+            remotePreference: data.remote_preference?.toString() ?? "50",
             availabilityHours: data.availability_hours?.toString() ?? "",
             skills: Array.isArray(data.skills) ? data.skills.join(", ") : "",
             interests: Array.isArray(data.interests)
               ? data.interests.join(", ")
+              : "",
+            languages: Array.isArray(data.languages)
+              ? data.languages.join(", ")
               : "",
             projectTypes: Array.isArray(preferences.project_types)
               ? preferences.project_types.join(", ")
@@ -117,6 +142,13 @@ export default function ProfilePage() {
             timelinePreference: preferences.timeline_preference ?? "1_month",
             portfolioUrl: data.portfolio_url ?? "",
             githubUrl: data.github_url ?? "",
+            // Hard filters
+            filterMaxDistance: hardFilters.max_distance_km?.toString() ?? "",
+            filterMinHours: hardFilters.min_hours?.toString() ?? "",
+            filterMaxHours: hardFilters.max_hours?.toString() ?? "",
+            filterLanguages: Array.isArray(hardFilters.languages)
+              ? hardFilters.languages.join(", ")
+              : "",
           });
         }
       })
@@ -152,6 +184,29 @@ export default function ProfilePage() {
     }
 
     const availabilityHours = Number(form.availabilityHours);
+    const locationLat = Number(form.locationLat);
+    const locationLng = Number(form.locationLng);
+    const remotePreference = Number(form.remotePreference);
+    const filterMaxDistance = Number(form.filterMaxDistance);
+    const filterMinHours = Number(form.filterMinHours);
+    const filterMaxHours = Number(form.filterMaxHours);
+    const filterLanguages = parseList(form.filterLanguages);
+
+    // Build hard_filters object (only include set values)
+    const hardFilters: Record<string, unknown> = {};
+    if (Number.isFinite(filterMaxDistance) && filterMaxDistance > 0) {
+      hardFilters.max_distance_km = filterMaxDistance;
+    }
+    if (Number.isFinite(filterMinHours) && filterMinHours > 0) {
+      hardFilters.min_hours = filterMinHours;
+    }
+    if (Number.isFinite(filterMaxHours) && filterMaxHours > 0) {
+      hardFilters.max_hours = filterMaxHours;
+    }
+    if (filterLanguages.length > 0) {
+      hardFilters.languages = filterLanguages;
+    }
+
     const { error: upsertError } = await supabase
       .from("profiles")
       .upsert(
@@ -161,13 +216,19 @@ export default function ProfilePage() {
           headline: form.headline.trim(),
           bio: form.bio.trim(),
           location: form.location.trim(),
+          location_lat: Number.isFinite(locationLat) ? locationLat : null,
+          location_lng: Number.isFinite(locationLng) ? locationLng : null,
           experience_level: form.experienceLevel,
           collaboration_style: form.collaborationStyle,
+          remote_preference: Number.isFinite(remotePreference)
+            ? Math.min(100, Math.max(0, remotePreference))
+            : null,
           availability_hours: Number.isFinite(availabilityHours)
             ? availabilityHours
             : null,
           skills: parseList(form.skills),
           interests: parseList(form.interests),
+          languages: parseList(form.languages),
           portfolio_url: form.portfolioUrl.trim(),
           github_url: form.githubUrl.trim(),
           project_preferences: {
@@ -177,6 +238,7 @@ export default function ProfilePage() {
             commitment_level: form.commitmentLevel,
             timeline_preference: form.timelinePreference,
           },
+          hard_filters: Object.keys(hardFilters).length > 0 ? hardFilters : null,
           updated_at: new Date().toISOString(),
         },
         { onConflict: "user_id" }
@@ -298,7 +360,7 @@ export default function ProfilePage() {
                     id="location"
                     value={form.location}
                     onChange={(e) => handleChange("location", e.target.value)}
-                    placeholder="e.g., Lagos, Remote"
+                    placeholder="e.g., Berlin, Germany"
                   />
                 </div>
                 <div className="space-y-2">
@@ -317,6 +379,72 @@ export default function ProfilePage() {
                     placeholder="e.g., 10"
                   />
                 </div>
+              </div>
+
+              <div className="grid gap-4 md:grid-cols-2">
+                <div className="space-y-2">
+                  <label htmlFor="locationLat" className="text-sm font-medium">
+                    Latitude (for matching)
+                  </label>
+                  <Input
+                    id="locationLat"
+                    type="number"
+                    step="any"
+                    value={form.locationLat}
+                    onChange={(e) => handleChange("locationLat", e.target.value)}
+                    placeholder="e.g., 52.52"
+                  />
+                </div>
+                <div className="space-y-2">
+                  <label htmlFor="locationLng" className="text-sm font-medium">
+                    Longitude (for matching)
+                  </label>
+                  <Input
+                    id="locationLng"
+                    type="number"
+                    step="any"
+                    value={form.locationLng}
+                    onChange={(e) => handleChange("locationLng", e.target.value)}
+                    placeholder="e.g., 13.405"
+                  />
+                </div>
+              </div>
+
+              <div className="space-y-2">
+                <label htmlFor="remotePreference" className="text-sm font-medium">
+                  Remote preference: {form.remotePreference}%
+                </label>
+                <div className="flex items-center gap-4">
+                  <span className="text-xs text-muted-foreground">On-site</span>
+                  <input
+                    id="remotePreference"
+                    type="range"
+                    min="0"
+                    max="100"
+                    value={form.remotePreference}
+                    onChange={(e) => handleChange("remotePreference", e.target.value)}
+                    className="flex-1 h-2 bg-muted rounded-lg appearance-none cursor-pointer"
+                  />
+                  <span className="text-xs text-muted-foreground">Remote</span>
+                </div>
+                <p className="text-xs text-muted-foreground">
+                  0% = prefer fully on-site, 100% = prefer fully remote
+                </p>
+              </div>
+
+              <div className="space-y-2">
+                <label htmlFor="languages" className="text-sm font-medium">
+                  Spoken languages (comma-separated)
+                </label>
+                <Input
+                  id="languages"
+                  value={form.languages}
+                  onChange={(e) => handleChange("languages", e.target.value)}
+                  placeholder="e.g., en, de, es"
+                />
+                <p className="text-xs text-muted-foreground">
+                  Use ISO codes: en (English), de (German), es (Spanish), fr (French), etc.
+                </p>
               </div>
 
               <div className="grid gap-4 md:grid-cols-2">
@@ -518,6 +646,79 @@ export default function ProfilePage() {
             </CardContent>
           </Card>
 
+          <Card>
+            <CardHeader>
+              <CardTitle>Match Filters</CardTitle>
+              <CardDescription>
+                Set preferences for which projects rank higher in your matches.
+                Projects outside these preferences will still appear but with lower scores.
+              </CardDescription>
+            </CardHeader>
+            <CardContent className="space-y-5">
+              <div className="grid gap-4 md:grid-cols-2">
+                <div className="space-y-2">
+                  <label htmlFor="filterMaxDistance" className="text-sm font-medium">
+                    Max distance (km)
+                  </label>
+                  <Input
+                    id="filterMaxDistance"
+                    type="number"
+                    min="0"
+                    value={form.filterMaxDistance}
+                    onChange={(e) => handleChange("filterMaxDistance", e.target.value)}
+                    placeholder="e.g., 500"
+                  />
+                  <p className="text-xs text-muted-foreground">
+                    Leave empty for no distance preference
+                  </p>
+                </div>
+                <div className="space-y-2">
+                  <label htmlFor="filterLanguages" className="text-sm font-medium">
+                    Required languages
+                  </label>
+                  <Input
+                    id="filterLanguages"
+                    value={form.filterLanguages}
+                    onChange={(e) => handleChange("filterLanguages", e.target.value)}
+                    placeholder="e.g., en, de"
+                  />
+                  <p className="text-xs text-muted-foreground">
+                    Project owners must speak these languages
+                  </p>
+                </div>
+              </div>
+
+              <div className="grid gap-4 md:grid-cols-2">
+                <div className="space-y-2">
+                  <label htmlFor="filterMinHours" className="text-sm font-medium">
+                    Min hours/week
+                  </label>
+                  <Input
+                    id="filterMinHours"
+                    type="number"
+                    min="0"
+                    value={form.filterMinHours}
+                    onChange={(e) => handleChange("filterMinHours", e.target.value)}
+                    placeholder="e.g., 5"
+                  />
+                </div>
+                <div className="space-y-2">
+                  <label htmlFor="filterMaxHours" className="text-sm font-medium">
+                    Max hours/week
+                  </label>
+                  <Input
+                    id="filterMaxHours"
+                    type="number"
+                    min="0"
+                    value={form.filterMaxHours}
+                    onChange={(e) => handleChange("filterMaxHours", e.target.value)}
+                    placeholder="e.g., 20"
+                  />
+                </div>
+              </div>
+            </CardContent>
+          </Card>
+
           <div className="flex flex-col gap-3 sm:flex-row sm:justify-end">
             <Button type="submit" disabled={isSaving}>
               {isSaving ? "Saving..." : "Save changes"}
@@ -564,6 +765,11 @@ export default function ProfilePage() {
                   <p className="text-sm text-muted-foreground">Location</p>
                   <p className="font-medium">
                     {form.location || "Not provided"}
+                    {form.locationLat && form.locationLng && (
+                      <span className="ml-2 text-xs text-muted-foreground">
+                        ({form.locationLat}, {form.locationLng})
+                      </span>
+                    )}
                   </p>
                 </div>
                 <div>
@@ -572,6 +778,25 @@ export default function ProfilePage() {
                     {form.availabilityHours
                       ? `${form.availabilityHours} hrs/week`
                       : "Not provided"}
+                  </p>
+                </div>
+              </div>
+
+              <div className="grid gap-4 md:grid-cols-2">
+                <div>
+                  <p className="text-sm text-muted-foreground">
+                    Remote preference
+                  </p>
+                  <p className="font-medium">
+                    {form.remotePreference}% remote
+                  </p>
+                </div>
+                <div>
+                  <p className="text-sm text-muted-foreground">
+                    Spoken languages
+                  </p>
+                  <p className="font-medium">
+                    {form.languages || "Not provided"}
                   </p>
                 </div>
               </div>
@@ -712,6 +937,39 @@ export default function ProfilePage() {
                         : form.timelinePreference === "1_month"
                           ? "1 month"
                           : "Ongoing"}
+                  </p>
+                </div>
+              </div>
+            </CardContent>
+          </Card>
+
+          <Card>
+            <CardHeader>
+              <CardTitle>Match Filters</CardTitle>
+            </CardHeader>
+            <CardContent className="space-y-4">
+              <div className="grid gap-4 md:grid-cols-2">
+                <div>
+                  <p className="text-sm text-muted-foreground">Max distance</p>
+                  <p className="font-medium">
+                    {form.filterMaxDistance ? `${form.filterMaxDistance} km` : "No limit"}
+                  </p>
+                </div>
+                <div>
+                  <p className="text-sm text-muted-foreground">Required languages</p>
+                  <p className="font-medium">
+                    {form.filterLanguages || "Any"}
+                  </p>
+                </div>
+              </div>
+
+              <div className="grid gap-4 md:grid-cols-2">
+                <div>
+                  <p className="text-sm text-muted-foreground">Hours range</p>
+                  <p className="font-medium">
+                    {form.filterMinHours || form.filterMaxHours
+                      ? `${form.filterMinHours || "0"} - ${form.filterMaxHours || "∞"} hrs/week`
+                      : "Any"}
                   </p>
                 </div>
               </div>

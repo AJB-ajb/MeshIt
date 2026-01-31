@@ -76,6 +76,27 @@ export function MatchBreakdown({
           : "Time commitment not specified",
       score: breakdown.commitment_match,
     },
+    // New dimensions - only show if available (for backwards compatibility)
+    ...(breakdown.location_match !== undefined
+      ? [
+          {
+            key: "location_match" as const,
+            label: "Location Match",
+            description: "Geographic proximity weighted by remote preferences",
+            score: breakdown.location_match,
+          },
+        ]
+      : []),
+    ...(breakdown.filter_match !== undefined
+      ? [
+          {
+            key: "filter_match" as const,
+            label: "Filter Compliance",
+            description: "How well you match the specified preferences",
+            score: breakdown.filter_match,
+          },
+        ]
+      : []),
   ];
 
   return (

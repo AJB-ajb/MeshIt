@@ -1,6 +1,8 @@
 /**
  * TypeScript types for Supabase database tables
  * These types match the database schema defined in migrations
+ * 
+ * See docs/DATA_MODEL.md for full schema documentation
  */
 
 export type Json =
@@ -34,6 +36,22 @@ export interface Database {
 }
 
 // ============================================
+// SHARED TYPES
+// ============================================
+
+/**
+ * Hard filters for match scoring
+ * Used by both profiles (to filter projects) and projects (to filter applicants)
+ * Matches violating filters receive penalized scores but still appear in results
+ */
+export interface HardFilters {
+  max_distance_km?: number;  // Maximum distance in kilometers
+  min_hours?: number;        // Minimum commitment hours/week
+  max_hours?: number;        // Maximum commitment hours/week
+  languages?: string[];      // Required spoken languages (ISO codes)
+}
+
+// ============================================
 // PROFILE TYPES
 // ============================================
 
@@ -42,16 +60,28 @@ export interface Profile {
   full_name: string | null;
   headline: string | null;
   bio: string | null;
-  location: string | null;
+  // Location fields
+  location: string | null;           // Legacy: human-readable location for display
+  location_lat: number | null;       // Latitude for distance-based matching
+  location_lng: number | null;       // Longitude for distance-based matching
+  // Experience and availability
   experience_level: string | null;
-  collaboration_style: string | null;
+  collaboration_style: string | null; // Legacy: kept for UI (async, sync, hybrid)
+  remote_preference: number | null;   // 0-100: 0=on-site, 100=fully remote
   availability_hours: number | null;
+  // Skills and interests
   skills: string[] | null;
   interests: string[] | null;
+  languages: string[] | null;         // Spoken languages (ISO codes: en, de, es)
+  // Links
   portfolio_url: string | null;
   github_url: string | null;
+  // Preferences and filters
   project_preferences: Json;
-  embedding: number[] | null; // vector(1536) stored as array
+  hard_filters: HardFilters | null;
+  // Matching
+  embedding: number[] | null;         // vector(1536) stored as array
+  // Timestamps
   created_at: string;
   updated_at: string;
 }
@@ -62,14 +92,19 @@ export interface ProfileInsert {
   headline?: string | null;
   bio?: string | null;
   location?: string | null;
+  location_lat?: number | null;
+  location_lng?: number | null;
   experience_level?: string | null;
   collaboration_style?: string | null;
+  remote_preference?: number | null;
   availability_hours?: number | null;
   skills?: string[] | null;
   interests?: string[] | null;
+  languages?: string[] | null;
   portfolio_url?: string | null;
   github_url?: string | null;
   project_preferences?: Json;
+  hard_filters?: HardFilters | null;
   embedding?: number[] | null;
   created_at?: string;
   updated_at?: string;
@@ -81,14 +116,19 @@ export interface ProfileUpdate {
   headline?: string | null;
   bio?: string | null;
   location?: string | null;
+  location_lat?: number | null;
+  location_lng?: number | null;
   experience_level?: string | null;
   collaboration_style?: string | null;
+  remote_preference?: number | null;
   availability_hours?: number | null;
   skills?: string[] | null;
   interests?: string[] | null;
+  languages?: string[] | null;
   portfolio_url?: string | null;
   github_url?: string | null;
   project_preferences?: Json;
+  hard_filters?: HardFilters | null;
   embedding?: number[] | null;
   created_at?: string;
   updated_at?: string;
@@ -108,7 +148,8 @@ export interface Project {
   experience_level: string | null;
   commitment_hours: number | null;
   timeline: string | null;
-  embedding: number[] | null; // vector(1536) stored as array
+  hard_filters: HardFilters | null;   // Filters for scoring applicants
+  embedding: number[] | null;         // vector(1536) stored as array
   status: "open" | "closed" | "filled" | "expired";
   created_at: string;
   updated_at: string;
@@ -125,6 +166,7 @@ export interface ProjectInsert {
   experience_level?: string | null;
   commitment_hours?: number | null;
   timeline?: string | null;
+  hard_filters?: HardFilters | null;
   embedding?: number[] | null;
   status?: "open" | "closed" | "filled" | "expired";
   created_at?: string;
@@ -142,6 +184,7 @@ export interface ProjectUpdate {
   experience_level?: string | null;
   commitment_hours?: number | null;
   timeline?: string | null;
+  hard_filters?: HardFilters | null;
   embedding?: number[] | null;
   status?: "open" | "closed" | "filled" | "expired";
   created_at?: string;
@@ -158,6 +201,8 @@ export interface ScoreBreakdown {
   skills_overlap: number;   // % of required skills user has (0-1)
   experience_match: number; // experience level compatibility (0-1)
   commitment_match: number; // hours alignment (0-1)
+  location_match: number;   // location + remote preference compatibility (0-1)
+  filter_match: number;     // hard filter compliance score (0-1)
 }
 
 export interface Match {
