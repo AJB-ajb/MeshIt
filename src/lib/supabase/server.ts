@@ -22,10 +22,21 @@ export async function createClient() {
           return cookieStore.get(name)?.value;
         },
         set(name, value, options) {
-          cookieStore.set({ name, value, ...options });
+          try {
+            cookieStore.set({ name, value, ...options });
+          } catch {
+            // Cookies can only be modified in Server Actions or Route Handlers
+            // Silently fail in read-only contexts (e.g., during page rendering)
+            // The cookie will be set on the next mutation request
+          }
         },
         remove(name, options) {
-          cookieStore.set({ name, value: "", ...options });
+          try {
+            cookieStore.set({ name, value: "", ...options });
+          } catch {
+            // Cookies can only be modified in Server Actions or Route Handlers
+            // Silently fail in read-only contexts
+          }
         },
       },
     }
