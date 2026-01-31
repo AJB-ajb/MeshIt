@@ -169,10 +169,10 @@ export function createPresenceChannel(
       onPresenceSync(state);
     })
     .on("presence", { event: "join" }, ({ key, newPresences }) => {
-      onPresenceJoin?.(key, newPresences as PresenceState[]);
+      onPresenceJoin?.(key, newPresences as unknown as PresenceState[]);
     })
     .on("presence", { event: "leave" }, ({ key, leftPresences }) => {
-      onPresenceLeave?.(key, leftPresences as PresenceState[]);
+      onPresenceLeave?.(key, leftPresences as unknown as PresenceState[]);
     })
     .subscribe(async (status) => {
       if (status === "SUBSCRIBED") {

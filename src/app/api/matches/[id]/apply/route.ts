@@ -85,6 +85,7 @@ export async function PATCH(
       profile: profile,
       score: updatedMatch.similarity_score,
       explanation: updatedMatch.explanation,
+      score_breakdown: updatedMatch.score_breakdown,
       status: updatedMatch.status,
       created_at: updatedMatch.created_at,
     };
