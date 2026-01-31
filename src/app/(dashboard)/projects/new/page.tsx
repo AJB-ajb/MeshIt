@@ -3,7 +3,7 @@
 import { useState } from "react";
 import { useRouter } from "next/navigation";
 import Link from "next/link";
-import { ArrowLeft, Mic, Loader2 } from "lucide-react";
+import { ArrowLeft, Mic, Loader2, Sparkles, FileText, CheckCircle } from "lucide-react";
 
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
@@ -15,6 +15,8 @@ import {
   CardTitle,
 } from "@/components/ui/card";
 import { createClient } from "@/lib/supabase/client";
+
+type InputMode = "form" | "ai";
 
 type ProjectFormState = {
   title: string;
@@ -47,9 +49,64 @@ export default function NewProjectPage() {
   const [form, setForm] = useState<ProjectFormState>(defaultFormState);
   const [isSaving, setIsSaving] = useState(false);
   const [error, setError] = useState<string | null>(null);
+  const [inputMode, setInputMode] = useState<InputMode>("form");
+  const [aiText, setAiText] = useState("");
+  const [isExtracting, setIsExtracting] = useState(false);
+  const [extractionSuccess, setExtractionSuccess] = useState(false);
 
   const handleChange = (field: keyof ProjectFormState, value: string) => {
     setForm((prev) => ({ ...prev, [field]: value }));
+  };
+
+  const handleAiExtract = async () => {
+    if (!aiText.trim()) {
+      setError("Please paste some text to extract project information from.");
+      return;
+    }
+
+    setError(null);
+    setIsExtracting(true);
+    setExtractionSuccess(false);
+
+    try {
+      const response = await fetch("/api/extract/project", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ text: aiText }),
+      });
+
+      const data = await response.json();
+
+      if (!response.ok) {
+        throw new Error(data.error || "Failed to extract project");
+      }
+
+      const project = data.project;
+
+      // Map extracted data to form state
+      setForm({
+        title: project.title || form.title,
+        description: project.description || form.description,
+        requiredSkills: Array.isArray(project.required_skills)
+          ? project.required_skills.join(", ")
+          : form.requiredSkills,
+        timeline: project.timeline || form.timeline,
+        commitmentHours: project.commitment_hours?.toString() || form.commitmentHours,
+        teamSize: project.team_size?.toString() || form.teamSize,
+        experienceLevel: project.experience_level || form.experienceLevel,
+      });
+
+      setExtractionSuccess(true);
+      // Switch to form mode to review extracted data
+      setTimeout(() => {
+        setInputMode("form");
+        setExtractionSuccess(false);
+      }, 1500);
+    } catch (err) {
+      setError(err instanceof Error ? err.message : "Failed to extract project");
+    } finally {
+      setIsExtracting(false);
+    }
   };
 
   const handleSubmit = async (event: React.FormEvent<HTMLFormElement>) => {
@@ -174,7 +231,107 @@ export default function NewProjectPage() {
         </p>
       )}
 
+      {/* Input Mode Toggle */}
+      <div className="flex items-center justify-center gap-2 rounded-lg border border-border bg-muted/30 p-1">
+        <button
+          type="button"
+          onClick={() => setInputMode("form")}
+          className={`flex items-center gap-2 rounded-md px-4 py-2 text-sm font-medium transition-colors ${
+            inputMode === "form"
+              ? "bg-background text-foreground shadow-sm"
+              : "text-muted-foreground hover:text-foreground"
+          }`}
+        >
+          <FileText className="h-4 w-4" />
+          Fill Form
+        </button>
+        <button
+          type="button"
+          onClick={() => setInputMode("ai")}
+          className={`flex items-center gap-2 rounded-md px-4 py-2 text-sm font-medium transition-colors ${
+            inputMode === "ai"
+              ? "bg-background text-foreground shadow-sm"
+              : "text-muted-foreground hover:text-foreground"
+          }`}
+        >
+          <Sparkles className="h-4 w-4" />
+          AI Extract
+        </button>
+      </div>
+
+      {/* AI Text Input Mode */}
+      {inputMode === "ai" && (
+        <Card className="border-primary/20 bg-primary/5">
+          <CardHeader>
+            <CardTitle className="flex items-center gap-2">
+              <Sparkles className="h-5 w-5 text-primary" />
+              AI Project Extraction
+            </CardTitle>
+            <CardDescription>
+              Paste your project description from Slack, Discord, a GitHub README, or any text. 
+              Our AI will automatically extract project details.
+            </CardDescription>
+          </CardHeader>
+          <CardContent className="space-y-4">
+            <textarea
+              rows={12}
+              value={aiText}
+              onChange={(e) => setAiText(e.target.value)}
+              className="flex w-full rounded-md border border-input bg-background px-3 py-2 text-sm ring-offset-background placeholder:text-muted-foreground focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring focus-visible:ring-offset-2"
+              placeholder={`Paste your project text here...
+
+Example:
+Hey everyone! Looking for 2-3 devs to join my hackathon project this weekend 🚀
+
+Building an AI-powered recipe generator that suggests meals based on what's in your fridge. 
+
+Tech stack: React, TypeScript, OpenAI API, Supabase
+Need: Frontend dev + someone with AI/ML experience
+Commitment: ~10 hrs over the weekend
+
+DM if interested!`}
+            />
+            <div className="flex gap-3">
+              <Button
+                type="button"
+                onClick={handleAiExtract}
+                disabled={isExtracting || !aiText.trim()}
+                className="flex-1"
+              >
+                {isExtracting ? (
+                  <>
+                    <Loader2 className="h-4 w-4 animate-spin" />
+                    Extracting...
+                  </>
+                ) : extractionSuccess ? (
+                  <>
+                    <CheckCircle className="h-4 w-4" />
+                    Extracted!
+                  </>
+                ) : (
+                  <>
+                    <Sparkles className="h-4 w-4" />
+                    Extract Project Details
+                  </>
+                )}
+              </Button>
+              <Button
+                type="button"
+                variant="outline"
+                onClick={() => setInputMode("form")}
+              >
+                Switch to Form
+              </Button>
+            </div>
+            <p className="text-xs text-muted-foreground">
+              After extraction, you&apos;ll be able to review and edit the extracted information before creating your project.
+            </p>
+          </CardContent>
+        </Card>
+      )}
+
       {/* Form */}
+      {inputMode === "form" && (
       <form onSubmit={handleSubmit}>
         <Card>
           <CardHeader>
@@ -318,7 +475,7 @@ Example: Building a Minecraft-style collaborative IDE, need 2-3 people with WebG
 
             {/* Submit */}
             <div className="flex gap-4 pt-4">
-              <Button type="submit" className="flex-1" disabled={isSaving}>
+              <Button type="submit" className="flex-1" disabled={isSaving || isExtracting}>
                 {isSaving ? (
                   <>
                     <Loader2 className="h-4 w-4 animate-spin" />
@@ -335,11 +492,14 @@ Example: Building a Minecraft-style collaborative IDE, need 2-3 people with WebG
           </CardContent>
         </Card>
       </form>
+      )}
 
       {/* Info */}
       <p className="text-center text-sm text-muted-foreground">
-        After creating your project, our AI will immediately start finding
-        matching collaborators based on your description.
+        {inputMode === "ai" 
+          ? "Paste your project description and let AI extract the details automatically."
+          : "After creating your project, our AI will immediately start finding matching collaborators based on your description."
+        }
       </p>
     </div>
   );

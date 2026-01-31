@@ -2,6 +2,7 @@
 
 import { Suspense, useEffect, useMemo, useState } from "react";
 import { useRouter, useSearchParams } from "next/navigation";
+import { Sparkles, FileText, Loader2, CheckCircle } from "lucide-react";
 
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
@@ -14,6 +15,8 @@ import {
 } from "@/components/ui/card";
 import { Logo } from "@/components/layout/logo";
 import { createClient } from "@/lib/supabase/client";
+
+type InputMode = "form" | "ai";
 
 type ProfileFormState = {
   fullName: string;
@@ -66,6 +69,10 @@ function DeveloperOnboardingContent() {
   const [isLoading, setIsLoading] = useState(true);
   const [isSaving, setIsSaving] = useState(false);
   const [error, setError] = useState<string | null>(null);
+  const [inputMode, setInputMode] = useState<InputMode>("form");
+  const [aiText, setAiText] = useState("");
+  const [isExtracting, setIsExtracting] = useState(false);
+  const [extractionSuccess, setExtractionSuccess] = useState(false);
 
   const next = useMemo(() => {
     const value = searchParams.get("next") ?? "";
@@ -129,6 +136,70 @@ function DeveloperOnboardingContent() {
 
   const handleChange = (field: keyof ProfileFormState, value: string) => {
     setForm((prev) => ({ ...prev, [field]: value }));
+  };
+
+  const handleAiExtract = async () => {
+    if (!aiText.trim()) {
+      setError("Please paste some text to extract profile information from.");
+      return;
+    }
+
+    setError(null);
+    setIsExtracting(true);
+    setExtractionSuccess(false);
+
+    try {
+      const response = await fetch("/api/extract/profile", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ text: aiText }),
+      });
+
+      const data = await response.json();
+
+      if (!response.ok) {
+        throw new Error(data.error || "Failed to extract profile");
+      }
+
+      const profile = data.profile;
+
+      // Map extracted data to form state
+      setForm({
+        fullName: profile.full_name || form.fullName,
+        headline: profile.headline || form.headline,
+        bio: profile.bio || form.bio,
+        location: profile.location || form.location,
+        experienceLevel: profile.experience_level || form.experienceLevel,
+        collaborationStyle: profile.collaboration_style || form.collaborationStyle,
+        availabilityHours: profile.availability_hours?.toString() || form.availabilityHours,
+        skills: Array.isArray(profile.skills) ? profile.skills.join(", ") : form.skills,
+        interests: Array.isArray(profile.interests) ? profile.interests.join(", ") : form.interests,
+        projectTypes: Array.isArray(profile.project_preferences?.project_types)
+          ? profile.project_preferences.project_types.join(", ")
+          : form.projectTypes,
+        preferredRoles: Array.isArray(profile.project_preferences?.preferred_roles)
+          ? profile.project_preferences.preferred_roles.join(", ")
+          : form.preferredRoles,
+        preferredStack: Array.isArray(profile.project_preferences?.preferred_stack)
+          ? profile.project_preferences.preferred_stack.join(", ")
+          : form.preferredStack,
+        commitmentLevel: profile.project_preferences?.commitment_level || form.commitmentLevel,
+        timelinePreference: profile.project_preferences?.timeline_preference || form.timelinePreference,
+        portfolioUrl: profile.portfolio_url || form.portfolioUrl,
+        githubUrl: profile.github_url || form.githubUrl,
+      });
+
+      setExtractionSuccess(true);
+      // Switch to form mode to review extracted data
+      setTimeout(() => {
+        setInputMode("form");
+        setExtractionSuccess(false);
+      }, 1500);
+    } catch (err) {
+      setError(err instanceof Error ? err.message : "Failed to extract profile");
+    } finally {
+      setIsExtracting(false);
+    }
   };
 
   const handleSubmit = async (event: React.FormEvent<HTMLFormElement>) => {
@@ -225,6 +296,107 @@ function DeveloperOnboardingContent() {
             </p>
           ) : null}
 
+          {/* Input Mode Toggle */}
+          <div className="flex items-center justify-center gap-2 rounded-lg border border-border bg-muted/30 p-1">
+            <button
+              type="button"
+              onClick={() => setInputMode("form")}
+              className={`flex items-center gap-2 rounded-md px-4 py-2 text-sm font-medium transition-colors ${
+                inputMode === "form"
+                  ? "bg-background text-foreground shadow-sm"
+                  : "text-muted-foreground hover:text-foreground"
+              }`}
+            >
+              <FileText className="h-4 w-4" />
+              Fill Form
+            </button>
+            <button
+              type="button"
+              onClick={() => setInputMode("ai")}
+              className={`flex items-center gap-2 rounded-md px-4 py-2 text-sm font-medium transition-colors ${
+                inputMode === "ai"
+                  ? "bg-background text-foreground shadow-sm"
+                  : "text-muted-foreground hover:text-foreground"
+              }`}
+            >
+              <Sparkles className="h-4 w-4" />
+              AI Extract
+            </button>
+          </div>
+
+          {/* AI Text Input Mode */}
+          {inputMode === "ai" && (
+            <Card className="border-primary/20 bg-primary/5">
+              <CardHeader>
+                <CardTitle className="flex items-center gap-2">
+                  <Sparkles className="h-5 w-5 text-primary" />
+                  AI Profile Extraction
+                </CardTitle>
+                <CardDescription>
+                  Paste your GitHub profile README, LinkedIn bio, resume, or any text describing yourself. 
+                  Our AI will automatically extract your profile information.
+                </CardDescription>
+              </CardHeader>
+              <CardContent className="space-y-4">
+                <textarea
+                  rows={12}
+                  value={aiText}
+                  onChange={(e) => setAiText(e.target.value)}
+                  className="flex w-full rounded-md border border-input bg-background px-3 py-2 text-sm ring-offset-background placeholder:text-muted-foreground focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring focus-visible:ring-offset-2"
+                  placeholder={`Paste your profile text here...
+
+Example:
+Hi, I'm Alex! I'm a full-stack developer with 5 years of experience.
+
+🔧 Tech Stack: React, TypeScript, Node.js, PostgreSQL, AWS
+🎯 Interests: AI/ML, fintech, developer tools
+📍 Based in San Francisco, available 15 hrs/week
+
+Currently looking for hackathon projects and open source contributions.
+Check out my work at github.com/alexdev`}
+                />
+                <div className="flex gap-3">
+                  <Button
+                    type="button"
+                    onClick={handleAiExtract}
+                    disabled={isExtracting || !aiText.trim()}
+                    className="flex-1"
+                  >
+                    {isExtracting ? (
+                      <>
+                        <Loader2 className="h-4 w-4 animate-spin" />
+                        Extracting...
+                      </>
+                    ) : extractionSuccess ? (
+                      <>
+                        <CheckCircle className="h-4 w-4" />
+                        Extracted!
+                      </>
+                    ) : (
+                      <>
+                        <Sparkles className="h-4 w-4" />
+                        Extract Profile
+                      </>
+                    )}
+                  </Button>
+                  <Button
+                    type="button"
+                    variant="outline"
+                    onClick={() => setInputMode("form")}
+                  >
+                    Switch to Form
+                  </Button>
+                </div>
+                <p className="text-xs text-muted-foreground">
+                  After extraction, you&apos;ll be able to review and edit the extracted information.
+                </p>
+              </CardContent>
+            </Card>
+          )}
+
+          {/* Traditional Form Mode */}
+          {inputMode === "form" && (
+          <>
           <Card>
             <CardHeader>
               <CardTitle>General Information</CardTitle>
@@ -506,9 +678,11 @@ function DeveloperOnboardingContent() {
               </div>
             </CardContent>
           </Card>
+          </>
+          )}
 
           <div className="flex flex-col gap-3 sm:flex-row sm:justify-end">
-            <Button type="submit" disabled={isSaving}>
+            <Button type="submit" disabled={isSaving || isExtracting}>
               {isSaving ? "Saving..." : "Save profile"}
             </Button>
             <Button
