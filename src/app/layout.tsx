@@ -1,5 +1,7 @@
-import type { Metadata } from "next";
+import type { Metadata, Viewport } from "next";
 import { Geist, Geist_Mono } from "next/font/google";
+
+import { ThemeProvider } from "@/components/providers/theme-provider";
 import "./globals.css";
 
 const geistSans = Geist({
@@ -13,8 +15,68 @@ const geistMono = Geist_Mono({
 });
 
 export const metadata: Metadata = {
-  title: "Mesh",
-  description: "AI-powered project collaboration matching platform",
+  title: {
+    default: "MeshIt - Find Your Perfect Project Match",
+    template: "%s | MeshIt",
+  },
+  description:
+    "AI-powered matching connects developers with projects that fit their skills and interests. Stop posting 'looking for teammates' in Slack.",
+  keywords: [
+    "collaboration",
+    "project matching",
+    "developers",
+    "AI matching",
+    "team building",
+    "hackathon",
+  ],
+  authors: [{ name: "MeshIt" }],
+  creator: "MeshIt",
+  manifest: "/manifest.json",
+  appleWebApp: {
+    capable: true,
+    statusBarStyle: "default",
+    title: "MeshIt",
+  },
+  formatDetection: {
+    telephone: false,
+  },
+  openGraph: {
+    type: "website",
+    locale: "en_US",
+    url: "https://meshit.app",
+    title: "MeshIt - Find Your Perfect Project Match",
+    description:
+      "AI-powered matching connects developers with projects that fit their skills and interests.",
+    siteName: "MeshIt",
+  },
+  twitter: {
+    card: "summary_large_image",
+    title: "MeshIt - Find Your Perfect Project Match",
+    description:
+      "AI-powered matching connects developers with projects that fit their skills and interests.",
+  },
+  robots: {
+    index: true,
+    follow: true,
+  },
+  icons: {
+    icon: [
+      { url: "/icons/icon.svg", type: "image/svg+xml" },
+    ],
+    apple: [
+      { url: "/icons/icon-192.png", sizes: "192x192", type: "image/png" },
+    ],
+  },
+};
+
+export const viewport: Viewport = {
+  themeColor: [
+    { media: "(prefers-color-scheme: light)", color: "#fafafa" },
+    { media: "(prefers-color-scheme: dark)", color: "#000000" },
+  ],
+  width: "device-width",
+  initialScale: 1,
+  maximumScale: 1,
 };
 
 export default function RootLayout({
@@ -23,11 +85,11 @@ export default function RootLayout({
   children: React.ReactNode;
 }>) {
   return (
-    <html lang="en">
+    <html lang="en" suppressHydrationWarning>
       <body
-        className={`${geistSans.variable} ${geistMono.variable} antialiased`}
+        className={`${geistSans.variable} ${geistMono.variable} font-sans antialiased`}
       >
-        {children}
+        <ThemeProvider>{children}</ThemeProvider>
       </body>
     </html>
   );

@@ -1,65 +1,157 @@
-import Image from "next/image";
+import Link from "next/link";
+import { ArrowRight, Sparkles } from "lucide-react";
 
-export default function Home() {
+import { Button } from "@/components/ui/button";
+import { Logo } from "@/components/layout/logo";
+import { ThemeToggle } from "@/components/ui/theme-toggle";
+
+export default function LandingPage() {
   return (
-    <div className="flex min-h-screen items-center justify-center bg-zinc-50 font-sans dark:bg-black">
-      <main className="flex min-h-screen w-full max-w-3xl flex-col items-center justify-between py-32 px-16 bg-white dark:bg-black sm:items-start">
-        <Image
-          className="dark:invert"
-          src="/next.svg"
-          alt="Next.js logo"
-          width={100}
-          height={20}
-          priority
-        />
-        <div className="flex flex-col items-center gap-6 text-center sm:items-start sm:text-left">
-          <h1 className="max-w-xs text-3xl font-semibold leading-10 tracking-tight text-black dark:text-zinc-50">
-            To get started, edit the page.tsx file.
+    <div className="flex min-h-screen flex-col bg-background">
+      {/* Header */}
+      <header className="sticky top-0 z-50 flex h-16 items-center justify-between border-b border-border/50 bg-background/95 px-6 backdrop-blur supports-[backdrop-filter]:bg-background/60 lg:px-8">
+        <Logo />
+        <div className="flex items-center gap-4">
+          <ThemeToggle />
+          <Button variant="ghost" asChild>
+            <Link href="/login">Log in</Link>
+          </Button>
+        </div>
+      </header>
+
+      {/* Hero Section */}
+      <main className="flex flex-1 flex-col">
+        <section className="flex flex-1 flex-col items-center justify-center px-6 py-16 text-center lg:px-8 lg:py-24">
+          {/* AI Badge */}
+          <div className="mb-8 animate-fade-in">
+            <div className="inline-flex items-center gap-2 rounded-full border border-border bg-muted/50 px-4 py-1.5 text-sm">
+              <Sparkles className="h-4 w-4 text-blue-500" />
+              <span className="text-muted-foreground">AI-powered matching</span>
+            </div>
+          </div>
+
+          {/* Main Headline */}
+          <h1 className="max-w-4xl animate-slide-up text-4xl font-bold tracking-tight sm:text-5xl lg:text-6xl">
+            Find your perfect
+            <br />
+            project match.
           </h1>
-          <p className="max-w-md text-lg leading-8 text-zinc-600 dark:text-zinc-400">
-            Looking for a starting point or more instructions? Head over to{" "}
-            <a
-              href="https://vercel.com/templates?framework=next.js&utm_source=create-next-app&utm_medium=appdir-template-tw&utm_campaign=create-next-app"
-              className="font-medium text-zinc-950 dark:text-zinc-50"
-            >
-              Templates
-            </a>{" "}
-            or the{" "}
-            <a
-              href="https://nextjs.org/learn?utm_source=create-next-app&utm_medium=appdir-template-tw&utm_campaign=create-next-app"
-              className="font-medium text-zinc-950 dark:text-zinc-50"
-            >
-              Learning
-            </a>{" "}
-            center.
+
+          {/* Subheadline */}
+          <p className="mt-6 max-w-2xl animate-slide-up text-lg text-muted-foreground sm:text-xl" style={{ animationDelay: "100ms" }}>
+            Stop posting &quot;looking for teammates&quot; in Slack. Describe your project in
+            plain language, and let AI find the 3-5 people most likely to be a
+            great fit.
           </p>
-        </div>
-        <div className="flex flex-col gap-4 text-base font-medium sm:flex-row">
-          <a
-            className="flex h-12 w-full items-center justify-center gap-2 rounded-full bg-foreground px-5 text-background transition-colors hover:bg-[#383838] dark:hover:bg-[#ccc] md:w-[158px]"
-            href="https://vercel.com/new?utm_source=create-next-app&utm_medium=appdir-template-tw&utm_campaign=create-next-app"
-            target="_blank"
-            rel="noopener noreferrer"
-          >
-            <Image
-              className="dark:invert"
-              src="/vercel.svg"
-              alt="Vercel logomark"
-              width={16}
-              height={16}
-            />
-            Deploy Now
-          </a>
-          <a
-            className="flex h-12 w-full items-center justify-center rounded-full border border-solid border-black/[.08] px-5 transition-colors hover:border-transparent hover:bg-black/[.04] dark:border-white/[.145] dark:hover:bg-[#1a1a1a] md:w-[158px]"
-            href="https://nextjs.org/docs?utm_source=create-next-app&utm_medium=appdir-template-tw&utm_campaign=create-next-app"
-            target="_blank"
-            rel="noopener noreferrer"
-          >
-            Documentation
-          </a>
-        </div>
+
+          {/* CTA Buttons */}
+          <div className="mt-10 flex flex-col items-center gap-4 animate-slide-up sm:flex-row" style={{ animationDelay: "200ms" }}>
+            <Button size="lg" className="gap-2 px-8" asChild>
+              <Link href="/login">
+                Get started
+                <ArrowRight className="h-4 w-4" />
+              </Link>
+            </Button>
+            <Button size="lg" variant="outline" className="px-8" asChild>
+              <Link href="/projects">Explore projects</Link>
+            </Button>
+          </div>
+        </section>
+
+        {/* Features Section */}
+        <section className="border-t border-border bg-muted/30 py-16 lg:py-24">
+          <div className="mx-auto max-w-7xl px-6 lg:px-8">
+            <h2 className="text-center text-3xl font-bold tracking-tight sm:text-4xl">
+              How it works
+            </h2>
+            <p className="mx-auto mt-4 max-w-2xl text-center text-muted-foreground">
+              From profile to project match in minutes, not hours.
+            </p>
+
+            <div className="mt-12 grid gap-8 sm:grid-cols-2 lg:grid-cols-3">
+              {/* Step 1 */}
+              <div className="group relative rounded-2xl border border-border bg-card p-8 transition-all hover:border-border/80 hover:shadow-lg">
+                <div className="mb-4 flex h-12 w-12 items-center justify-center rounded-xl bg-primary text-2xl font-bold text-primary-foreground">
+                  1
+                </div>
+                <h3 className="text-xl font-semibold">Create your profile</h3>
+                <p className="mt-2 text-muted-foreground">
+                  Tell us about yourself in 30 seconds. Voice or text — AI
+                  extracts your skills, interests, and availability.
+                </p>
+              </div>
+
+              {/* Step 2 */}
+              <div className="group relative rounded-2xl border border-border bg-card p-8 transition-all hover:border-border/80 hover:shadow-lg">
+                <div className="mb-4 flex h-12 w-12 items-center justify-center rounded-xl bg-primary text-2xl font-bold text-primary-foreground">
+                  2
+                </div>
+                <h3 className="text-xl font-semibold">AI finds your matches</h3>
+                <p className="mt-2 text-muted-foreground">
+                  Our semantic matching engine understands what you bring and
+                  what projects need — then connects them intelligently.
+                </p>
+              </div>
+
+              {/* Step 3 */}
+              <div className="group relative rounded-2xl border border-border bg-card p-8 transition-all hover:border-border/80 hover:shadow-lg sm:col-span-2 lg:col-span-1">
+                <div className="mb-4 flex h-12 w-12 items-center justify-center rounded-xl bg-primary text-2xl font-bold text-primary-foreground">
+                  3
+                </div>
+                <h3 className="text-xl font-semibold">Connect and collaborate</h3>
+                <p className="mt-2 text-muted-foreground">
+                  See why you matched, message your team, and start building
+                  together. It&apos;s that simple.
+                </p>
+              </div>
+            </div>
+          </div>
+        </section>
+
+        {/* CTA Section */}
+        <section className="py-16 lg:py-24">
+          <div className="mx-auto max-w-4xl px-6 text-center lg:px-8">
+            <h2 className="text-3xl font-bold tracking-tight sm:text-4xl">
+              Ready to find your match?
+            </h2>
+            <p className="mt-4 text-lg text-muted-foreground">
+              Join developers who are building their next project with the
+              perfect team.
+            </p>
+            <div className="mt-8">
+              <Button size="lg" className="gap-2 px-8" asChild>
+                <Link href="/login">
+                  Get started free
+                  <ArrowRight className="h-4 w-4" />
+                </Link>
+              </Button>
+            </div>
+          </div>
+        </section>
       </main>
+
+      {/* Footer */}
+      <footer className="border-t border-border py-8">
+        <div className="mx-auto flex max-w-7xl flex-col items-center justify-between gap-4 px-6 sm:flex-row lg:px-8">
+          <p className="text-sm text-muted-foreground">
+            © 2026 MeshIt. All rights reserved.
+          </p>
+          <nav className="flex gap-6">
+            <Link
+              href="/privacy"
+              className="text-sm text-muted-foreground hover:text-foreground"
+            >
+              Privacy
+            </Link>
+            <Link
+              href="/terms"
+              className="text-sm text-muted-foreground hover:text-foreground"
+            >
+              Terms
+            </Link>
+          </nav>
+        </div>
+      </footer>
     </div>
   );
 }
