@@ -20,6 +20,8 @@ Semantic matching between profiles and projects using pgvector cosine similarity
 | 5.4 | Build Match Results Page | ready-for-dev | 5.3 |
 | 5.5 | Build Match Detail Page | ready-for-dev | 5.3 |
 | 5.6 | Generate Match Explanations | ready-for-dev | 5.1, 5.2 |
+| 5.7 | Implement Apply/Accept/Decline Flow | ready-for-dev | 5.3 |
+| 5.8 | Auto-Expire Old Projects | ready-for-dev | E4-S2 |
 
 ## FR Coverage
 
@@ -27,7 +29,14 @@ Semantic matching between profiles and projects using pgvector cosine similarity
 - FR15: Match results show similarity score (0-100%)
 - FR16: System generates text explanation for each match
 - FR17: Users can browse matches for their profile
+- FR18: Users can apply to projects, creators can accept/decline
+
+## NFR Coverage
+
+- NFR: Match generation completes within 30 seconds
+- NFR: Embedding generation completes within 5 seconds
+- NFR: Project expiration handled automatically
 
 ## Estimated Effort
 
-~8 hours total
+~10 hours total

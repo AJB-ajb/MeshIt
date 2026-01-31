@@ -26,12 +26,21 @@ Project scaffolding, Supabase setup, all OAuth providers working, basic layout e
 | 1.10 | Implement Auth Flow | ready-for-dev | 1.5-1.9 |
 | 1.11 | Create Basic Layout | ready-for-dev | 1.1, 1.2 |
 | 1.12 | Set Up Environment Variables | ready-for-dev | 1.3 |
+| 1.13 | Implement Global Error Handling | ready-for-dev | 1.1 |
+| 1.14 | Set Up Vitest for Unit Testing | ready-for-dev | 1.1 |
+| 1.15 | Set Up Playwright for E2E Testing | ready-for-dev | 1.1, 1.10 |
 
 ## FR Coverage
 
 - FR1: Users can sign up/login via Google, GitHub, LinkedIn, Slack, or Discord OAuth
 - FR2: System auto-creates profile record on first OAuth login
 
+## NFR Coverage
+
+- NFR: Consistent error handling with proper HTTP status codes
+- NFR: Unit test framework ready for development
+- NFR: E2E test framework ready for integration testing
+
 ## Estimated Effort
 
-~9 hours total
+~11 hours total

@@ -1,9 +1,9 @@
 # MeshIt - Epics & Stories Master List
 
-**Version:** 2.0  
+**Version:** 2.1  
 **Last Updated:** 2026-01-31  
 **Total Epics:** 9 (8 MVP + 1 Post-MVP)  
-**Total Stories:** 62
+**Total Stories:** 68
 
 ---
 
@@ -11,12 +11,12 @@
 
 | Epic | Name | Stories | Status | Priority |
 |------|------|---------|--------|----------|
-| [E1](#e1-foundation) | Foundation | 12 | MVP | P0 |
+| [E1](#e1-foundation) | Foundation | 15 | MVP | P0 |
 | [E2](#e2-github-enrichment) | GitHub Enrichment | 6 | MVP | P1 |
 | [E3](#e3-profile-management) | Profile Management | 7 | MVP | P0 |
 | [E4](#e4-project-management) | Project Management | 7 | MVP | P0 |
-| [E5](#e5-matching-engine) | Matching Engine | 6 | MVP | P0 |
-| [E6](#e6-notifications) | Notifications | 6 | MVP | P1 |
+| [E5](#e5-matching-engine) | Matching Engine | 8 | MVP | P0 |
+| [E6](#e6-notifications) | Notifications | 8 | MVP | P1 |
 | [E7](#e7-messaging) | Messaging | 5 | MVP | P1 |
 | [E8](#e8-uiux) | UI/UX | 9 | MVP | P0 |
 | [E9](#e9-voice-agent-post-mvp) | Voice Agent | 5 | Post-MVP | P2 |
@@ -43,6 +43,9 @@
 | 1.10 | Implement Auth Flow | [E1-S10.md](./E1-S10.md) | 1.5-1.9 | ready-for-dev |
 | 1.11 | Create Basic Layout | [E1-S11.md](./E1-S11.md) | 1.1, 1.2 | ready-for-dev |
 | 1.12 | Set Up Environment Variables | [E1-S12.md](./E1-S12.md) | 1.3 | ready-for-dev |
+| 1.13 | Implement Global Error Handling | [E1-S13.md](./E1-S13.md) | 1.1 | ready-for-dev |
+| 1.14 | Set Up Vitest for Unit Testing | [E1-S14.md](./E1-S14.md) | 1.1 | ready-for-dev |
+| 1.15 | Set Up Playwright for E2E Testing | [E1-S15.md](./E1-S15.md) | 1.1, 1.10 | ready-for-dev |
 
 ---
 
@@ -113,6 +116,8 @@
 | 5.4 | Build Match Results Page | [E5-S4.md](./E5-S4.md) | 5.3 | ready-for-dev |
 | 5.5 | Build Match Detail Page | [E5-S5.md](./E5-S5.md) | 5.3 | ready-for-dev |
 | 5.6 | Generate Match Explanations | [E5-S6.md](./E5-S6.md) | 5.1, 5.2 | ready-for-dev |
+| 5.7 | Implement Apply/Accept/Decline Flow | [E5-S7.md](./E5-S7.md) | 5.3 | ready-for-dev |
+| 5.8 | Auto-Expire Old Projects | [E5-S8.md](./E5-S8.md) | E4-S2 | ready-for-dev |
 
 ---
 
@@ -130,6 +135,8 @@
 | 6.4 | Create Notification List Page | [E6-S4.md](./E6-S4.md) | 6.2 | ready-for-dev |
 | 6.5 | Implement Email Notifications | [E6-S5.md](./E6-S5.md) | 6.2 | ready-for-dev |
 | 6.6 | Trigger Match Notifications | [E6-S6.md](./E6-S6.md) | 6.2, E5 | ready-for-dev |
+| 6.7 | Implement Match Notification Emails | [E6-S7.md](./E6-S7.md) | 6.5, E5-S7 | ready-for-dev |
+| 6.8 | Implement Acceptance Notification Emails | [E6-S8.md](./E6-S8.md) | 6.5, E5-S7 | ready-for-dev |
 
 ---
 
