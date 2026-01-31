@@ -6,9 +6,12 @@ const nextConfig: NextConfig = {
   /* config options here */
 };
 
-// Conditionally apply Serwist only in production to avoid Turbopack conflicts
+// PWA support is disabled by default
+// To enable: set ENABLE_PWA=true environment variable
 const createConfig = () => {
-  if (process.env.NODE_ENV !== "production") {
+  const isPwaEnabled = process.env.ENABLE_PWA === "true";
+  
+  if (!isPwaEnabled || process.env.NODE_ENV !== "production") {
     return nextConfig;
   }
 
