@@ -81,3 +81,4 @@ venv/
 # Logs
 *.log
 logs/
+.env*.local
