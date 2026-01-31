@@ -1,15 +1,15 @@
-import { Metadata } from "next";
+"use client";
+
+import { useEffect, useState } from "react";
+import { useRouter } from "next/navigation";
 import Link from "next/link";
-import { Search, Filter, Check, X, MessageSquare } from "lucide-react";
+import { Search, Filter, Check, X, MessageSquare, Loader2 } from "lucide-react";
 
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
-import { createClient } from "@/lib/supabase/server";
-
-export const metadata: Metadata = {
-  title: "Matches",
-};
+import { EmptyState } from "@/components/ui/empty-state";
+import type { MatchResponse, Project } from "@/lib/supabase/types";
 
 const statusColors = {
   pending: "bg-warning/10 text-warning",
@@ -25,67 +25,103 @@ const statusLabels = {
   declined: "Declined",
 };
 
-const formatTimeAgo = (dateString: string) => {
+function formatTimeAgo(dateString: string): string {
   const date = new Date(dateString);
   const now = new Date();
-  const diffMs = now.getTime() - date.getTime();
-  const diffMins = Math.floor(diffMs / (1000 * 60));
-  const diffHours = Math.floor(diffMs / (1000 * 60 * 60));
-  const diffDays = Math.floor(diffMs / (1000 * 60 * 60 * 24));
+  const diffInSeconds = Math.floor((now.getTime() - date.getTime()) / 1000);
 
-  if (diffMins < 60) return `${diffMins} min${diffMins !== 1 ? "s" : ""} ago`;
-  if (diffHours < 24) return `${diffHours} hour${diffHours !== 1 ? "s" : ""} ago`;
-  if (diffDays === 1) return "1 day ago";
-  return `${diffDays} days ago`;
-};
-
-export default async function MatchesPage() {
-  const supabase = await createClient();
-  const {
-    data: { user },
-  } = await supabase.auth.getUser();
-
-  let matches: Array<{
-    id: string;
-    projectTitle: string;
-    projectId: string;
-    matchScore: number;
-    status: string;
-    explanation: string | null;
-    matchedAt: string;
-  }> = [];
-
-  if (user) {
-    const { data: matchesData, error } = await supabase
-      .from("matches")
-      .select(
-        `
-        id,
-        similarity_score,
-        explanation,
-        status,
-        created_at,
-        projects:project_id (
-          id,
-          title
-        )
-      `
-      )
-      .eq("user_id", user.id)
-      .order("created_at", { ascending: false });
-
-    if (!error && matchesData) {
-      matches = matchesData.map((match: any) => ({
-        id: match.id,
-        projectTitle: match.projects?.title || "Unknown Project",
-        projectId: match.projects?.id || "",
-        matchScore: Math.round(match.similarity_score * 100),
-        status: match.status,
-        explanation: match.explanation || "No explanation available.",
-        matchedAt: formatTimeAgo(match.created_at),
-      }));
-    }
+  if (diffInSeconds < 60) {
+    return "just now";
+  } else if (diffInSeconds < 3600) {
+    const minutes = Math.floor(diffInSeconds / 60);
+    return `${minutes} ${minutes === 1 ? "minute" : "minutes"} ago`;
+  } else if (diffInSeconds < 86400) {
+    const hours = Math.floor(diffInSeconds / 3600);
+    return `${hours} ${hours === 1 ? "hour" : "hours"} ago`;
+  } else {
+    const days = Math.floor(diffInSeconds / 86400);
+    return `${days} ${days === 1 ? "day" : "days"} ago`;
   }
+}
+
+export default function MatchesPage() {
+  const router = useRouter();
+  const [matches, setMatches] = useState<MatchResponse[]>([]);
+  const [isLoading, setIsLoading] = useState(true);
+  const [error, setError] = useState<string | null>(null);
+  const [applyingMatchId, setApplyingMatchId] = useState<string | null>(null);
+
+  useEffect(() => {
+    fetchMatches();
+  }, []);
+
+  const fetchMatches = async () => {
+    try {
+      setIsLoading(true);
+      setError(null);
+      const response = await fetch("/api/matches/for-me");
+      
+      if (!response.ok) {
+        if (response.status === 401) {
+          router.replace("/login");
+          return;
+        }
+        throw new Error("Failed to fetch matches");
+      }
+
+      const data = await response.json();
+      setMatches(data.matches || []);
+    } catch (err) {
+      setError(err instanceof Error ? err.message : "Failed to load matches");
+    } finally {
+      setIsLoading(false);
+    }
+  };
+
+  const handleApply = async (matchId: string) => {
+    try {
+      setApplyingMatchId(matchId);
+      const response = await fetch(`/api/matches/${matchId}/apply`, {
+        method: "PATCH",
+      });
+
+      if (!response.ok) {
+        throw new Error("Failed to apply");
+      }
+
+      // Refresh matches
+      await fetchMatches();
+    } catch (err) {
+      alert(err instanceof Error ? err.message : "Failed to apply");
+    } finally {
+      setApplyingMatchId(null);
+    }
+  };
+
+  if (isLoading) {
+    return (
+      <div className="flex min-h-[50vh] items-center justify-center">
+        <Loader2 className="h-8 w-8 animate-spin text-muted-foreground" />
+      </div>
+    );
+  }
+
+  if (error) {
+    return (
+      <div className="space-y-6">
+        <div>
+          <h1 className="text-3xl font-bold tracking-tight">Matches</h1>
+          <p className="mt-1 text-muted-foreground">
+            Projects that match your skills and interests
+          </p>
+        </div>
+        <div className="rounded-md border border-destructive/30 bg-destructive/10 px-4 py-3 text-sm text-destructive">
+          {error}
+        </div>
+      </div>
+    );
+  }
+
   return (
     <div className="space-y-6">
       {/* Page header */}
@@ -113,90 +149,129 @@ export default async function MatchesPage() {
       </div>
 
       {/* Matches list */}
-      <div className="space-y-4">
-        {matches.length === 0 ? (
-          <Card>
-            <CardContent className="flex min-h-[200px] flex-col items-center justify-center py-12">
-              <p className="text-muted-foreground">
-                No matches found. Keep your profile updated to discover matching projects!
-              </p>
-            </CardContent>
-          </Card>
-        ) : (
-          matches.map((match) => (
-          <Card key={match.id}>
-            <CardHeader className="pb-4">
-              <div className="flex items-start justify-between gap-4">
-                <div className="space-y-1">
-                  <div className="flex items-center gap-3">
-                    <CardTitle className="text-xl">
-                      <Link
-                        href={`/projects/${match.projectId}`}
-                        className="hover:underline"
-                      >
-                        {match.projectTitle}
-                      </Link>
-                    </CardTitle>
-                    <span className="rounded-full bg-success/10 px-2.5 py-0.5 text-xs font-medium text-success">
-                      {match.matchScore}% match
-                    </span>
-                    <span
-                      className={`rounded-full px-2.5 py-0.5 text-xs font-medium ${
-                        statusColors[match.status as keyof typeof statusColors]
-                      }`}
-                    >
-                      {statusLabels[match.status as keyof typeof statusLabels]}
-                    </span>
-                  </div>
-                  <p className="text-sm text-muted-foreground">
-                    Matched {match.matchedAt}
-                  </p>
-                </div>
-              </div>
-            </CardHeader>
-            <CardContent className="space-y-4">
-              {/* Why you matched */}
-              <div className="rounded-lg border border-border bg-muted/30 p-4">
-                <p className="text-sm font-medium text-muted-foreground mb-2">
-                  Why you matched
-                </p>
-                <p className="text-sm">{match.explanation}</p>
-              </div>
+      {matches.length === 0 ? (
+        <EmptyState
+          title="No matches yet"
+          description="Complete your profile to start seeing project matches that align with your skills and interests."
+          action={{
+            label: "Complete Profile",
+            href: "/profile",
+          }}
+        />
+      ) : (
+        <div className="space-y-4">
+          {matches.map((match) => {
+            const project = match.project as Project;
+            const matchScore = Math.round(match.score * 100);
+            const matchedAt = formatTimeAgo(match.created_at);
 
-              {/* Actions */}
-              <div className="flex gap-2">
-                {match.status === "pending" && (
-                  <>
-                    <Button className="flex-1 sm:flex-none">
-                      <Check className="h-4 w-4" />
-                      Apply
+            return (
+              <Card key={match.id}>
+                <CardHeader className="pb-4">
+                  <div className="flex items-start justify-between gap-4">
+                    <div className="space-y-1">
+                      <div className="flex items-center gap-3">
+                        <CardTitle className="text-xl">
+                          <Link
+                            href={`/matches/${match.id}`}
+                            className="hover:underline"
+                          >
+                            {project.title}
+                          </Link>
+                        </CardTitle>
+                        <span className="rounded-full bg-success/10 px-2.5 py-0.5 text-xs font-medium text-success">
+                          {matchScore}% match
+                        </span>
+                        <span
+                          className={`rounded-full px-2.5 py-0.5 text-xs font-medium ${
+                            statusColors[match.status as keyof typeof statusColors]
+                          }`}
+                        >
+                          {statusLabels[match.status as keyof typeof statusLabels]}
+                        </span>
+                      </div>
+                      <p className="text-sm text-muted-foreground">
+                        Matched {matchedAt}
+                      </p>
+                    </div>
+                  </div>
+                </CardHeader>
+                <CardContent className="space-y-4">
+                  {/* Why you matched */}
+                  {match.explanation && (
+                    <div className="rounded-lg border border-border bg-muted/30 p-4">
+                      <p className="text-sm font-medium text-muted-foreground mb-2">
+                        Why you matched
+                      </p>
+                      <p className="text-sm">{match.explanation}</p>
+                    </div>
+                  )}
+
+                  {/* Project description */}
+                  <p className="text-sm text-muted-foreground line-clamp-2">
+                    {project.description}
+                  </p>
+
+                  {/* Skills */}
+                  {project.required_skills && project.required_skills.length > 0 && (
+                    <div className="flex flex-wrap gap-2">
+                      {project.required_skills.slice(0, 5).map((skill) => (
+                        <span
+                          key={skill}
+                          className="rounded-md border border-border bg-muted/50 px-2.5 py-0.5 text-xs font-medium"
+                        >
+                          {skill}
+                        </span>
+                      ))}
+                      {project.required_skills.length > 5 && (
+                        <span className="rounded-md border border-border bg-muted/50 px-2.5 py-0.5 text-xs font-medium">
+                          +{project.required_skills.length - 5}
+                        </span>
+                      )}
+                    </div>
+                  )}
+
+                  {/* Actions */}
+                  <div className="flex gap-2">
+                    {match.status === "pending" && (
+                      <>
+                        <Button
+                          className="flex-1 sm:flex-none"
+                          onClick={() => handleApply(match.id)}
+                          disabled={applyingMatchId === match.id}
+                        >
+                          {applyingMatchId === match.id ? (
+                            <Loader2 className="h-4 w-4 animate-spin" />
+                          ) : (
+                            <Check className="h-4 w-4" />
+                          )}
+                          Apply
+                        </Button>
+                      </>
+                    )}
+                    {match.status === "applied" && (
+                      <Button variant="secondary" disabled>
+                        Application Sent
+                      </Button>
+                    )}
+                    {match.status === "accepted" && (
+                      <Button asChild>
+                        <Link href={`/messages?project=${project.id}`}>
+                          <MessageSquare className="h-4 w-4" />
+                          Message Team
+                        </Link>
+                      </Button>
+                    )}
+                    <Button variant="outline" asChild>
+                      <Link href={`/matches/${match.id}`}>View Details</Link>
                     </Button>
-                    <Button variant="outline">
-                      <X className="h-4 w-4" />
-                      Decline
-                    </Button>
-                  </>
-                )}
-                {match.status === "applied" && (
-                  <Button variant="secondary" disabled>
-                    Application Sent
-                  </Button>
-                )}
-                {match.status === "accepted" && (
-                  <Button>
-                    <MessageSquare className="h-4 w-4" />
-                    Message Team
-                  </Button>
-                )}
-                <Button variant="outline" asChild>
-                  <Link href={`/projects/${match.projectId}`}>View Project</Link>
-                </Button>
-              </div>
-            </CardContent>
-          </Card>
-          ))
-        )}
-      </div>
+                  </div>
+                </CardContent>
+              </Card>
+            );
+          })}
+        </div>
+      )}
     </div>
   );
 }
