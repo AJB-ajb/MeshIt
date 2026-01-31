@@ -11,15 +11,19 @@ function LoginForm() {
   const searchParams = useSearchParams();
   const [isLoading, setIsLoading] = useState(false);
   const error = searchParams.get("error");
+  const next = searchParams.get("next") ?? "/dashboard";
 
   const handleGoogleSignIn = async () => {
     setIsLoading(true);
 
     const supabase = createClient();
+    const callbackUrl = new URL("/callback", window.location.origin);
+    callbackUrl.searchParams.set("next", next);
+
     const { error: signInError } = await supabase.auth.signInWithOAuth({
       provider: "google",
       options: {
-        redirectTo: `${window.location.origin}/callback`,
+        redirectTo: callbackUrl.toString(),
       },
     });
 
@@ -32,10 +36,13 @@ function LoginForm() {
     setIsLoading(true);
 
     const supabase = createClient();
+    const callbackUrl = new URL("/callback", window.location.origin);
+    callbackUrl.searchParams.set("next", next);
+
     const { error: signInError } = await supabase.auth.signInWithOAuth({
       provider: "github",
       options: {
-        redirectTo: `${window.location.origin}/callback`,
+        redirectTo: callbackUrl.toString(),
       },
     });
 

@@ -1,0 +1,6 @@
+# Build Requirements
+
+## Suspense Boundaries
+- `useSearchParams()` must be wrapped in `<Suspense>` to avoid build errors
+- Extract component using `useSearchParams()` into separate component, wrap default export with Suspense
+- Example: `onboarding/page.tsx`, `onboarding/developer/page.tsx`

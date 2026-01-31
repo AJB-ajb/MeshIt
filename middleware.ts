@@ -11,7 +11,9 @@ export async function middleware(request: NextRequest) {
   const isOnboardingRoute = pathname.startsWith("/onboarding");
 
   if (!user && (isDashboardRoute || isOnboardingRoute)) {
-    return NextResponse.redirect(new URL("/login", request.url));
+    const redirectUrl = new URL("/login", request.url);
+    redirectUrl.searchParams.set("next", pathname);
+    return NextResponse.redirect(redirectUrl);
   }
 
   if (user && isLoginRoute) {

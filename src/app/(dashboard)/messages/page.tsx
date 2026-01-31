@@ -92,7 +92,6 @@ export default async function MessagesPage() {
 
     if (projectIds.size > 0) {
       const projectIdsArray = Array.from(projectIds);
-      const projectIds = userProjects.map((p) => p.id);
 
       // Get all messages for these projects
       const { data: messagesData } = await supabase
@@ -200,7 +199,7 @@ export default async function MessagesPage() {
               .slice(0, 2)
               .map((id) => ({
                 name: conv.participantNames.get(id) || "Unknown",
-                initials: getInitials(conv.participantNames.get(id)),
+                initials: getInitials(conv.participantNames.get(id) ?? null),
               })),
             lastMessage: lastMsg ? {
               sender: lastMsg.sender,
