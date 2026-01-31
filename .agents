@@ -41,6 +41,10 @@ supabase migration list
 
 # Pull remote schema changes
 supabase db pull
+
+When updating database model, update `docs/DATA_MODEL.md`!
+Keep legacy data columns for compatibility.
+
 ```
 
 ## Key Directories
@@ -48,5 +52,7 @@ supabase db pull
 - `src/app/` - Next.js App Router pages and API routes
 - `src/components/` - React components (layout, ui, match, project)
 - `src/lib/` - Utilities (supabase, matching, ai)
+- `docs/` - Project documentation
+- `docs/DATA_MODEL.md` - Data model documentation
 - `supabase/migrations/` - SQL migration files
 - `_bmad-output/` - Planning and implementation specs
