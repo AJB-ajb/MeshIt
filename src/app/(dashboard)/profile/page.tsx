@@ -152,30 +152,35 @@ export default function ProfilePage() {
     }
 
     const availabilityHours = Number(form.availabilityHours);
-    const { error: upsertError } = await supabase.from("profiles").upsert({
-      user_id: user.id,
-      full_name: form.fullName.trim(),
-      headline: form.headline.trim(),
-      bio: form.bio.trim(),
-      location: form.location.trim(),
-      experience_level: form.experienceLevel,
-      collaboration_style: form.collaborationStyle,
-      availability_hours: Number.isFinite(availabilityHours)
-        ? availabilityHours
-        : null,
-      skills: parseList(form.skills),
-      interests: parseList(form.interests),
-      portfolio_url: form.portfolioUrl.trim(),
-      github_url: form.githubUrl.trim(),
-      project_preferences: {
-        project_types: parseList(form.projectTypes),
-        preferred_roles: parseList(form.preferredRoles),
-        preferred_stack: parseList(form.preferredStack),
-        commitment_level: form.commitmentLevel,
-        timeline_preference: form.timelinePreference,
-      },
-      updated_at: new Date().toISOString(),
-    });
+    const { error: upsertError } = await supabase
+      .from("profiles")
+      .upsert(
+        {
+          user_id: user.id,
+          full_name: form.fullName.trim(),
+          headline: form.headline.trim(),
+          bio: form.bio.trim(),
+          location: form.location.trim(),
+          experience_level: form.experienceLevel,
+          collaboration_style: form.collaborationStyle,
+          availability_hours: Number.isFinite(availabilityHours)
+            ? availabilityHours
+            : null,
+          skills: parseList(form.skills),
+          interests: parseList(form.interests),
+          portfolio_url: form.portfolioUrl.trim(),
+          github_url: form.githubUrl.trim(),
+          project_preferences: {
+            project_types: parseList(form.projectTypes),
+            preferred_roles: parseList(form.preferredRoles),
+            preferred_stack: parseList(form.preferredStack),
+            commitment_level: form.commitmentLevel,
+            timeline_preference: form.timelinePreference,
+          },
+          updated_at: new Date().toISOString(),
+        },
+        { onConflict: "user_id" }
+      );
 
     setIsSaving(false);
 
