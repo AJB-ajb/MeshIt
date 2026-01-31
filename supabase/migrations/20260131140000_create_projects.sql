@@ -15,7 +15,7 @@ create table if not exists public.projects (
   timeline text check (timeline in ('weekend', '1_week', '1_month', 'ongoing')),
   
   -- Embedding for semantic matching
-  embedding vector(1536),
+  embedding extensions.vector(1536),
   
   -- Status management
   status text default 'open' check (status in ('open', 'closed', 'filled', 'expired')),
@@ -60,11 +60,8 @@ create index if not exists projects_creator_idx on public.projects(creator_id);
 create index if not exists projects_expires_at_idx on public.projects(expires_at);
 create index if not exists projects_skills_idx on public.projects using gin (required_skills);
 
--- IVFFlat index for vector similarity search
-create index if not exists projects_embedding_idx 
-on public.projects 
-using ivfflat (embedding vector_cosine_ops)
-with (lists = 100);
+-- Skip vector index creation for now - will be created after data is populated
+-- Index can be added later via: CREATE INDEX projects_embedding_idx ON projects USING ivfflat (embedding vector_cosine_ops) WITH (lists = 100);
 
 -- Auto-update updated_at trigger
 create trigger set_projects_updated_at

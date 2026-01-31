@@ -1,7 +1,7 @@
 -- Function: Find matching projects for a user
 -- Uses pgvector cosine similarity to find projects that match a user's profile
 create or replace function match_projects_to_user(
-  user_embedding vector(1536),
+  user_embedding extensions.vector(1536),
   user_id_param uuid,
   match_limit integer default 10
 )
@@ -51,7 +51,7 @@ $$;
 -- Function: Find matching users for a project
 -- Uses pgvector cosine similarity to find profiles that match a project
 create or replace function match_users_to_project(
-  project_embedding vector(1536),
+  project_embedding extensions.vector(1536),
   project_id_param uuid,
   match_limit integer default 10
 )
