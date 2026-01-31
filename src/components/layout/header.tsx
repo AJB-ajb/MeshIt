@@ -1,13 +1,13 @@
 "use client";
 
 import Link from "next/link";
-import { Bell, Search, User, Settings, LogOut } from "lucide-react";
+import { Bell, User, Settings, LogOut } from "lucide-react";
 import { useRouter } from "next/navigation";
 
 import { cn } from "@/lib/utils";
 import { Button } from "@/components/ui/button";
-import { Input } from "@/components/ui/input";
 import { ThemeToggle } from "@/components/ui/theme-toggle";
+import { GlobalSearch } from "./global-search";
 import { createClient } from "@/lib/supabase/client";
 
 interface HeaderProps {
@@ -33,15 +33,8 @@ export function Header({ className }: HeaderProps) {
       {/* Spacer for mobile menu button */}
       <div className="w-10 md:hidden" />
 
-      {/* Search */}
-      <div className="relative flex-1 max-w-md">
-        <Search className="absolute left-3 top-1/2 h-4 w-4 -translate-y-1/2 text-muted-foreground" />
-        <Input
-          type="search"
-          placeholder="Search projects, skills..."
-          className="pl-9 bg-muted/50"
-        />
-      </div>
+      {/* Global Search */}
+      <GlobalSearch />
 
       {/* Right side actions */}
       <div className="flex items-center gap-2">
