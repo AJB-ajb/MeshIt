@@ -18,9 +18,10 @@ This document defines how users and projects are matched based on compatibility 
 
 - Weighted filters per user
 - Compatibility = combined scores across dimensions
-- Two-stage database filtering:
+- Two-stage database filtering using Supabase (PostgreSQL):
   1. Fast filtering using indexed tables (context identifiers, coarse availability)
   2. Precise matching using complex calculations (AI processing, hour-by-hour availability)
+- Semantic matching via pgvector for embedding similarity (project descriptions, tags, natural language criteria)
 - Keep raw inputs (e.g., "prefer Monday evening") for user editing and display
 
 ### User Experience
@@ -98,12 +99,12 @@ Availability is often complex:
 ### Project Dimensions
 
 - **Project name**
-- **Project description**: Used for AI-based semantic matching
+- **Project description**: Used for semantic matching via pgvector embeddings
 - **Project type**:
   - Coarse category (for fast filtering): Study, Hackathon/Competition, Personal/Side, Professional, Social/Leisure
-  - Free-form tags/keywords (matched via overlap or embedding similarity)
+  - Free-form tags/keywords (matched via overlap or pgvector embedding similarity)
 - **Context identifier**: Specific hackathon name, course code, etc. (exact string match filter)
-- **Natural language criteria**: Optional, for AI-based matching beyond structured dimensions
+- **Natural language criteria**: Optional, stored as pgvector embeddings for semantic matching beyond structured dimensions
 - **Estimated success probability** (0-1 scale): Measure of project risk for matching risk tolerance
 - **Person dimension overrides**: Project-specific overrides of person-level defaults
 
@@ -181,17 +182,27 @@ Harmonic mean of preferences:
 
 ### Data Model
 
-Availability matrix per user:
+Availability stored in Supabase as availability matrix per user:
 - **Week-based**: `{ dayOfWeek, hourStart, hourEnd, preference: 0-1 }`
 - **Block-based**: `{ date, hourStart, hourEnd, preference: 0-1 }`
 - Project duration determines which hours to evaluate
 
 ---
 
-## AI Input Processing
+## Technical Implementation
+
+### Database: Supabase + pgvector
+
+- **Supabase** (PostgreSQL) for all structured data storage and queries
+- **pgvector** extension for embedding storage and similarity search
+- Embeddings stored for: project descriptions, tags, natural language criteria
+- Fast filtering via PostgreSQL indexes, semantic matching via pgvector cosine similarity
+
+### AI Input Processing
 
 Natural language inputs are transformed to structured values via AI:
 - Prompt a model to extract structured values from natural language inputs, given the data model
+- Generate embeddings for semantic fields and store in pgvector
 - Examples: "weekends, 10-20h/week" → structured time commitment and availability
 
 ---
