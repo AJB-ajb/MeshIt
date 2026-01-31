@@ -74,7 +74,7 @@ export function Sidebar({ className }: SidebarProps) {
       >
         {/* Logo */}
         <div className="flex h-16 items-center gap-2 border-b border-sidebar-border px-6">
-          <Logo />
+          <Logo href="/dashboard" />
         </div>
 
         {/* New Project button */}

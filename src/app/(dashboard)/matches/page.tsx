@@ -66,10 +66,19 @@ export default function MatchesPage() {
           router.replace("/login");
           return;
         }
-        throw new Error("Failed to fetch matches");
+        const errorData = await response.json().catch(() => ({}));
+        throw new Error(errorData.error || "Failed to fetch matches");
       }
 
       const data = await response.json();
+      
+      // Handle API-level errors (returned with 200 status)
+      if (data.error && (!data.matches || data.matches.length === 0)) {
+        setError(data.error);
+        setMatches([]);
+        return;
+      }
+      
       setMatches(data.matches || []);
     } catch (err) {
       setError(err instanceof Error ? err.message : "Failed to load matches");
@@ -107,6 +116,7 @@ export default function MatchesPage() {
   }
 
   if (error) {
+    const isProfileError = error.toLowerCase().includes("profile");
     return (
       <div className="space-y-6">
         <div>
@@ -115,9 +125,28 @@ export default function MatchesPage() {
             Projects that match your skills and interests
           </p>
         </div>
-        <div className="rounded-md border border-destructive/30 bg-destructive/10 px-4 py-3 text-sm text-destructive">
-          {error}
-        </div>
+        <Card className="border-warning/30 bg-warning/5">
+          <CardContent className="pt-6">
+            <div className="flex flex-col items-center text-center space-y-4">
+              <div className="rounded-full bg-warning/10 p-3">
+                <Search className="h-6 w-6 text-warning" />
+              </div>
+              <div className="space-y-2">
+                <h3 className="font-semibold">
+                  {isProfileError ? "Complete Your Profile" : "Unable to Find Matches"}
+                </h3>
+                <p className="text-sm text-muted-foreground max-w-md">
+                  {error}
+                </p>
+              </div>
+              {isProfileError && (
+                <Button asChild>
+                  <Link href="/profile">Go to Profile</Link>
+                </Button>
+              )}
+            </div>
+          </CardContent>
+        </Card>
       </div>
     );
   }

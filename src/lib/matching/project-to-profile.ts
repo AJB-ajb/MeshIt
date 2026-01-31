@@ -4,7 +4,8 @@
  */
 
 import { createClient } from "@/lib/supabase/server";
-import type { Profile, Match, ScoreBreakdown } from "@/lib/supabase/types";
+import type { Profile, ScoreBreakdown } from "@/lib/supabase/types";
+import { generateProjectEmbedding } from "@/lib/ai/embeddings";
 
 export interface ProjectToProfileMatch {
   profile: Profile;
@@ -30,7 +31,7 @@ export async function matchProjectToProfiles(
   // First, get the project and its embedding
   const { data: project, error: projectError } = await supabase
     .from("projects")
-    .select("embedding, creator_id")
+    .select("embedding, creator_id, title, description, required_skills")
     .eq("id", projectId)
     .single();
 
@@ -38,13 +39,32 @@ export async function matchProjectToProfiles(
     throw new Error(`Project not found: ${projectId}`);
   }
 
-  if (!project.embedding || !Array.isArray(project.embedding)) {
-    throw new Error(`Project embedding not found for project ${projectId}`);
+  // If no embedding exists, try to generate one
+  let embedding = project.embedding;
+  if (!embedding || !Array.isArray(embedding)) {
+    try {
+      embedding = await generateProjectEmbedding(
+        project.title,
+        project.description,
+        project.required_skills
+      );
+      
+      // Save the generated embedding
+      await supabase
+        .from("projects")
+        .update({ embedding })
+        .eq("id", projectId);
+    } catch (embeddingError) {
+      console.warn("Could not generate project embedding:", embeddingError);
+      throw new Error(
+        "Could not generate project embedding. Please ensure the project has a title and description."
+      );
+    }
   }
 
   // Call the database function to find matching profiles
   const { data, error } = await supabase.rpc("match_users_to_project", {
-    project_embedding: project.embedding,
+    project_embedding: embedding,
     project_id_param: projectId,
     match_limit: limit,
   });

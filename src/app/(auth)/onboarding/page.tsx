@@ -34,34 +34,64 @@ function OnboardingContent() {
     if (hasCheckedUser.current) return;
     hasCheckedUser.current = true;
     
-    const supabase = createClient();
-    supabase.auth
-      .getUser()
-      .then(({ data }: { data: { user: User | null } }) => {
-        const user = data.user;
-        if (!user) {
-          router.replace("/login");
-          return;
-        }
-
-        const persona = user.user_metadata?.persona as Persona | undefined;
-        const profileCompleted = user.user_metadata?.profile_completed as
-          | boolean
-          | undefined;
-        if (persona) {
-          const destination =
-            next ||
-            (persona === "developer" && !profileCompleted
-              ? "/onboarding/developer"
-              : persona === "developer"
-                ? "/dashboard"
-                : "/projects/new");
-          router.replace(destination);
-        }
-      })
-      .catch(() => {
+    const checkUser = async () => {
+      const supabase = createClient();
+      
+      const { data: { user } } = await supabase.auth.getUser();
+      
+      if (!user) {
         router.replace("/login");
-      });
+        return;
+      }
+
+      // Check if user already has a profile in the database (existing user)
+      const { data: profile } = await supabase
+        .from("profiles")
+        .select("user_id")
+        .eq("user_id", user.id)
+        .single();
+
+      if (profile) {
+        // Existing user with profile - go to dashboard
+        router.replace(next || "/dashboard");
+        return;
+      }
+
+      // Check if user has projects (project owner)
+      const { data: projects } = await supabase
+        .from("projects")
+        .select("id")
+        .eq("creator_id", user.id)
+        .limit(1);
+
+      if (projects && projects.length > 0) {
+        // Existing project owner - go to dashboard
+        router.replace(next || "/dashboard");
+        return;
+      }
+
+      // Check user metadata for persona
+      const persona = user.user_metadata?.persona as Persona | undefined;
+      const profileCompleted = user.user_metadata?.profile_completed as
+        | boolean
+        | undefined;
+        
+      if (persona) {
+        const destination =
+          next ||
+          (persona === "developer" && !profileCompleted
+            ? "/onboarding/developer"
+            : persona === "developer"
+              ? "/dashboard"
+              : "/projects/new");
+        router.replace(destination);
+      }
+      // If no persona, stay on this page to let user choose
+    };
+    
+    checkUser().catch(() => {
+      router.replace("/login");
+    });
   }, [next, router]);
 
   const handleSelect = async (persona: Persona) => {

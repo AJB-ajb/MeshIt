@@ -4,7 +4,8 @@
  */
 
 import { createClient } from "@/lib/supabase/server";
-import type { Project, Match, ScoreBreakdown } from "@/lib/supabase/types";
+import type { Project, ScoreBreakdown } from "@/lib/supabase/types";
+import { generateProfileEmbedding } from "@/lib/ai/embeddings";
 
 export interface ProfileToProjectMatch {
   project: Project;
@@ -30,21 +31,42 @@ export async function matchProfileToProjects(
   // First, get the user's profile and embedding
   const { data: profile, error: profileError } = await supabase
     .from("profiles")
-    .select("embedding")
+    .select("embedding, bio, skills, interests, headline")
     .eq("user_id", userId)
     .single();
 
   if (profileError || !profile) {
-    throw new Error(`Profile not found for user ${userId}`);
+    throw new Error(`Profile not found for user ${userId}. Please complete your profile first.`);
   }
 
-  if (!profile.embedding || !Array.isArray(profile.embedding)) {
-    throw new Error(`Profile embedding not found for user ${userId}`);
+  // If no embedding exists, try to generate one
+  let embedding = profile.embedding;
+  if (!embedding || !Array.isArray(embedding)) {
+    try {
+      embedding = await generateProfileEmbedding(
+        profile.bio,
+        profile.skills,
+        profile.interests,
+        profile.headline
+      );
+      
+      // Save the generated embedding
+      await supabase
+        .from("profiles")
+        .update({ embedding })
+        .eq("user_id", userId);
+    } catch (embeddingError) {
+      // If embedding generation fails, return empty matches with a helpful message
+      console.warn("Could not generate profile embedding:", embeddingError);
+      throw new Error(
+        "Could not generate profile embedding. Please ensure your profile has a bio, skills, or headline filled in."
+      );
+    }
   }
 
   // Call the database function to find matching projects
   const { data, error } = await supabase.rpc("match_projects_to_user", {
-    user_embedding: profile.embedding,
+    user_embedding: embedding,
     user_id_param: userId,
     match_limit: limit,
   });

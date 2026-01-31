@@ -5,6 +5,7 @@ interface LogoProps {
   className?: string;
   size?: "sm" | "md" | "lg";
   showText?: boolean;
+  href?: string;
 }
 
 const sizeClasses = {
@@ -19,10 +20,10 @@ const textSizeClasses = {
   lg: "text-xl",
 };
 
-export function Logo({ className, size = "md", showText = true }: LogoProps) {
+export function Logo({ className, size = "md", showText = true, href = "/" }: LogoProps) {
   return (
     <Link
-      href="/"
+      href={href}
       className={cn("flex items-center gap-2 font-semibold", className)}
     >
       <div
