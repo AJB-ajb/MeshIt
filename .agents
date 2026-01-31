@@ -43,7 +43,7 @@ supabase migration list
 supabase db pull
 
 When updating database model, update `docs/DATA_MODEL.md`!
-Keep legacy data columns for compatibility.
+Keep legacy data columns for compatibility by default.
 
 ```
 
