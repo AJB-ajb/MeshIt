@@ -282,11 +282,10 @@ function DeveloperOnboardingContent() {
         <form onSubmit={handleSubmit} className="w-full max-w-3xl space-y-6">
           <div className="text-center">
             <h1 className="text-3xl font-semibold">
-              Build your developer profile
+              Complete your profile
             </h1>
             <p className="mt-2 text-muted-foreground">
-              This helps us match you with projects that fit your skills and
-              interests.
+              Tell us about yourself so we can help you find the right projects and collaborators.
             </p>
           </div>
 

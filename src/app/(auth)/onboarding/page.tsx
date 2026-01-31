@@ -57,7 +57,7 @@ function OnboardingContent() {
         return;
       }
 
-      // Check if user has projects (project owner)
+      // Check if user has projects
       const { data: projects } = await supabase
         .from("projects")
         .select("id")
@@ -65,28 +65,20 @@ function OnboardingContent() {
         .limit(1);
 
       if (projects && projects.length > 0) {
-        // Existing project owner - go to dashboard
+        // Existing user with projects - go to dashboard
         router.replace(next || "/dashboard");
         return;
       }
 
-      // Check user metadata for persona
-      const persona = user.user_metadata?.persona as Persona | undefined;
-      const profileCompleted = user.user_metadata?.profile_completed as
-        | boolean
-        | undefined;
-        
-      if (persona) {
-        const destination =
-          next ||
-          (persona === "developer" && !profileCompleted
-            ? "/onboarding/developer"
-            : persona === "developer"
-              ? "/dashboard"
-              : "/projects/new");
-        router.replace(destination);
+      // New user - redirect to onboarding form
+      const profileCompleted = user.user_metadata?.profile_completed;
+      if (!profileCompleted) {
+        router.replace(`/onboarding/developer${next ? `?next=${encodeURIComponent(next)}` : ""}`);
+        return;
       }
-      // If no persona, stay on this page to let user choose
+
+      // User has completed profile
+      router.replace(next || "/dashboard");
     };
     
     checkUser().catch(() => {

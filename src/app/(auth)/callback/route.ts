@@ -31,13 +31,11 @@ export async function GET(request: Request) {
 
       // If user has a profile in the database, they're an existing user - go to dashboard
       if (profile) {
-        // Ensure user metadata is synced (in case it was lost)
-        const persona = user.user_metadata?.persona;
-        if (!persona) {
-          // User has a profile but no persona in metadata - they're a developer
+        // Ensure profile_completed is set in metadata
+        const profileCompleted = user.user_metadata?.profile_completed;
+        if (!profileCompleted) {
           await supabase.auth.updateUser({
             data: {
-              persona: "developer",
               profile_completed: true,
             },
           });
@@ -45,7 +43,7 @@ export async function GET(request: Request) {
         return NextResponse.redirect(`${origin}${next}`);
       }
 
-      // Check if user is a project owner (has projects but no profile)
+      // Check if user has projects (existing user)
       const { data: projects } = await supabase
         .from("projects")
         .select("id")
@@ -53,12 +51,11 @@ export async function GET(request: Request) {
         .limit(1);
 
       if (projects && projects.length > 0) {
-        // User is a project owner - ensure metadata is set
-        const persona = user.user_metadata?.persona;
-        if (!persona) {
+        // Existing user with projects - ensure profile_completed is set
+        const profileCompleted = user.user_metadata?.profile_completed;
+        if (!profileCompleted) {
           await supabase.auth.updateUser({
             data: {
-              persona: "project_owner",
               profile_completed: true,
             },
           });
@@ -66,25 +63,17 @@ export async function GET(request: Request) {
         return NextResponse.redirect(`${origin}${next}`);
       }
 
-      // New user - check user metadata for persona selection
-      const persona = user.user_metadata?.persona;
+      // New user - send directly to onboarding form
+      // Check if profile is completed
       const profileCompleted = user.user_metadata?.profile_completed;
 
-      if (!persona) {
-        // Brand new user - send to onboarding to choose persona
-        const destination = `/onboarding?next=${encodeURIComponent(next)}`;
+      if (!profileCompleted) {
+        // Brand new user - send directly to onboarding form
+        const destination = `/onboarding/developer?next=${encodeURIComponent(next)}`;
         return NextResponse.redirect(`${origin}${destination}`);
       }
 
-      if (persona === "developer" && !profileCompleted) {
-        // Developer who hasn't completed profile
-        const destination = `/onboarding/developer?next=${encodeURIComponent(
-          next
-        )}`;
-        return NextResponse.redirect(`${origin}${destination}`);
-      }
-
-      // User has persona and profile is completed
+      // User has completed profile
       return NextResponse.redirect(`${origin}${next}`);
     }
   }
