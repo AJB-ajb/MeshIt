@@ -17,6 +17,9 @@ import {
   Loader2,
   Pencil,
   Trash2,
+  Send,
+  CheckCircle,
+  XCircle,
 } from "lucide-react";
 
 import { Button } from "@/components/ui/button";
@@ -44,6 +47,20 @@ type Project = {
   created_at: string;
   expires_at: string;
   creator_id: string;
+  profiles?: {
+    full_name: string | null;
+    headline: string | null;
+    skills: string[] | null;
+    user_id: string;
+  };
+};
+
+type Application = {
+  id: string;
+  status: string;
+  cover_message: string | null;
+  created_at: string;
+  applicant_id: string;
   profiles?: {
     full_name: string | null;
     headline: string | null;
@@ -109,6 +126,7 @@ export default function ProjectDetailPage() {
   const [project, setProject] = useState<Project | null>(null);
   const [isLoading, setIsLoading] = useState(true);
   const [isOwner, setIsOwner] = useState(false);
+  const [currentUserId, setCurrentUserId] = useState<string | null>(null);
   const [isEditing, setIsEditing] = useState(false);
   const [isSaving, setIsSaving] = useState(false);
   const [isDeleting, setIsDeleting] = useState(false);
@@ -124,6 +142,15 @@ export default function ProjectDetailPage() {
     status: "open",
   });
 
+  // Application state
+  const [hasApplied, setHasApplied] = useState(false);
+  const [myApplication, setMyApplication] = useState<Application | null>(null);
+  const [isApplying, setIsApplying] = useState(false);
+  const [showApplyForm, setShowApplyForm] = useState(false);
+  const [coverMessage, setCoverMessage] = useState("");
+  const [applications, setApplications] = useState<Application[]>([]);
+  const [isUpdatingApplication, setIsUpdatingApplication] = useState<string | null>(null);
+
   useEffect(() => {
     const fetchProject = async () => {
       setIsLoading(true);
@@ -133,6 +160,8 @@ export default function ProjectDetailPage() {
       const {
         data: { user },
       } = await supabase.auth.getUser();
+
+      setCurrentUserId(user?.id || null);
 
       // Fetch project with creator profile
       const { data, error } = await supabase
@@ -158,7 +187,8 @@ export default function ProjectDetailPage() {
       }
 
       setProject(data);
-      setIsOwner(user?.id === data.creator_id);
+      const ownerCheck = user?.id === data.creator_id;
+      setIsOwner(ownerCheck);
       setForm({
         title: data.title,
         description: data.description,
@@ -169,6 +199,48 @@ export default function ProjectDetailPage() {
         experienceLevel: data.experience_level || "any",
         status: data.status || "open",
       });
+
+      // Check if user has already applied
+      if (user && !ownerCheck) {
+        const { data: applicationData } = await supabase
+          .from("applications")
+          .select("*")
+          .eq("project_id", projectId)
+          .eq("applicant_id", user.id)
+          .single();
+
+        if (applicationData) {
+          setHasApplied(true);
+          setMyApplication(applicationData);
+        }
+      }
+
+      // If owner, fetch all applications
+      if (ownerCheck) {
+        const { data: applicationsData } = await supabase
+          .from("applications")
+          .select("*")
+          .eq("project_id", projectId)
+          .order("created_at", { ascending: false });
+
+        if (applicationsData && applicationsData.length > 0) {
+          // Fetch profiles for each applicant
+          const applicantIds = applicationsData.map((a) => a.applicant_id);
+          const { data: profilesData } = await supabase
+            .from("profiles")
+            .select("full_name, headline, skills, user_id")
+            .in("user_id", applicantIds);
+
+          // Merge profiles with applications
+          const applicationsWithProfiles = applicationsData.map((app) => ({
+            ...app,
+            profiles: profilesData?.find((p) => p.user_id === app.applicant_id),
+          }));
+
+          setApplications(applicationsWithProfiles);
+        }
+      }
+
       setIsLoading(false);
     };
 
@@ -238,7 +310,11 @@ export default function ProjectDetailPage() {
   };
 
   const handleDelete = async () => {
-    if (!confirm("Are you sure you want to delete this project? This action cannot be undone.")) {
+    if (
+      !confirm(
+        "Are you sure you want to delete this project? This action cannot be undone."
+      )
+    ) {
       return;
     }
 
@@ -257,6 +333,209 @@ export default function ProjectDetailPage() {
     }
 
     router.push("/projects");
+  };
+
+  const handleApply = async () => {
+    if (!currentUserId) {
+      router.push("/login");
+      return;
+    }
+
+    setIsApplying(true);
+    setError(null);
+
+    const supabase = createClient();
+
+    // Create application
+    const { data: application, error: applyError } = await supabase
+      .from("applications")
+      .insert({
+        project_id: projectId,
+        applicant_id: currentUserId,
+        cover_message: coverMessage.trim() || null,
+      })
+      .select()
+      .single();
+
+    if (applyError) {
+      setIsApplying(false);
+      setError("Failed to submit application. Please try again.");
+      return;
+    }
+
+    // Create notification for project owner
+    if (project) {
+      // Get applicant's profile for notification
+      const { data: profile } = await supabase
+        .from("profiles")
+        .select("full_name")
+        .eq("user_id", currentUserId)
+        .single();
+
+      const applicantName = profile?.full_name || "Someone";
+
+      await supabase.from("notifications").insert({
+        user_id: project.creator_id,
+        type: "application_received",
+        title: "New Application Received",
+        body: `${applicantName} has applied to your project "${project.title}"`,
+        related_project_id: projectId,
+        related_application_id: application.id,
+        related_user_id: currentUserId,
+      });
+    }
+
+    setHasApplied(true);
+    setMyApplication(application);
+    setShowApplyForm(false);
+    setCoverMessage("");
+    setIsApplying(false);
+  };
+
+  const handleWithdrawApplication = async () => {
+    if (!myApplication) return;
+
+    if (!confirm("Are you sure you want to withdraw your application?")) {
+      return;
+    }
+
+    const supabase = createClient();
+
+    const { error: withdrawError } = await supabase
+      .from("applications")
+      .update({ status: "withdrawn" })
+      .eq("id", myApplication.id);
+
+    if (withdrawError) {
+      setError("Failed to withdraw application. Please try again.");
+      return;
+    }
+
+    setMyApplication({ ...myApplication, status: "withdrawn" });
+  };
+
+  const handleUpdateApplicationStatus = async (
+    applicationId: string,
+    newStatus: "accepted" | "rejected"
+  ) => {
+    setIsUpdatingApplication(applicationId);
+    const supabase = createClient();
+
+    const { error: updateError } = await supabase
+      .from("applications")
+      .update({ status: newStatus })
+      .eq("id", applicationId);
+
+    if (updateError) {
+      setError("Failed to update application. Please try again.");
+      setIsUpdatingApplication(null);
+      return;
+    }
+
+    // Find the application to get applicant info
+    const application = applications.find((a) => a.id === applicationId);
+
+    // Create notification for applicant
+    if (application && project) {
+      await supabase.from("notifications").insert({
+        user_id: application.applicant_id,
+        type: newStatus === "accepted" ? "application_accepted" : "application_rejected",
+        title: newStatus === "accepted" ? "Application Accepted! 🎉" : "Application Update",
+        body:
+          newStatus === "accepted"
+            ? `Your application to "${project.title}" has been accepted!`
+            : `Your application to "${project.title}" was not selected.`,
+        related_project_id: projectId,
+        related_application_id: applicationId,
+        related_user_id: project.creator_id,
+      });
+    }
+
+    // Update local state
+    setApplications((prev) =>
+      prev.map((app) =>
+        app.id === applicationId ? { ...app, status: newStatus } : app
+      )
+    );
+    setIsUpdatingApplication(null);
+  };
+
+  const handleMessageApplicant = async (applicantId: string) => {
+    if (!currentUserId || !project) return;
+
+    const supabase = createClient();
+
+    // Check if conversation exists
+    const { data: existingConv } = await supabase
+      .from("conversations")
+      .select("id")
+      .eq("project_id", projectId)
+      .or(
+        `and(participant_1.eq.${currentUserId},participant_2.eq.${applicantId}),and(participant_1.eq.${applicantId},participant_2.eq.${currentUserId})`
+      )
+      .single();
+
+    if (existingConv) {
+      router.push(`/inbox?conversation=${existingConv.id}`);
+      return;
+    }
+
+    // Create new conversation
+    const { data: newConv, error: convError } = await supabase
+      .from("conversations")
+      .insert({
+        project_id: projectId,
+        participant_1: currentUserId,
+        participant_2: applicantId,
+      })
+      .select()
+      .single();
+
+    if (convError) {
+      setError("Failed to start conversation. Please try again.");
+      return;
+    }
+
+    router.push(`/inbox?conversation=${newConv.id}`);
+  };
+
+  const handleContactCreator = async () => {
+    if (!currentUserId || !project) return;
+
+    const supabase = createClient();
+
+    // Check if conversation exists
+    const { data: existingConv } = await supabase
+      .from("conversations")
+      .select("id")
+      .eq("project_id", projectId)
+      .or(
+        `and(participant_1.eq.${currentUserId},participant_2.eq.${project.creator_id}),and(participant_1.eq.${project.creator_id},participant_2.eq.${currentUserId})`
+      )
+      .single();
+
+    if (existingConv) {
+      router.push(`/inbox?conversation=${existingConv.id}`);
+      return;
+    }
+
+    // Create new conversation
+    const { data: newConv, error: convError } = await supabase
+      .from("conversations")
+      .insert({
+        project_id: projectId,
+        participant_1: currentUserId,
+        participant_2: project.creator_id,
+      })
+      .select()
+      .single();
+
+    if (convError) {
+      setError("Failed to start conversation. Please try again.");
+      return;
+    }
+
+    router.push(`/inbox?conversation=${newConv.id}`);
   };
 
   if (isLoading) {
@@ -341,7 +620,7 @@ export default function ProjectDetailPage() {
             Created by {creatorName} • {formatDate(project.created_at)}
           </p>
         </div>
-        {isOwner && (
+        {isOwner ? (
           <div className="flex gap-2">
             {isEditing ? (
               <>
@@ -380,6 +659,80 @@ export default function ProjectDetailPage() {
                   )}
                 </Button>
               </>
+            )}
+          </div>
+        ) : (
+          // Apply button for non-owners
+          <div className="flex gap-2">
+            {hasApplied ? (
+              <div className="flex items-center gap-2">
+                <Badge
+                  variant={
+                    myApplication?.status === "accepted"
+                      ? "default"
+                      : myApplication?.status === "rejected"
+                        ? "destructive"
+                        : myApplication?.status === "withdrawn"
+                          ? "outline"
+                          : "secondary"
+                  }
+                  className="px-3 py-1"
+                >
+                  {myApplication?.status === "pending" && "Application Pending"}
+                  {myApplication?.status === "accepted" && "✓ Accepted"}
+                  {myApplication?.status === "rejected" && "Not Selected"}
+                  {myApplication?.status === "withdrawn" && "Withdrawn"}
+                </Badge>
+                {myApplication?.status === "pending" && (
+                  <Button
+                    variant="outline"
+                    size="sm"
+                    onClick={handleWithdrawApplication}
+                  >
+                    Withdraw
+                  </Button>
+                )}
+              </div>
+            ) : project.status === "open" ? (
+              showApplyForm ? (
+                <div className="flex flex-col gap-2 w-full max-w-md">
+                  <textarea
+                    value={coverMessage}
+                    onChange={(e) => setCoverMessage(e.target.value)}
+                    placeholder="Tell the project owner why you're interested... (optional)"
+                    rows={3}
+                    className="flex w-full rounded-md border border-input bg-background px-3 py-2 text-sm ring-offset-background placeholder:text-muted-foreground focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring focus-visible:ring-offset-2"
+                  />
+                  <div className="flex gap-2">
+                    <Button onClick={handleApply} disabled={isApplying}>
+                      {isApplying ? (
+                        <>
+                          <Loader2 className="h-4 w-4 animate-spin" />
+                          Applying...
+                        </>
+                      ) : (
+                        <>
+                          <Send className="h-4 w-4" />
+                          Submit Application
+                        </>
+                      )}
+                    </Button>
+                    <Button
+                      variant="outline"
+                      onClick={() => setShowApplyForm(false)}
+                    >
+                      Cancel
+                    </Button>
+                  </div>
+                </div>
+              ) : (
+                <Button onClick={() => setShowApplyForm(true)}>
+                  <Send className="h-4 w-4" />
+                  Apply to Project
+                </Button>
+              )
+            ) : (
+              <Badge variant="secondary">Project {project.status}</Badge>
             )}
           </div>
         )}
@@ -524,6 +877,194 @@ export default function ProjectDetailPage() {
             </CardContent>
           </Card>
 
+          {/* Applications (for project owner) */}
+          {isOwner && (
+            <Card className={applications.filter(a => a.status === "pending").length > 0 ? "border-primary/50 shadow-md" : ""}>
+              <CardHeader>
+                <div className="flex items-center justify-between">
+                  <div className="flex items-center gap-3">
+                    <div className={`flex h-10 w-10 items-center justify-center rounded-full ${applications.filter(a => a.status === "pending").length > 0 ? "bg-primary text-primary-foreground" : "bg-muted"}`}>
+                      <Users className="h-5 w-5" />
+                    </div>
+                    <div>
+                      <CardTitle>Applications</CardTitle>
+                      <CardDescription>
+                        {applications.filter(a => a.status === "pending").length > 0 ? (
+                          <span className="text-primary font-medium">
+                            {applications.filter(a => a.status === "pending").length} pending review
+                          </span>
+                        ) : (
+                          `${applications.length} application${applications.length !== 1 ? "s" : ""} received`
+                        )}
+                      </CardDescription>
+                    </div>
+                  </div>
+                </div>
+              </CardHeader>
+              <CardContent>
+                {applications.length === 0 ? (
+                  <div className="text-center py-8">
+                    <Users className="h-12 w-12 mx-auto text-muted-foreground/50" />
+                    <p className="mt-4 text-sm text-muted-foreground">
+                      No applications yet
+                    </p>
+                    <p className="text-xs text-muted-foreground">
+                      Share your project to attract developers!
+                    </p>
+                  </div>
+                ) : (
+                  <div className="space-y-4">
+                    {applications.map((application) => (
+                      <div
+                        key={application.id}
+                        className={`rounded-lg border p-4 transition-colors ${
+                          application.status === "pending" 
+                            ? "border-primary/30 bg-primary/5" 
+                            : "border-border"
+                        }`}
+                      >
+                        <div className="flex items-start justify-between gap-4">
+                          <div className="flex items-start gap-3 flex-1 min-w-0">
+                            <div className="flex h-12 w-12 items-center justify-center rounded-full bg-muted text-sm font-medium shrink-0">
+                              {getInitials(application.profiles?.full_name || null)}
+                            </div>
+                            <div className="flex-1 min-w-0">
+                              <div className="flex items-center gap-2">
+                                <h4 className="font-medium truncate">
+                                  {application.profiles?.full_name || "Unknown"}
+                                </h4>
+                                {application.status === "pending" && (
+                                  <Badge variant="secondary" className="text-xs shrink-0">
+                                    New
+                                  </Badge>
+                                )}
+                              </div>
+                              {application.profiles?.headline && (
+                                <p className="text-sm text-muted-foreground truncate">
+                                  {application.profiles.headline}
+                                </p>
+                              )}
+                              {application.cover_message && (
+                                <div className="mt-2 p-2 rounded bg-muted/50">
+                                  <p className="text-sm text-muted-foreground italic">
+                                    &quot;{application.cover_message}&quot;
+                                  </p>
+                                </div>
+                              )}
+                              {application.profiles?.skills &&
+                                application.profiles.skills.length > 0 && (
+                                  <div className="mt-2 flex flex-wrap gap-1">
+                                    {application.profiles.skills
+                                      .slice(0, 5)
+                                      .map((skill) => (
+                                        <Badge
+                                          key={skill}
+                                          variant="outline"
+                                          className="text-xs"
+                                        >
+                                          {skill}
+                                        </Badge>
+                                      ))}
+                                    {application.profiles.skills.length > 5 && (
+                                      <Badge variant="outline" className="text-xs">
+                                        +{application.profiles.skills.length - 5} more
+                                      </Badge>
+                                    )}
+                                  </div>
+                                )}
+                              <p className="mt-2 text-xs text-muted-foreground">
+                                Applied {formatDate(application.created_at)}
+                              </p>
+                            </div>
+                          </div>
+                        </div>
+                        
+                        {/* Action buttons */}
+                        <div className="mt-4 flex items-center justify-between border-t border-border pt-4">
+                          <div className="flex gap-2">
+                            <Button
+                              size="sm"
+                              variant="outline"
+                              onClick={() => handleMessageApplicant(application.applicant_id)}
+                            >
+                              <MessageSquare className="h-4 w-4" />
+                              Message
+                            </Button>
+                          </div>
+                          <div className="flex items-center gap-2">
+                            {application.status === "pending" ? (
+                              <>
+                                <Button
+                                  size="sm"
+                                  variant="outline"
+                                  className="border-green-500/50 text-green-600 hover:bg-green-50 hover:text-green-700"
+                                  onClick={() =>
+                                    handleUpdateApplicationStatus(
+                                      application.id,
+                                      "accepted"
+                                    )
+                                  }
+                                  disabled={
+                                    isUpdatingApplication === application.id
+                                  }
+                                >
+                                  {isUpdatingApplication === application.id ? (
+                                    <Loader2 className="h-4 w-4 animate-spin" />
+                                  ) : (
+                                    <>
+                                      <CheckCircle className="h-4 w-4" />
+                                      Accept
+                                    </>
+                                  )}
+                                </Button>
+                                <Button
+                                  size="sm"
+                                  variant="outline"
+                                  className="border-red-500/50 text-red-600 hover:bg-red-50 hover:text-red-700"
+                                  onClick={() =>
+                                    handleUpdateApplicationStatus(
+                                      application.id,
+                                      "rejected"
+                                    )
+                                  }
+                                  disabled={
+                                    isUpdatingApplication === application.id
+                                  }
+                                >
+                                  {isUpdatingApplication === application.id ? (
+                                    <Loader2 className="h-4 w-4 animate-spin" />
+                                  ) : (
+                                    <>
+                                      <XCircle className="h-4 w-4" />
+                                      Decline
+                                    </>
+                                  )}
+                                </Button>
+                              </>
+                            ) : (
+                              <Badge
+                                variant={
+                                  application.status === "accepted"
+                                    ? "default"
+                                    : application.status === "rejected"
+                                      ? "destructive"
+                                      : "secondary"
+                                }
+                                className="capitalize"
+                              >
+                                {application.status}
+                              </Badge>
+                            )}
+                          </div>
+                        </div>
+                      </div>
+                    ))}
+                  </div>
+                )}
+              </CardContent>
+            </Card>
+          )}
+
           {/* Matched Collaborators (placeholder for now) */}
           <Card>
             <CardHeader>
@@ -578,7 +1119,7 @@ export default function ProjectDetailPage() {
                 </div>
               )}
               {!isOwner && (
-                <Button className="w-full">
+                <Button className="w-full" onClick={handleContactCreator}>
                   <MessageSquare className="h-4 w-4" />
                   Contact Creator
                 </Button>

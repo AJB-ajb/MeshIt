@@ -6,7 +6,7 @@ import {
   LayoutDashboard,
   FolderKanban,
   Users,
-  MessageSquare,
+  Inbox,
   Plus,
   Menu,
   X,
@@ -23,7 +23,7 @@ const navigation = [
   { href: "/dashboard", icon: LayoutDashboard, label: "Dashboard" },
   { href: "/projects", icon: FolderKanban, label: "Projects" },
   { href: "/matches", icon: Users, label: "Matches" },
-  { href: "/messages", icon: MessageSquare, label: "Messages" },
+  { href: "/inbox", icon: Inbox, label: "Inbox" },
 ];
 
 const secondaryNavigation = [
