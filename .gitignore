@@ -82,3 +82,7 @@ venv/
 *.log
 logs/
 .env*.local
+
+# Serwist
+public/sw*
+public/swe-worker*
