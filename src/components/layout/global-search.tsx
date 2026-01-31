@@ -15,6 +15,7 @@ import { cn } from "@/lib/utils";
 import { Input } from "@/components/ui/input";
 import { Badge } from "@/components/ui/badge";
 import { createClient } from "@/lib/supabase/client";
+import { getTestDataValue } from "@/lib/environment";
 
 type SearchResult = {
   id: string;
@@ -51,6 +52,7 @@ export function GlobalSearch() {
       const { data: projects } = await supabase
         .from("projects")
         .select("id, title, description, required_skills, status")
+        .eq("is_test_data", getTestDataValue())
         .or(`title.ilike.${searchTerm},description.ilike.${searchTerm}`)
         .limit(5);
 
@@ -58,6 +60,7 @@ export function GlobalSearch() {
       const { data: profiles } = await supabase
         .from("profiles")
         .select("user_id, full_name, headline, skills")
+        .eq("is_test_data", getTestDataValue())
         .or(`full_name.ilike.${searchTerm},headline.ilike.${searchTerm}`)
         .limit(5);
 

@@ -35,6 +35,7 @@ import { cn } from "@/lib/utils";
 import { createClient } from "@/lib/supabase/client";
 import { useRealtimeChat } from "@/lib/hooks/use-realtime-chat";
 import { usePresenceContext } from "@/components/providers/presence-provider";
+import { getTestDataValue } from "@/lib/environment";
 import {
   subscribeToNotifications,
   subscribeToConversations,
@@ -232,6 +233,7 @@ function InboxPageContent() {
                 .from("projects")
                 .select("title")
                 .eq("id", conv.project_id)
+                .eq("is_test_data", getTestDataValue())
                 .single();
               project = projectData;
             }

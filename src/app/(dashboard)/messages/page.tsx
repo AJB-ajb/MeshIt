@@ -5,6 +5,7 @@ import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { EmptyState } from "@/components/ui/empty-state";
 import { createClient } from "@/lib/supabase/server";
+import { getTestDataValue } from "@/lib/environment";
 
 export const metadata: Metadata = {
   title: "Messages",
@@ -73,7 +74,8 @@ export default async function MessagesPage() {
     const { data: createdProjects } = await supabase
       .from("projects")
       .select("id, title, creator_id")
-      .eq("creator_id", user.id);
+      .eq("creator_id", user.id)
+      .eq("is_test_data", getTestDataValue());
 
     // Get projects where user has accepted matches
     const { data: acceptedMatches } = await supabase

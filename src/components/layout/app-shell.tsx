@@ -1,6 +1,7 @@
 import { cn } from "@/lib/utils";
 import { Sidebar } from "./sidebar";
 import { Header } from "./header";
+import { TestModeBanner } from "./test-mode-banner";
 import { SkipLink } from "@/components/ui/skip-link";
 import { PresenceProvider } from "@/components/providers/presence-provider";
 
@@ -16,6 +17,7 @@ export function AppShell({ children, className }: AppShellProps) {
         <SkipLink />
         <Sidebar />
         <div className="flex flex-1 flex-col">
+          <TestModeBanner />
           <Header />
           <main 
             id="main-content" 

@@ -36,6 +36,7 @@ User profile information including skills, preferences, and matching-related dat
 | `project_preferences` | jsonb | NO | '{}' | See JSONB structure below |
 | `hard_filters` | jsonb | YES | null | See JSONB structure below |
 | `embedding` | vector(1536) | YES | null | OpenAI embedding for semantic matching |
+| `is_test_data` | boolean | NO | true | Flag for test/mock data (true) vs production data (false) |
 | `created_at` | timestamptz | NO | now() | Record creation timestamp |
 | `updated_at` | timestamptz | NO | now() | Last update timestamp (auto-updated) |
 
@@ -62,6 +63,7 @@ Project listings created by users seeking collaborators.
 | `hard_filters` | jsonb | YES | null | See JSONB structure below |
 | `embedding` | vector(1536) | YES | null | OpenAI embedding for semantic matching |
 | `status` | text | NO | 'open' | One of: open, closed, filled, expired |
+| `is_test_data` | boolean | NO | true | Flag for test/mock data (true) vs production data (false) |
 | `created_at` | timestamptz | NO | now() | Record creation timestamp |
 | `updated_at` | timestamptz | NO | now() | Last update timestamp (auto-updated) |
 | `expires_at` | timestamptz | NO | - | Project expiration date |
@@ -176,10 +178,33 @@ Fields kept for backward compatibility but superseded by newer fields:
 
 ---
 
+## Data Isolation
+
+### Test Data Flag
+
+Both `profiles` and `projects` tables include an `is_test_data` flag for complete data isolation between environments:
+
+- **Test/Development/Preview** (`is_test_data = true`): All data in non-production environments
+- **Production** (`is_test_data = false`): Real production data only
+
+**Behavior:**
+- Production environment only shows and modifies records with `is_test_data = false`
+- Test/dev environments only show and modify records with `is_test_data = true`
+- New records are automatically flagged based on environment (`VERCEL_ENV`)
+- Ensures test environments cannot access or modify production data
+
+**Implementation:**
+- Environment detection via `VERCEL_ENV` variable
+- All queries filter by `is_test_data` matching current environment
+- UI displays "MeshIt - Test" and warning banner in test mode
+
+---
+
 ## Indexes
 
 ### profiles
 - Primary key on `user_id`
+- `profiles_is_test_data_idx` on `is_test_data`
 
 ### projects
 - Primary key on `id`
@@ -187,6 +212,7 @@ Fields kept for backward compatibility but superseded by newer fields:
 - `projects_creator_idx` on `creator_id`
 - `projects_expires_at_idx` on `expires_at`
 - `projects_skills_idx` (GIN) on `required_skills`
+- `projects_is_test_data_idx` on `is_test_data`
 
 ### matches
 - Primary key on `id`

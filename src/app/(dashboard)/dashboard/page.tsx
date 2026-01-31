@@ -20,6 +20,7 @@ import {
 } from "@/components/ui/card";
 import { ProjectCard } from "@/components/project/project-card";
 import { createClient } from "@/lib/supabase/server";
+import { getTestDataValue } from "@/lib/environment";
 
 export const metadata: Metadata = {
   title: "Dashboard",
@@ -69,13 +70,15 @@ export default async function DashboardPage() {
         .from("projects")
         .select("*", { count: "exact", head: true })
         .eq("creator_id", user.id)
-        .eq("status", "open");
+        .eq("status", "open")
+        .eq("is_test_data", getTestDataValue());
 
       // Get user's project IDs first
       const { data: userProjects } = await supabase
         .from("projects")
         .select("id")
-        .eq("creator_id", user.id);
+        .eq("creator_id", user.id)
+        .eq("is_test_data", getTestDataValue());
 
       const projectIds = userProjects?.map((p) => p.id) || [];
 
@@ -345,6 +348,7 @@ export default async function DashboardPage() {
       .select("id, title, status")
       .eq("creator_id", user.id)
       .eq("status", "open")
+      .eq("is_test_data", getTestDataValue())
       .limit(2);
 
     if (userProjects) {

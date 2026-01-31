@@ -15,6 +15,7 @@ import {
   CardTitle,
 } from "@/components/ui/card";
 import { createClient } from "@/lib/supabase/client";
+import { getTestDataValue } from "@/lib/environment";
 
 type InputMode = "form" | "ai";
 
@@ -149,6 +150,7 @@ export default function NewProjectPage() {
       const { error: profileError } = await supabase.from("profiles").insert({
         user_id: user.id,
         full_name: user.user_metadata?.full_name || user.email?.split("@")[0] || "User",
+        is_test_data: getTestDataValue(),
       });
 
       if (profileError) {
@@ -190,6 +192,7 @@ export default function NewProjectPage() {
         experience_level: form.experienceLevel,
         status: "open",
         expires_at: expiresAt.toISOString(),
+        is_test_data: getTestDataValue(),
       })
       .select()
       .single();

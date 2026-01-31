@@ -5,6 +5,7 @@ import {
   createMatchRecordsForProject,
 } from "@/lib/matching/project-to-profile";
 import type { MatchResponse } from "@/lib/supabase/types";
+import { getTestDataValue } from "@/lib/environment";
 
 /**
  * GET /api/matches/for-project/[id]
@@ -33,6 +34,7 @@ export async function GET(
       .from("projects")
       .select("creator_id")
       .eq("id", projectId)
+      .eq("is_test_data", getTestDataValue())
       .single();
 
     if (projectError || !project) {

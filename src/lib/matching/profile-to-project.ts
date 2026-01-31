@@ -107,6 +107,7 @@ export async function matchProfileToProjects(
         hard_filters: row.hard_filters || null,
         embedding: null, // Don't return embedding in response
         status: "open",
+        is_test_data: row.is_test_data || false,
         created_at: row.created_at,
         updated_at: row.created_at,
         expires_at: row.expires_at,

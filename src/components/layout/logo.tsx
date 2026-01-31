@@ -1,5 +1,6 @@
 import Link from "next/link";
 import { cn } from "@/lib/utils";
+import { isTestMode } from "@/lib/environment";
 
 interface LogoProps {
   className?: string;
@@ -21,6 +22,9 @@ const textSizeClasses = {
 };
 
 export function Logo({ className, size = "md", showText = true, href = "/" }: LogoProps) {
+  const testMode = isTestMode();
+  const displayName = testMode ? "MeshIt - Test" : "MeshIt";
+  
   return (
     <Link
       href={href}
@@ -38,7 +42,7 @@ export function Logo({ className, size = "md", showText = true, href = "/" }: Lo
       </div>
       {showText && (
         <span className={cn("font-semibold", textSizeClasses[size])}>
-          MeshIt
+          {displayName}
         </span>
       )}
     </Link>

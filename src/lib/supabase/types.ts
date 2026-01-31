@@ -81,6 +81,8 @@ export interface Profile {
   hard_filters: HardFilters | null;
   // Matching
   embedding: number[] | null;         // vector(1536) stored as array
+  // Data isolation
+  is_test_data: boolean;              // Flag for test/mock data vs production data
   // Timestamps
   created_at: string;
   updated_at: string;
@@ -106,6 +108,7 @@ export interface ProfileInsert {
   project_preferences?: Json;
   hard_filters?: HardFilters | null;
   embedding?: number[] | null;
+  is_test_data?: boolean;
   created_at?: string;
   updated_at?: string;
 }
@@ -130,6 +133,7 @@ export interface ProfileUpdate {
   project_preferences?: Json;
   hard_filters?: HardFilters | null;
   embedding?: number[] | null;
+  is_test_data?: boolean;
   created_at?: string;
   updated_at?: string;
 }
@@ -151,6 +155,7 @@ export interface Project {
   hard_filters: HardFilters | null;   // Filters for scoring applicants
   embedding: number[] | null;         // vector(1536) stored as array
   status: "open" | "closed" | "filled" | "expired";
+  is_test_data: boolean;              // Flag for test/mock data vs production data
   created_at: string;
   updated_at: string;
   expires_at: string;
@@ -169,6 +174,7 @@ export interface ProjectInsert {
   hard_filters?: HardFilters | null;
   embedding?: number[] | null;
   status?: "open" | "closed" | "filled" | "expired";
+  is_test_data?: boolean;
   created_at?: string;
   updated_at?: string;
   expires_at: string;
@@ -187,6 +193,7 @@ export interface ProjectUpdate {
   hard_filters?: HardFilters | null;
   embedding?: number[] | null;
   status?: "open" | "closed" | "filled" | "expired";
+  is_test_data?: boolean;
   created_at?: string;
   updated_at?: string;
   expires_at?: string;

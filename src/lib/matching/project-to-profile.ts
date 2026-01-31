@@ -6,6 +6,7 @@
 import { createClient } from "@/lib/supabase/server";
 import type { Profile, ScoreBreakdown } from "@/lib/supabase/types";
 import { generateProjectEmbedding } from "@/lib/ai/embeddings";
+import { getTestDataValue } from "@/lib/environment";
 
 export interface ProjectToProfileMatch {
   profile: Profile;
@@ -33,6 +34,7 @@ export async function matchProjectToProfiles(
     .from("projects")
     .select("embedding, creator_id, title, description, required_skills")
     .eq("id", projectId)
+    .eq("is_test_data", getTestDataValue())
     .single();
 
   if (projectError || !project) {
@@ -112,6 +114,7 @@ export async function matchProjectToProfiles(
         project_preferences: row.project_preferences || {},
         hard_filters: row.hard_filters || null,
         embedding: null, // Don't return embedding in response
+        is_test_data: row.is_test_data || false,
         created_at: row.created_at || "",
         updated_at: row.updated_at || "",
       };
