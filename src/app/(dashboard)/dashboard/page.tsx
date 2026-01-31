@@ -25,115 +25,26 @@ export const metadata: Metadata = {
   title: "Dashboard",
 };
 
-const developerStats = [
-  {
-    title: "Active Projects",
-    value: "3",
-    description: "Projects you're involved in",
-    icon: FolderKanban,
-    href: "/projects",
-  },
-  {
-    title: "New Matches",
-    value: "12",
-    description: "Projects waiting for your review",
-    icon: Users,
-    href: "/matches",
-  },
-  {
-    title: "Messages",
-    value: "5",
-    description: "Unread conversations",
-    icon: MessageSquare,
-    href: "/messages",
-  },
-  {
-    title: "Match Rate",
-    value: "87%",
-    description: "Average compatibility",
-    icon: TrendingUp,
-    href: "/matches",
-  },
-];
+const formatDate = (dateString: string) => {
+  const date = new Date(dateString);
+  const now = new Date();
+  const diffMs = now.getTime() - date.getTime();
+  const diffDays = Math.floor(diffMs / (1000 * 60 * 60 * 24));
 
-const ownerStats = [
-  {
-    title: "Live Projects",
-    value: "2",
-    description: "Projects currently open",
-    icon: FolderKanban,
-    href: "/projects",
-  },
-  {
-    title: "New Applicants",
-    value: "9",
-    description: "Developers waiting on review",
-    icon: Users,
-    href: "/matches",
-  },
-  {
-    title: "Messages",
-    value: "4",
-    description: "Unread conversations",
-    icon: MessageSquare,
-    href: "/messages",
-  },
-  {
-    title: "Match Quality",
-    value: "82%",
-    description: "Average match strength",
-    icon: TrendingUp,
-    href: "/matches",
-  },
-];
+  if (diffDays === 0) return "Posted today";
+  if (diffDays === 1) return "Posted 1 day ago";
+  return `Posted ${diffDays} days ago`;
+};
 
-const recommendedProjects = [
-  {
-    id: "alpha",
-    title: "AI Wellness Companion",
-    description:
-      "Building a mobile-first wellness coach with mood tracking and AI suggestions.",
-    skills: ["React Native", "TypeScript", "LLM", "Product"],
-    teamSize: "3-4 people",
-    timeline: "1 month",
-    commitment: "10 hrs/week",
-    matchScore: 91,
-    creator: { name: "Maya Chen", initials: "MC" },
-    createdAt: "Posted 2 days ago",
-  },
-  {
-    id: "beta",
-    title: "Campus Event Matcher",
-    description:
-      "A platform for students to find hackathon teammates and side projects.",
-    skills: ["Next.js", "Supabase", "Design", "Growth"],
-    teamSize: "2-3 people",
-    timeline: "Ongoing",
-    commitment: "15 hrs/week",
-    matchScore: 86,
-    creator: { name: "Jordan Lee", initials: "JL" },
-    createdAt: "Posted 5 days ago",
-  },
-];
-
-const ownerProjectMetrics = [
-  {
-    id: "creator-1",
-    title: "Carbon Footprint Tracker",
-    status: "Open",
-    applicants: 7,
-    matches: 5,
-    views: 120,
-  },
-  {
-    id: "creator-2",
-    title: "AI Study Buddy",
-    status: "Open",
-    applicants: 4,
-    matches: 3,
-    views: 84,
-  },
-];
+const getInitials = (name: string | null) => {
+  if (!name) return "U";
+  return name
+    .split(" ")
+    .map((n) => n[0])
+    .join("")
+    .toUpperCase()
+    .slice(0, 2);
+};
 
 export default async function DashboardPage() {
   const supabase = await createClient();
@@ -141,7 +52,332 @@ export default async function DashboardPage() {
     data: { user },
   } = await supabase.auth.getUser();
   const persona = (user?.user_metadata?.persona as string) ?? "developer";
-  const stats = persona === "project_owner" ? ownerStats : developerStats;
+
+  // Fetch stats based on persona
+  let stats: Array<{
+    title: string;
+    value: string;
+    description: string;
+    icon: typeof FolderKanban;
+    href: string;
+  }> = [];
+
+  if (user) {
+    if (persona === "project_owner") {
+      // Owner stats
+      const { count: liveProjectsCount } = await supabase
+        .from("projects")
+        .select("*", { count: "exact", head: true })
+        .eq("creator_id", user.id)
+        .eq("status", "open");
+
+      // Get user's project IDs first
+      const { data: userProjects } = await supabase
+        .from("projects")
+        .select("id")
+        .eq("creator_id", user.id);
+
+      const projectIds = userProjects?.map((p) => p.id) || [];
+
+      const { count: applicantsCount } = projectIds.length > 0
+        ? await supabase
+            .from("matches")
+            .select("*", { count: "exact", head: true })
+            .in("project_id", projectIds)
+            .eq("status", "pending")
+        : { count: 0 };
+
+      // Get messages count
+      const { count: messagesCount } = projectIds.length > 0
+        ? await supabase
+            .from("messages")
+            .select("*", { count: "exact", head: true })
+            .in("project_id", projectIds)
+        : { count: 0 };
+
+      // Calculate average match quality
+      const { data: matchesData } = projectIds.length > 0
+        ? await supabase
+            .from("matches")
+            .select("similarity_score")
+            .in("project_id", projectIds)
+        : { data: null };
+
+      const avgMatchQuality = matchesData && matchesData.length > 0
+        ? Math.round(
+            (matchesData.reduce((sum, m) => sum + m.similarity_score, 0) /
+              matchesData.length) *
+              100
+          )
+        : 0;
+
+      stats = [
+        {
+          title: "Live Projects",
+          value: String(liveProjectsCount || 0),
+          description: "Projects currently open",
+          icon: FolderKanban,
+          href: "/projects",
+        },
+        {
+          title: "New Applicants",
+          value: String(applicantsCount || 0),
+          description: "Developers waiting on review",
+          icon: Users,
+          href: "/matches",
+        },
+        {
+          title: "Messages",
+          value: String(messagesCount || 0),
+          description: "Total conversations",
+          icon: MessageSquare,
+          href: "/messages",
+        },
+        {
+          title: "Match Quality",
+          value: `${avgMatchQuality}%`,
+          description: "Average match strength",
+          icon: TrendingUp,
+          href: "/matches",
+        },
+      ];
+    } else {
+      // Developer stats
+      // Count projects where user has accepted matches
+      const { data: acceptedMatches } = await supabase
+        .from("matches")
+        .select("project_id")
+        .eq("user_id", user.id)
+        .eq("status", "accepted");
+
+      const activeProjectsCount = acceptedMatches?.length || 0;
+
+      // Count pending matches
+      const { count: pendingMatchesCount } = await supabase
+        .from("matches")
+        .select("*", { count: "exact", head: true })
+        .eq("user_id", user.id)
+        .eq("status", "pending");
+
+      // Count messages in projects user is involved in
+      const projectIds = acceptedMatches?.map((m) => m.project_id) || [];
+      const { count: messagesCount } = projectIds.length > 0
+        ? await supabase
+            .from("messages")
+            .select("*", { count: "exact", head: true })
+            .in("project_id", projectIds)
+        : { count: 0 };
+
+      // Calculate average match rate
+      const { data: allMatches } = await supabase
+        .from("matches")
+        .select("similarity_score")
+        .eq("user_id", user.id);
+
+      const avgMatchRate = allMatches && allMatches.length > 0
+        ? Math.round(
+            (allMatches.reduce((sum, m) => sum + m.similarity_score, 0) /
+              allMatches.length) *
+              100
+          )
+        : 0;
+
+      stats = [
+        {
+          title: "Active Projects",
+          value: String(activeProjectsCount),
+          description: "Projects you're involved in",
+          icon: FolderKanban,
+          href: "/projects",
+        },
+        {
+          title: "New Matches",
+          value: String(pendingMatchesCount || 0),
+          description: "Projects waiting for your review",
+          icon: Users,
+          href: "/matches",
+        },
+        {
+          title: "Messages",
+          value: String(messagesCount || 0),
+          description: "Total conversations",
+          icon: MessageSquare,
+          href: "/messages",
+        },
+        {
+          title: "Match Rate",
+          value: `${avgMatchRate}%`,
+          description: "Average compatibility",
+          icon: TrendingUp,
+          href: "/matches",
+        },
+      ];
+    }
+  } else {
+    // Default stats when not logged in
+    stats = [
+      {
+        title: "Active Projects",
+        value: "0",
+        description: "Projects you're involved in",
+        icon: FolderKanban,
+        href: "/projects",
+      },
+      {
+        title: "New Matches",
+        value: "0",
+        description: "Projects waiting for your review",
+        icon: Users,
+        href: "/matches",
+      },
+      {
+        title: "Messages",
+        value: "0",
+        description: "Total conversations",
+        icon: MessageSquare,
+        href: "/messages",
+      },
+      {
+        title: "Match Rate",
+        value: "0%",
+        description: "Average compatibility",
+        icon: TrendingUp,
+        href: "/matches",
+      },
+    ];
+  }
+
+  // Fetch recommended projects for developers
+  let recommendedProjects: Array<{
+    id: string;
+    title: string;
+    description: string;
+    skills: string[];
+    teamSize: string;
+    timeline: string;
+    commitment: string;
+    matchScore: number;
+    creator: { name: string; initials: string };
+    createdAt: string;
+  }> = [];
+
+  if (user && persona === "developer") {
+    const { data: topMatches } = await supabase
+      .from("matches")
+      .select(
+        `
+        projects:project_id (
+          id,
+          title,
+          description,
+          required_skills,
+          team_size,
+          timeline,
+          commitment_hours,
+          created_at,
+          profiles:creator_id (
+            full_name,
+            user_id
+          )
+        ),
+        similarity_score
+      `
+      )
+      .eq("user_id", user.id)
+      .eq("status", "pending")
+      .order("similarity_score", { ascending: false })
+      .limit(2);
+
+    if (topMatches) {
+      recommendedProjects = topMatches
+        .map((match: any) => {
+          const project = match.projects;
+          if (!project) return null;
+
+          const formatTimeline = (timeline: string) => {
+            switch (timeline) {
+              case "weekend":
+                return "This weekend";
+              case "1_week":
+                return "1 week";
+              case "1_month":
+                return "1 month";
+              case "ongoing":
+                return "Ongoing";
+              default:
+                return timeline;
+            }
+          };
+
+          return {
+            id: project.id,
+            title: project.title,
+            description: project.description,
+            skills: project.required_skills || [],
+            teamSize: `${project.team_size} people`,
+            timeline: formatTimeline(project.timeline),
+            commitment: `${project.commitment_hours || 0} hrs/week`,
+            matchScore: Math.round(match.similarity_score * 100),
+            creator: {
+              name: project.profiles?.full_name || "Unknown",
+              initials: getInitials(project.profiles?.full_name),
+            },
+            createdAt: formatDate(project.created_at),
+          };
+        })
+        .filter(Boolean) as typeof recommendedProjects;
+    }
+  }
+
+  // Fetch project metrics for owners
+  let ownerProjectMetrics: Array<{
+    id: string;
+    title: string;
+    status: string;
+    applicants: number;
+    matches: number;
+    views: number;
+  }> = [];
+
+  if (user && persona === "project_owner") {
+    const { data: userProjects } = await supabase
+      .from("projects")
+      .select("id, title, status")
+      .eq("creator_id", user.id)
+      .eq("status", "open")
+      .limit(2);
+
+    if (userProjects) {
+      const projectIds = userProjects.map((p) => p.id);
+
+      // Get match counts for each project
+      const { data: matchesData } = projectIds.length > 0
+        ? await supabase
+            .from("matches")
+            .select("project_id, status")
+            .in("project_id", projectIds)
+        : { data: null };
+
+      ownerProjectMetrics = userProjects.map((project) => {
+        const projectMatches = matchesData?.filter(
+          (m) => m.project_id === project.id
+        ) || [];
+        const applicants = projectMatches.filter(
+          (m) => m.status === "pending"
+        ).length;
+        const totalMatches = projectMatches.length;
+
+        return {
+          id: project.id,
+          title: project.title,
+          status: project.status,
+          applicants,
+          matches: totalMatches,
+          views: 0, // Views tracking not implemented yet
+        };
+      });
+    }
+  }
 
   return (
     <div className="space-y-8">
@@ -281,9 +517,19 @@ export default async function DashboardPage() {
             </Button>
           </div>
           <div className="grid gap-6 lg:grid-cols-2">
-            {recommendedProjects.map((project) => (
-              <ProjectCard key={project.id} {...project} />
-            ))}
+            {recommendedProjects.length > 0 ? (
+              recommendedProjects.map((project) => (
+                <ProjectCard key={project.id} {...project} />
+              ))
+            ) : (
+              <Card>
+                <CardContent className="flex min-h-[200px] flex-col items-center justify-center py-12">
+                  <p className="text-muted-foreground">
+                    No recommended projects yet. Complete your profile to get personalized recommendations!
+                  </p>
+                </CardContent>
+              </Card>
+            )}
           </div>
         </div>
       ) : (
@@ -303,7 +549,8 @@ export default async function DashboardPage() {
             </Button>
           </div>
           <div className="grid gap-4 lg:grid-cols-2">
-            {ownerProjectMetrics.map((project) => (
+            {ownerProjectMetrics.length > 0 ? (
+              ownerProjectMetrics.map((project) => (
               <Card key={project.id}>
                 <CardHeader className="pb-3">
                   <div className="flex items-center justify-between">
@@ -329,7 +576,16 @@ export default async function DashboardPage() {
                   </div>
                 </CardContent>
               </Card>
-            ))}
+              ))
+            ) : (
+              <Card>
+                <CardContent className="flex min-h-[200px] flex-col items-center justify-center py-12">
+                  <p className="text-muted-foreground">
+                    You haven't created any projects yet. Create your first project to see metrics here!
+                  </p>
+                </CardContent>
+              </Card>
+            )}
           </div>
         </div>
       )}

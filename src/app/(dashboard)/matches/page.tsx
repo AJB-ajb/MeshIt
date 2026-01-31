@@ -5,44 +5,11 @@ import { Search, Filter, Check, X, MessageSquare } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
+import { createClient } from "@/lib/supabase/server";
 
 export const metadata: Metadata = {
   title: "Matches",
 };
-
-// Mock matches data
-const matches = [
-  {
-    id: "1",
-    projectTitle: "AI Recipe Generator",
-    projectId: "1",
-    matchScore: 92,
-    status: "pending",
-    explanation:
-      "Your React and TypeScript skills align perfectly with this project's frontend needs. Your previous experience with image processing projects makes you an excellent fit for the computer vision component.",
-    matchedAt: "2 hours ago",
-  },
-  {
-    id: "2",
-    projectTitle: "Climate Data Visualization",
-    projectId: "2",
-    matchScore: 88,
-    status: "pending",
-    explanation:
-      "Your data visualization experience with D3.js and interest in environmental causes make this a strong match. The project timeline aligns well with your availability.",
-    matchedAt: "5 hours ago",
-  },
-  {
-    id: "3",
-    projectTitle: "Mobile Fitness App",
-    projectId: "3",
-    matchScore: 75,
-    status: "applied",
-    explanation:
-      "Your mobile development skills and experience with React Native are relevant to this project. Your interest in health tech adds extra alignment.",
-    matchedAt: "1 day ago",
-  },
-];
 
 const statusColors = {
   pending: "bg-warning/10 text-warning",
@@ -58,7 +25,67 @@ const statusLabels = {
   declined: "Declined",
 };
 
-export default function MatchesPage() {
+const formatTimeAgo = (dateString: string) => {
+  const date = new Date(dateString);
+  const now = new Date();
+  const diffMs = now.getTime() - date.getTime();
+  const diffMins = Math.floor(diffMs / (1000 * 60));
+  const diffHours = Math.floor(diffMs / (1000 * 60 * 60));
+  const diffDays = Math.floor(diffMs / (1000 * 60 * 60 * 24));
+
+  if (diffMins < 60) return `${diffMins} min${diffMins !== 1 ? "s" : ""} ago`;
+  if (diffHours < 24) return `${diffHours} hour${diffHours !== 1 ? "s" : ""} ago`;
+  if (diffDays === 1) return "1 day ago";
+  return `${diffDays} days ago`;
+};
+
+export default async function MatchesPage() {
+  const supabase = await createClient();
+  const {
+    data: { user },
+  } = await supabase.auth.getUser();
+
+  let matches: Array<{
+    id: string;
+    projectTitle: string;
+    projectId: string;
+    matchScore: number;
+    status: string;
+    explanation: string | null;
+    matchedAt: string;
+  }> = [];
+
+  if (user) {
+    const { data: matchesData, error } = await supabase
+      .from("matches")
+      .select(
+        `
+        id,
+        similarity_score,
+        explanation,
+        status,
+        created_at,
+        projects:project_id (
+          id,
+          title
+        )
+      `
+      )
+      .eq("user_id", user.id)
+      .order("created_at", { ascending: false });
+
+    if (!error && matchesData) {
+      matches = matchesData.map((match: any) => ({
+        id: match.id,
+        projectTitle: match.projects?.title || "Unknown Project",
+        projectId: match.projects?.id || "",
+        matchScore: Math.round(match.similarity_score * 100),
+        status: match.status,
+        explanation: match.explanation || "No explanation available.",
+        matchedAt: formatTimeAgo(match.created_at),
+      }));
+    }
+  }
   return (
     <div className="space-y-6">
       {/* Page header */}
@@ -87,7 +114,16 @@ export default function MatchesPage() {
 
       {/* Matches list */}
       <div className="space-y-4">
-        {matches.map((match) => (
+        {matches.length === 0 ? (
+          <Card>
+            <CardContent className="flex min-h-[200px] flex-col items-center justify-center py-12">
+              <p className="text-muted-foreground">
+                No matches found. Keep your profile updated to discover matching projects!
+              </p>
+            </CardContent>
+          </Card>
+        ) : (
+          matches.map((match) => (
           <Card key={match.id}>
             <CardHeader className="pb-4">
               <div className="flex items-start justify-between gap-4">
@@ -158,7 +194,8 @@ export default function MatchesPage() {
               </div>
             </CardContent>
           </Card>
-        ))}
+          ))
+        )}
       </div>
     </div>
   );
