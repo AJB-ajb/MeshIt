@@ -622,22 +622,23 @@ function InboxPageContent() {
                 >
                   <div
                     className={cn(
-                      "flex h-10 w-10 items-center justify-center rounded-full",
+                      "flex h-10 w-10 items-center justify-center rounded-full shrink-0 cursor-pointer",
                       notification.type === "application_accepted"
                         ? "bg-green-100 text-green-600 dark:bg-green-900/30"
                         : notification.type === "application_rejected"
                           ? "bg-red-100 text-red-600 dark:bg-red-900/30"
                           : "bg-muted text-muted-foreground"
                     )}
+                    onClick={() => handleNotificationClick(notification)}
                   >
                     {getNotificationIcon(notification.type)}
                   </div>
                   <div
-                    className="flex-1 cursor-pointer"
+                    className="flex-1 cursor-pointer min-w-0"
                     onClick={() => handleNotificationClick(notification)}
                   >
-                    <div className="flex items-start justify-between">
-                      <div>
+                    <div className="flex items-start justify-between gap-2">
+                      <div className="min-w-0 flex-1">
                         <h4 className="font-medium">{notification.title}</h4>
                         {notification.body && (
                           <p className="mt-1 text-sm text-muted-foreground">
@@ -645,18 +646,24 @@ function InboxPageContent() {
                           </p>
                         )}
                       </div>
-                      <span className="text-xs text-muted-foreground">
+                      <span className="text-xs text-muted-foreground shrink-0">
                         {formatDate(notification.created_at)}
                       </span>
                     </div>
                   </div>
-                  <div className="flex items-center gap-1 opacity-0 group-hover:opacity-100 transition-opacity">
+                  <div 
+                    className="flex items-center gap-1 opacity-0 group-hover:opacity-100 transition-opacity shrink-0"
+                    onClick={(e) => e.stopPropagation()}
+                  >
                     {!notification.read && (
                       <Button
                         variant="ghost"
                         size="icon"
                         className="h-8 w-8"
-                        onClick={() => handleMarkAsRead(notification.id)}
+                        onClick={(e) => {
+                          e.stopPropagation();
+                          handleMarkAsRead(notification.id);
+                        }}
                       >
                         <Check className="h-4 w-4" />
                       </Button>
@@ -665,7 +672,10 @@ function InboxPageContent() {
                       variant="ghost"
                       size="icon"
                       className="h-8 w-8 text-destructive"
-                      onClick={() => handleDeleteNotification(notification.id)}
+                      onClick={(e) => {
+                        e.stopPropagation();
+                        handleDeleteNotification(notification.id);
+                      }}
                     >
                       <Trash2 className="h-4 w-4" />
                     </Button>

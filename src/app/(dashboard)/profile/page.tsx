@@ -378,6 +378,9 @@ export default function ProfilePage() {
                     }
                     placeholder="e.g., 10"
                   />
+                  <p className="text-xs text-muted-foreground">
+                    Your actual weekly availability for projects. This is used for matching with project requirements.
+                  </p>
                 </div>
               </div>
 
@@ -553,6 +556,13 @@ export default function ProfilePage() {
               </CardDescription>
             </CardHeader>
             <CardContent className="space-y-5">
+              <div className="rounded-md border border-blue-200 bg-blue-50/50 dark:bg-blue-950/20 dark:border-blue-900 p-3">
+                <p className="text-xs text-blue-700 dark:text-blue-300">
+                  <strong>Note:</strong> "Preferred project commitment" is different from "Availability" above. 
+                  Availability is your actual weekly hours available, while preferred commitment is the project 
+                  commitment level you're looking for. Make sure both are set for accurate matching.
+                </p>
+              </div>
               <div className="grid gap-4 md:grid-cols-2">
                 <div className="space-y-2">
                   <label htmlFor="projectTypes" className="text-sm font-medium">
@@ -605,7 +615,7 @@ export default function ProfilePage() {
                     htmlFor="commitmentLevel"
                     className="text-sm font-medium"
                   >
-                    Time commitment
+                    Preferred project commitment
                   </label>
                   <select
                     id="commitmentLevel"
@@ -620,6 +630,9 @@ export default function ProfilePage() {
                     <option value="15">15 hrs/week</option>
                     <option value="20">20+ hrs/week</option>
                   </select>
+                  <p className="text-xs text-muted-foreground">
+                    Your preferred project commitment level. This helps match you with projects that fit your desired time investment.
+                  </p>
                 </div>
                 <div className="space-y-2">
                   <label
@@ -779,6 +792,9 @@ export default function ProfilePage() {
                       ? `${form.availabilityHours} hrs/week`
                       : "Not provided"}
                   </p>
+                  <p className="text-xs text-muted-foreground mt-1">
+                    Your actual weekly availability
+                  </p>
                 </div>
               </div>
 
@@ -921,9 +937,12 @@ export default function ProfilePage() {
               <div className="grid gap-4 md:grid-cols-2">
                 <div>
                   <p className="text-sm text-muted-foreground">
-                    Time commitment
+                    Preferred project commitment
                   </p>
                   <p className="font-medium">{form.commitmentLevel} hrs/week</p>
+                  <p className="text-xs text-muted-foreground mt-1">
+                    Your preferred project commitment level
+                  </p>
                 </div>
                 <div>
                   <p className="text-sm text-muted-foreground">
