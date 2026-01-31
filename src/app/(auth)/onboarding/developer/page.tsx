@@ -388,7 +388,7 @@ Check out my work at github.com/alexdev`}
                   </Button>
                 </div>
                 <p className="text-xs text-muted-foreground">
-                  After extraction, you&apos;ll be able to review and edit the extracted information.
+                  After extraction, youll be able to review and edit the extracted information.
                 </p>
               </CardContent>
             </Card>
@@ -588,7 +588,7 @@ Check out my work at github.com/alexdev`}
             <CardHeader>
               <CardTitle>Project Preferences</CardTitle>
               <CardDescription>
-                Tell us what kinds of projects you&apos;re excited to join.
+                Tell us what kinds of projects youre excited to join.
               </CardDescription>
             </CardHeader>
             <CardContent className="space-y-5">

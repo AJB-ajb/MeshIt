@@ -112,7 +112,7 @@ export default async function LandingPage() {
                 <h3 className="text-xl font-semibold">Connect and collaborate</h3>
                 <p className="mt-2 text-muted-foreground">
                   See why you matched, message your team, and start building
-                  together. It&apos;s that simple.
+                  together. Its that simple.
                 </p>
               </div>
             </div>

@@ -421,7 +421,7 @@ export default function ProfilePage() {
             <CardHeader>
               <CardTitle>Project Preferences</CardTitle>
               <CardDescription>
-                Tell us what kinds of projects you&apos;re excited to join.
+                Tell us what kinds of projects youre excited to join.
               </CardDescription>
             </CardHeader>
             <CardContent className="space-y-5">

@@ -16,6 +16,8 @@ import {
   FolderKanban,
   User,
   X,
+  Wifi,
+  WifiOff,
 } from "lucide-react";
 
 import { Button } from "@/components/ui/button";
@@ -27,8 +29,19 @@ import {
   CardHeader,
   CardTitle,
 } from "@/components/ui/card";
+import { TypingIndicator } from "@/components/ui/typing-indicator";
+import { OnlineStatus, OnlineStatusBadge } from "@/components/ui/online-status";
 import { cn } from "@/lib/utils";
 import { createClient } from "@/lib/supabase/client";
+import { useRealtimeChat } from "@/lib/hooks/use-realtime-chat";
+import { usePresenceContext } from "@/components/providers/presence-provider";
+import {
+  subscribeToNotifications,
+  subscribeToConversations,
+  unsubscribeChannel,
+  requestNotificationPermission,
+  showBrowserNotification,
+} from "@/lib/supabase/realtime";
 
 type Notification = {
   id: string;
@@ -119,6 +132,7 @@ export default function InboxPage() {
   const router = useRouter();
   const searchParams = useSearchParams();
   const conversationParam = searchParams.get("conversation");
+  const { isUserOnline } = usePresenceContext();
 
   const [activeTab, setActiveTab] = useState<Tab>(
     conversationParam ? "messages" : "notifications"
@@ -138,6 +152,24 @@ export default function InboxPage() {
   const [newMessage, setNewMessage] = useState("");
   const [isSendingMessage, setIsSendingMessage] = useState(false);
   const messagesEndRef = useRef<HTMLDivElement>(null);
+
+  // Real-time chat hook
+  const handleNewMessage = useCallback((message: Message) => {
+    setMessages((prev) => {
+      // Avoid duplicates
+      if (prev.some((m) => m.id === message.id)) return prev;
+      return [...prev, message];
+    });
+  }, []);
+
+  const { typingUsers, onlineUsers, setIsTyping, isConnected } = useRealtimeChat({
+    conversationId: selectedConversation?.id || null,
+    currentUserId,
+    onNewMessage: handleNewMessage,
+  });
+
+  // Get the other user's name for typing indicator
+  const otherUserName = selectedConversation?.other_user?.full_name || "Someone";
 
   // Fetch data
   useEffect(() => {
@@ -246,10 +278,114 @@ export default function InboxPage() {
       }
 
       setIsLoading(false);
+
+      // Request browser notification permission
+      requestNotificationPermission();
     };
 
     fetchData();
   }, [router, conversationParam]);
+
+  // Real-time notifications subscription
+  useEffect(() => {
+    if (!currentUserId) return;
+
+    const notificationChannel = subscribeToNotifications(
+      currentUserId,
+      // On new notification
+      (notification) => {
+        setNotifications((prev) => [notification, ...prev]);
+        if (!notification.read) {
+          setUnreadNotifications((prev) => prev + 1);
+          // Show browser notification
+          showBrowserNotification(
+            notification.title,
+            notification.body || "",
+            () => {
+              if (notification.related_project_id) {
+                router.push(`/projects/${notification.related_project_id}`);
+              }
+            }
+          );
+        }
+      },
+      // On notification update
+      (notification) => {
+        setNotifications((prev) =>
+          prev.map((n) => (n.id === notification.id ? notification : n))
+        );
+        // Recalculate unread count
+        setNotifications((prev) => {
+          setUnreadNotifications(prev.filter((n) => !n.read).length);
+          return prev;
+        });
+      },
+      // On notification delete
+      (notification) => {
+        setNotifications((prev) => prev.filter((n) => n.id !== notification.id));
+      }
+    );
+
+    const conversationChannel = subscribeToConversations(
+      currentUserId,
+      // On conversation update
+      async (conv) => {
+        // Refresh conversation data
+        const supabase = createClient();
+        const otherUserId =
+          conv.participant_1 === currentUserId
+            ? conv.participant_2
+            : conv.participant_1;
+
+        const { data: profile } = await supabase
+          .from("profiles")
+          .select("full_name, headline, user_id")
+          .eq("user_id", otherUserId)
+          .single();
+
+        const { data: lastMessageData } = await supabase
+          .from("messages")
+          .select("content, created_at, sender_id")
+          .eq("conversation_id", conv.id)
+          .order("created_at", { ascending: false })
+          .limit(1)
+          .single();
+
+        const { count } = await supabase
+          .from("messages")
+          .select("*", { count: "exact", head: true })
+          .eq("conversation_id", conv.id)
+          .eq("read", false)
+          .neq("sender_id", currentUserId);
+
+        const enrichedConv = {
+          ...conv,
+          other_user: profile || undefined,
+          last_message: lastMessageData || undefined,
+          unread_count: count || 0,
+        };
+
+        setConversations((prev) => {
+          const exists = prev.find((c) => c.id === conv.id);
+          if (exists) {
+            return prev
+              .map((c) => (c.id === conv.id ? enrichedConv : c))
+              .sort(
+                (a, b) =>
+                  new Date(b.updated_at).getTime() -
+                  new Date(a.updated_at).getTime()
+              );
+          }
+          return [enrichedConv, ...prev];
+        });
+      }
+    );
+
+    return () => {
+      unsubscribeChannel(notificationChannel);
+      unsubscribeChannel(conversationChannel);
+    };
+  }, [currentUserId, router]);
 
   // Fetch messages when conversation is selected
   useEffect(() => {
@@ -569,9 +705,13 @@ export default function InboxPage() {
                       "bg-primary/5"
                   )}
                 >
-                  <div className="flex h-10 w-10 items-center justify-center rounded-full bg-muted text-sm font-medium shrink-0">
-                    {getInitials(conversation.other_user?.full_name || null)}
-                  </div>
+                  <OnlineStatusBadge
+                    isOnline={isUserOnline(conversation.other_user?.user_id || "")}
+                  >
+                    <div className="flex h-10 w-10 items-center justify-center rounded-full bg-muted text-sm font-medium shrink-0">
+                      {getInitials(conversation.other_user?.full_name || null)}
+                    </div>
+                  </OnlineStatusBadge>
                   <div className="flex-1 min-w-0">
                     <div className="flex items-center justify-between">
                       <h4 className="font-medium truncate">
@@ -624,16 +764,31 @@ export default function InboxPage() {
                       >
                         <ArrowLeft className="h-4 w-4" />
                       </Button>
-                      <div className="flex h-10 w-10 items-center justify-center rounded-full bg-muted text-sm font-medium">
-                        {getInitials(
-                          selectedConversation.other_user?.full_name || null
+                      <OnlineStatusBadge
+                        isOnline={isUserOnline(
+                          selectedConversation.other_user?.user_id || ""
                         )}
-                      </div>
+                      >
+                        <div className="flex h-10 w-10 items-center justify-center rounded-full bg-muted text-sm font-medium">
+                          {getInitials(
+                            selectedConversation.other_user?.full_name || null
+                          )}
+                        </div>
+                      </OnlineStatusBadge>
                       <div>
-                        <h4 className="font-medium">
-                          {selectedConversation.other_user?.full_name ||
-                            "Unknown"}
-                        </h4>
+                        <div className="flex items-center gap-2">
+                          <h4 className="font-medium">
+                            {selectedConversation.other_user?.full_name ||
+                              "Unknown"}
+                          </h4>
+                          <OnlineStatus
+                            isOnline={isUserOnline(
+                              selectedConversation.other_user?.user_id || ""
+                            )}
+                            showLabel
+                            size="sm"
+                          />
+                        </div>
                         {selectedConversation.project && (
                           <Link
                             href={`/projects/${selectedConversation.project_id}`}
@@ -693,24 +848,44 @@ export default function InboxPage() {
                   <div ref={messagesEndRef} />
                 </CardContent>
 
+                {/* Typing indicator */}
+                {typingUsers.length > 0 && (
+                  <div className="border-t border-border px-4 py-2">
+                    <TypingIndicator userName={otherUserName} />
+                  </div>
+                )}
+
                 {/* Message input */}
                 <div className="border-t border-border p-4">
                   <div className="flex gap-2">
                     <textarea
                       value={newMessage}
-                      onChange={(e) => setNewMessage(e.target.value)}
+                      onChange={(e) => {
+                        setNewMessage(e.target.value);
+                        // Trigger typing indicator
+                        if (e.target.value.length > 0) {
+                          setIsTyping(true);
+                        } else {
+                          setIsTyping(false);
+                        }
+                      }}
                       onKeyDown={(e) => {
                         if (e.key === "Enter" && !e.shiftKey) {
                           e.preventDefault();
+                          setIsTyping(false);
                           handleSendMessage();
                         }
                       }}
+                      onBlur={() => setIsTyping(false)}
                       placeholder="Type a message..."
                       rows={1}
                       className="flex-1 resize-none rounded-md border border-input bg-background px-3 py-2 text-sm ring-offset-background placeholder:text-muted-foreground focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring focus-visible:ring-offset-2"
                     />
                     <Button
-                      onClick={handleSendMessage}
+                      onClick={() => {
+                        setIsTyping(false);
+                        handleSendMessage();
+                      }}
                       disabled={!newMessage.trim() || isSendingMessage}
                     >
                       {isSendingMessage ? (
@@ -719,6 +894,20 @@ export default function InboxPage() {
                         <Send className="h-4 w-4" />
                       )}
                     </Button>
+                  </div>
+                  {/* Connection status */}
+                  <div className="mt-2 flex items-center gap-2 text-xs text-muted-foreground">
+                    {isConnected ? (
+                      <>
+                        <Wifi className="h-3 w-3 text-green-500" />
+                        <span>Connected</span>
+                      </>
+                    ) : (
+                      <>
+                        <WifiOff className="h-3 w-3 text-red-500" />
+                        <span>Connecting...</span>
+                      </>
+                    )}
                   </div>
                 </div>
               </Card>

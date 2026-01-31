@@ -133,9 +133,9 @@ function OnboardingContent() {
       <main className="flex flex-1 items-center justify-center px-6 py-16 lg:px-8">
         <div className="w-full max-w-3xl space-y-6">
           <div className="text-center">
-            <h1 className="text-3xl font-semibold">Tell us why you&apos;re here</h1>
+            <h1 className="text-3xl font-semibold">Tell us why youre here</h1>
             <p className="mt-2 text-muted-foreground">
-              We&apos;ll tailor your experience based on your goal.
+              Well tailor your experience based on your goal.
             </p>
           </div>
 
@@ -160,7 +160,7 @@ function OnboardingContent() {
                   onClick={() => handleSelect("developer")}
                   disabled={isLoading !== null}
                 >
-                  {isLoading === "developer" ? "Saving..." : "I&apos;m a developer"}
+                  {isLoading === "developer" ? "Saving..." : "I'm a developer"}
                 </Button>
               </CardContent>
             </Card>
@@ -182,7 +182,7 @@ function OnboardingContent() {
                 >
                   {isLoading === "project_owner"
                     ? "Saving..."
-                    : "I&apos;m looking for developers"}
+                    : "I'm looking for developers"}
                 </Button>
               </CardContent>
             </Card>

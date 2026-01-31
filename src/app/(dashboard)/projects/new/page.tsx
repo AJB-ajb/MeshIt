@@ -324,7 +324,7 @@ DM if interested!`}
               </Button>
             </div>
             <p className="text-xs text-muted-foreground">
-              After extraction, you&apos;ll be able to review and edit the extracted information before creating your project.
+              After extraction, youll be able to review and edit the extracted information before creating your project.
             </p>
           </CardContent>
         </Card>

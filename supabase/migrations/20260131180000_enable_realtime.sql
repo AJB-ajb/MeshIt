@@ -1,0 +1,11 @@
+-- Enable Realtime for messages table
+ALTER PUBLICATION supabase_realtime ADD TABLE messages;
+
+-- Enable Realtime for notifications table
+ALTER PUBLICATION supabase_realtime ADD TABLE notifications;
+
+-- Enable Realtime for conversations table
+ALTER PUBLICATION supabase_realtime ADD TABLE conversations;
+
+-- Enable Realtime for applications table (for real-time application updates)
+ALTER PUBLICATION supabase_realtime ADD TABLE applications;
