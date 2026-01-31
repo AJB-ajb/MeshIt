@@ -92,7 +92,6 @@ export default async function MessagesPage() {
 
     if (projectIds.size > 0) {
       const projectIdsArray = Array.from(projectIds);
-      const projectIds = userProjects.map((p) => p.id);
 
       // Get all messages for these projects
       const { data: messagesData } = await supabase
