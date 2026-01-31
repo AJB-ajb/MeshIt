@@ -1,6 +1,6 @@
 "use client";
 
-import { useEffect, useMemo, useState } from "react";
+import { Suspense, useEffect, useMemo, useState } from "react";
 import { useRouter, useSearchParams } from "next/navigation";
 
 import { Button } from "@/components/ui/button";
@@ -59,7 +59,7 @@ const parseList = (value: string) =>
     .map((item) => item.trim())
     .filter(Boolean);
 
-export default function DeveloperOnboardingPage() {
+function DeveloperOnboardingContent() {
   const router = useRouter();
   const searchParams = useSearchParams();
   const [form, setForm] = useState<ProfileFormState>(defaultFormState);
@@ -522,5 +522,17 @@ export default function DeveloperOnboardingPage() {
         </form>
       </main>
     </div>
+  );
+}
+
+export default function DeveloperOnboardingPage() {
+  return (
+    <Suspense fallback={
+      <div className="flex min-h-screen items-center justify-center bg-background">
+        <p className="text-sm text-muted-foreground">Loading...</p>
+      </div>
+    }>
+      <DeveloperOnboardingContent />
+    </Suspense>
   );
 }

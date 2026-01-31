@@ -62,6 +62,7 @@ export async function GET(
       profile: profile,
       score: match.similarity_score,
       explanation: match.explanation,
+      score_breakdown: match.score_breakdown,
       status: match.status,
       created_at: match.created_at,
     };

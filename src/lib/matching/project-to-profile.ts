@@ -4,11 +4,12 @@
  */
 
 import { createClient } from "@/lib/supabase/server";
-import type { Profile, Match } from "@/lib/supabase/types";
+import type { Profile, Match, ScoreBreakdown } from "@/lib/supabase/types";
 
 export interface ProjectToProfileMatch {
   profile: Profile;
   score: number; // 0-1 similarity score
+  scoreBreakdown: ScoreBreakdown | null;
   matchId?: string; // If match record already exists
 }
 
@@ -60,7 +61,7 @@ export async function matchProjectToProfiles(
   const userIds = data.map((row: any) => row.user_id);
   const { data: existingMatches } = await supabase
     .from("matches")
-    .select("id, user_id, similarity_score, status")
+    .select("id, user_id, similarity_score, status, score_breakdown")
     .eq("project_id", projectId)
     .in("user_id", userIds);
 
@@ -68,35 +69,58 @@ export async function matchProjectToProfiles(
     existingMatches?.map((m) => [m.user_id, m]) || []
   );
 
-  // Transform results into match objects
-  const matches: ProjectToProfileMatch[] = data.map((row: any) => {
-    const profile: Profile = {
-      user_id: row.user_id,
-      full_name: row.full_name,
-      headline: row.headline,
-      bio: row.bio,
-      location: null,
-      experience_level: row.experience_level,
-      collaboration_style: row.collaboration_style,
-      availability_hours: row.availability_hours,
-      skills: row.skills || [],
-      interests: null,
-      portfolio_url: null,
-      github_url: null,
-      project_preferences: {},
-      embedding: null, // Don't return embedding in response
-      created_at: "",
-      updated_at: "",
-    };
+  // Transform results into match objects and compute breakdowns
+  const matches: ProjectToProfileMatch[] = await Promise.all(
+    data.map(async (row: any) => {
+      const profile: Profile = {
+        user_id: row.user_id,
+        full_name: row.full_name,
+        headline: row.headline,
+        bio: row.bio,
+        location: null,
+        experience_level: row.experience_level,
+        collaboration_style: row.collaboration_style,
+        availability_hours: row.availability_hours,
+        skills: row.skills || [],
+        interests: null,
+        portfolio_url: null,
+        github_url: null,
+        project_preferences: {},
+        embedding: null, // Don't return embedding in response
+        created_at: "",
+        updated_at: "",
+      };
 
-    const existingMatch = matchMap.get(row.user_id);
+      const existingMatch = matchMap.get(row.user_id);
 
-    return {
-      profile,
-      score: row.similarity,
-      matchId: existingMatch?.id,
-    };
-  });
+      // Compute score breakdown using database function
+      let scoreBreakdown: ScoreBreakdown | null = null;
+      if (existingMatch?.score_breakdown) {
+        // Use existing breakdown if available
+        scoreBreakdown = existingMatch.score_breakdown as ScoreBreakdown;
+      } else {
+        // Compute new breakdown
+        const { data: breakdown, error: breakdownError } = await supabase.rpc(
+          "compute_match_breakdown",
+          {
+            profile_user_id: row.user_id,
+            target_project_id: projectId,
+          }
+        );
+
+        if (!breakdownError && breakdown) {
+          scoreBreakdown = breakdown as ScoreBreakdown;
+        }
+      }
+
+      return {
+        profile,
+        score: row.similarity,
+        scoreBreakdown,
+        matchId: existingMatch?.id,
+      };
+    })
+  );
 
   return matches;
 }
@@ -117,19 +141,42 @@ export async function createMatchRecordsForProject(
       project_id: projectId,
       user_id: m.profile.user_id,
       similarity_score: m.score,
+      score_breakdown: m.scoreBreakdown,
       status: "pending" as const,
     }));
 
-  if (matchInserts.length === 0) {
-    return;
+  if (matchInserts.length > 0) {
+    const { error } = await supabase.from("matches").upsert(matchInserts, {
+      onConflict: "project_id,user_id",
+      ignoreDuplicates: false,
+    });
+
+    if (error) {
+      throw new Error(`Failed to create match records: ${error.message}`);
+    }
   }
 
-  const { error } = await supabase.from("matches").upsert(matchInserts, {
-    onConflict: "project_id,user_id",
-    ignoreDuplicates: false,
-  });
+  // Update existing matches that are missing score_breakdown
+  const updatesToMake = matches
+    .filter((m) => m.matchId && m.scoreBreakdown) // Has matchId and computed breakdown
+    .map((m) => ({
+      id: m.matchId!,
+      score_breakdown: m.scoreBreakdown,
+    }));
 
-  if (error) {
-    throw new Error(`Failed to create match records: ${error.message}`);
+  if (updatesToMake.length > 0) {
+    // Update each match individually to set score_breakdown
+    for (const update of updatesToMake) {
+      const { error } = await supabase
+        .from("matches")
+        .update({ score_breakdown: update.score_breakdown })
+        .eq("id", update.id)
+        .is("score_breakdown", null); // Only update if currently null
+
+      if (error) {
+        console.warn(`Failed to update breakdown for match ${update.id}:`, error);
+        // Don't throw - this is not critical
+      }
+    }
   }
 }

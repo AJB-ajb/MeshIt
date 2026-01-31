@@ -58,6 +58,7 @@ export async function GET(
       profile: match.profile,
       score: match.score,
       explanation: null, // Will be generated async if needed
+      score_breakdown: match.scoreBreakdown,
       status: "pending",
       created_at: new Date().toISOString(),
     }));
