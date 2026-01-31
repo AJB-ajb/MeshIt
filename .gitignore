@@ -1,0 +1,36 @@
+# BMAD Framework Files
+_bmad/
+
+# OS generated files
+.DS_Store
+.DS_Store?
+._*
+.Spotlight-V100
+.Trashes
+Thumbs.db
+
+# IDE and Editor files
+.idea/
+.vscode/
+*.swp
+*.swo
+*~
+
+# Node modules (if applicable)
+node_modules/
+
+# Python (if applicable)
+__pycache__/
+*.py[cod]
+.env
+.venv/
+venv/
+.codex*
+.cursor*
+.gemini*
+.github*
+.agent/*
+
+# Logs
+*.log
+logs/
