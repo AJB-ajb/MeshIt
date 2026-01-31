@@ -33,6 +33,7 @@ export async function GET() {
       project: match.project,
       score: match.score,
       explanation: null, // Will be generated async if needed
+      score_breakdown: match.scoreBreakdown,
       status: "pending",
       created_at: match.project.created_at,
     }));

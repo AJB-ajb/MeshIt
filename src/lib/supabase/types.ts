@@ -153,12 +153,20 @@ export interface ProjectUpdate {
 // MATCH TYPES
 // ============================================
 
+export interface ScoreBreakdown {
+  semantic: number;         // pgvector similarity (0-1)
+  skills_overlap: number;   // % of required skills user has (0-1)
+  experience_match: number; // experience level compatibility (0-1)
+  commitment_match: number; // hours alignment (0-1)
+}
+
 export interface Match {
   id: string;
   project_id: string;
   user_id: string;
   similarity_score: number; // 0-1 range
   explanation: string | null;
+  score_breakdown: ScoreBreakdown | null;
   status: "pending" | "applied" | "accepted" | "declined";
   created_at: string;
   responded_at: string | null;
@@ -171,6 +179,7 @@ export interface MatchInsert {
   user_id: string;
   similarity_score: number;
   explanation?: string | null;
+  score_breakdown?: ScoreBreakdown | null;
   status?: "pending" | "applied" | "accepted" | "declined";
   created_at?: string;
   responded_at?: string | null;
@@ -183,6 +192,7 @@ export interface MatchUpdate {
   user_id?: string;
   similarity_score?: number;
   explanation?: string | null;
+  score_breakdown?: ScoreBreakdown | null;
   status?: "pending" | "applied" | "accepted" | "declined";
   created_at?: string;
   responded_at?: string | null;
@@ -216,6 +226,7 @@ export interface MatchResponse {
   profile?: Profile;
   score: number; // 0-1, displayed as percentage
   explanation: string | null;
+  score_breakdown: ScoreBreakdown | null;
   status: Match["status"];
   created_at: string;
 }
