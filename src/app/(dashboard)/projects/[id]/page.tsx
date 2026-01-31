@@ -72,6 +72,16 @@ type Application = {
   };
 };
 
+type MatchedProfile = {
+  profile_id: string;
+  user_id: string;
+  full_name: string | null;
+  headline: string | null;
+  skills: string[] | null;
+  overall_score: number;
+  breakdown: ScoreBreakdown;
+};
+
 type ProjectFormState = {
   title: string;
   description: string;
@@ -165,6 +175,10 @@ export default function ProjectDetailPage() {
   const [coverMessage, setCoverMessage] = useState("");
   const [applications, setApplications] = useState<Application[]>([]);
   const [isUpdatingApplication, setIsUpdatingApplication] = useState<string | null>(null);
+  
+  // Matched profiles state (for owners)
+  const [matchedProfiles, setMatchedProfiles] = useState<MatchedProfile[]>([]);
+  const [isLoadingMatches, setIsLoadingMatches] = useState(false);
 
   useEffect(() => {
     const fetchProject = async () => {
@@ -274,6 +288,9 @@ export default function ProjectDetailPage() {
 
           setApplications(applicationsWithProfiles);
         }
+
+        // Fetch matched profiles for owner
+        fetchMatchedProfiles(projectId);
       }
 
       setIsLoading(false);
@@ -299,6 +316,69 @@ export default function ProjectDetailPage() {
       console.error("Failed to compute match breakdown:", err);
     } finally {
       setIsComputingMatch(false);
+    }
+  };
+
+  const fetchMatchedProfiles = async (targetProjectId: string) => {
+    setIsLoadingMatches(true);
+    const supabase = createClient();
+
+    try {
+      // Fetch all profiles
+      const { data: allProfiles, error: profilesError } = await supabase
+        .from("profiles")
+        .select("user_id, full_name, headline, skills, experience_level, availability_hours");
+
+      if (profilesError || !allProfiles) {
+        console.error("Failed to fetch profiles:", profilesError);
+        return;
+      }
+
+      // Compute match breakdown for each profile
+      const matchedProfilesData: MatchedProfile[] = [];
+
+      for (const profile of allProfiles) {
+        // Skip if this is the project owner
+        if (profile.user_id === currentUserId) continue;
+
+        try {
+          const { data: breakdown, error: breakdownError } = await supabase.rpc(
+            "compute_match_breakdown",
+            {
+              profile_user_id: profile.user_id,
+              target_project_id: targetProjectId,
+            }
+          );
+
+          if (!breakdownError && breakdown) {
+            const overallScore =
+              breakdown.semantic * 0.4 +
+              breakdown.skills_overlap * 0.3 +
+              breakdown.experience_match * 0.15 +
+              breakdown.commitment_match * 0.15;
+
+            matchedProfilesData.push({
+              profile_id: profile.user_id,
+              user_id: profile.user_id,
+              full_name: profile.full_name,
+              headline: profile.headline,
+              skills: profile.skills,
+              overall_score: overallScore,
+              breakdown: breakdown as ScoreBreakdown,
+            });
+          }
+        } catch (err) {
+          console.error(`Failed to compute match for profile ${profile.user_id}:`, err);
+        }
+      }
+
+      // Sort by overall score descending and take top 10
+      matchedProfilesData.sort((a, b) => b.overall_score - a.overall_score);
+      setMatchedProfiles(matchedProfilesData.slice(0, 10));
+    } catch (err) {
+      console.error("Failed to fetch matched profiles:", err);
+    } finally {
+      setIsLoadingMatches(false);
     }
   };
 
@@ -668,7 +748,7 @@ export default function ProjectDetailPage() {
       {/* Header */}
       <div className="flex flex-col gap-4 lg:flex-row lg:items-start lg:justify-between">
         <div className="space-y-2">
-          <div className="flex items-center gap-3">
+          <div className="flex items-center gap-3 flex-wrap">
             {isEditing ? (
               <Input
                 value={form.title}
@@ -691,6 +771,21 @@ export default function ProjectDetailPage() {
             >
               {project.status}
             </Badge>
+            {/* Show compatibility score badge for non-owners */}
+            {!isOwner && matchBreakdown && (
+              <Badge 
+                variant="default" 
+                className="bg-green-500 hover:bg-green-600 flex items-center gap-1"
+              >
+                <Sparkles className="h-4 w-4" />
+                {formatScore(
+                  (matchBreakdown.semantic * 0.4 +
+                    matchBreakdown.skills_overlap * 0.3 +
+                    matchBreakdown.experience_match * 0.15 +
+                    matchBreakdown.commitment_match * 0.15)
+                )} match
+              </Badge>
+            )}
           </div>
           <p className="text-muted-foreground">
             Created by {creatorName} • {formatDate(project.created_at)}
@@ -1256,14 +1351,110 @@ export default function ProjectDetailPage() {
                   <CardTitle>Matched Collaborators</CardTitle>
                 </div>
                 <CardDescription>
-                  People who match your project requirements
+                  Top profiles that match your project requirements
                 </CardDescription>
               </CardHeader>
               <CardContent>
-                <p className="text-sm text-muted-foreground">
-                  AI matching will find collaborators once your project is
-                  published. Check back soon!
-                </p>
+                {isLoadingMatches ? (
+                  <div className="flex items-center justify-center py-8">
+                    <Loader2 className="h-6 w-6 animate-spin text-muted-foreground" />
+                  </div>
+                ) : matchedProfiles.length === 0 ? (
+                  <div className="text-center py-8">
+                    <p className="text-sm text-muted-foreground">
+                      No matched profiles found yet. Complete profiles will appear here as they match your project.
+                    </p>
+                  </div>
+                ) : (
+                  <div className="space-y-4">
+                    {matchedProfiles.map((matchedProfile) => (
+                      <div
+                        key={matchedProfile.user_id}
+                        className="rounded-lg border border-border p-4 hover:bg-muted/30 transition-colors"
+                      >
+                        <div className="flex items-start justify-between gap-4">
+                          <div className="flex items-start gap-3 flex-1 min-w-0">
+                            <div className="flex h-12 w-12 items-center justify-center rounded-full bg-muted text-sm font-medium shrink-0">
+                              {getInitials(matchedProfile.full_name)}
+                            </div>
+                            <div className="flex-1 min-w-0">
+                              <div className="flex items-center gap-2">
+                                <h4 className="font-medium truncate">
+                                  {matchedProfile.full_name || "Anonymous"}
+                                </h4>
+                                <Badge variant="default" className="text-xs shrink-0">
+                                  {formatScore(matchedProfile.overall_score)}
+                                </Badge>
+                              </div>
+                              {matchedProfile.headline && (
+                                <p className="text-sm text-muted-foreground truncate">
+                                  {matchedProfile.headline}
+                                </p>
+                              )}
+                              {matchedProfile.skills && matchedProfile.skills.length > 0 && (
+                                <div className="mt-2 flex flex-wrap gap-1">
+                                  {matchedProfile.skills.slice(0, 4).map((skill) => (
+                                    <Badge
+                                      key={skill}
+                                      variant="outline"
+                                      className="text-xs"
+                                    >
+                                      {skill}
+                                    </Badge>
+                                  ))}
+                                  {matchedProfile.skills.length > 4 && (
+                                    <Badge variant="outline" className="text-xs">
+                                      +{matchedProfile.skills.length - 4} more
+                                    </Badge>
+                                  )}
+                                </div>
+                              )}
+                              
+                              {/* Match Breakdown */}
+                              <div className="mt-3 grid grid-cols-2 gap-2 text-xs">
+                                <div className="flex items-center justify-between">
+                                  <span className="text-muted-foreground">Skills Match:</span>
+                                  <span className="font-medium">{formatScore(matchedProfile.breakdown.skills_overlap)}</span>
+                                </div>
+                                <div className="flex items-center justify-between">
+                                  <span className="text-muted-foreground">Semantic:</span>
+                                  <span className="font-medium">{formatScore(matchedProfile.breakdown.semantic)}</span>
+                                </div>
+                                <div className="flex items-center justify-between">
+                                  <span className="text-muted-foreground">Experience:</span>
+                                  <span className="font-medium">{formatScore(matchedProfile.breakdown.experience_match)}</span>
+                                </div>
+                                <div className="flex items-center justify-between">
+                                  <span className="text-muted-foreground">Availability:</span>
+                                  <span className="font-medium">{formatScore(matchedProfile.breakdown.commitment_match)}</span>
+                                </div>
+                              </div>
+                            </div>
+                          </div>
+                        </div>
+                        
+                        {/* Action buttons */}
+                        <div className="mt-4 flex gap-2">
+                          <Button
+                            size="sm"
+                            variant="outline"
+                            onClick={() => router.push(`/profile/${matchedProfile.user_id}`)}
+                          >
+                            View Profile
+                          </Button>
+                          <Button
+                            size="sm"
+                            variant="default"
+                            onClick={() => handleMessageApplicant(matchedProfile.user_id)}
+                          >
+                            <MessageSquare className="h-4 w-4" />
+                            Message
+                          </Button>
+                        </div>
+                      </div>
+                    ))}
+                  </div>
+                )}
               </CardContent>
             </Card>
           )}

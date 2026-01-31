@@ -2,7 +2,7 @@
 
 import { useEffect, useState } from "react";
 import Link from "next/link";
-import { Plus, Search, Filter, Users, Calendar, Clock, Loader2 } from "lucide-react";
+import { Plus, Search, Filter, Users, Calendar, Clock, Loader2, Sparkles } from "lucide-react";
 
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
@@ -15,6 +15,8 @@ import {
   CardTitle,
 } from "@/components/ui/card";
 import { createClient } from "@/lib/supabase/client";
+import { formatScore } from "@/lib/matching/scoring";
+import type { ScoreBreakdown } from "@/lib/supabase/types";
 
 type Project = {
   id: string;
@@ -31,6 +33,11 @@ type Project = {
     full_name: string | null;
     user_id: string;
   };
+};
+
+type ProjectWithScore = Project & {
+  compatibility_score?: number;
+  score_breakdown?: ScoreBreakdown;
 };
 
 type TabId = "discover" | "my-projects";
@@ -80,10 +87,11 @@ const getInitials = (name: string | null) => {
 
 export default function ProjectsPage() {
   const [activeTab, setActiveTab] = useState<TabId>("discover");
-  const [projects, setProjects] = useState<Project[]>([]);
+  const [projects, setProjects] = useState<ProjectWithScore[]>([]);
   const [isLoading, setIsLoading] = useState(true);
   const [userId, setUserId] = useState<string | null>(null);
   const [searchQuery, setSearchQuery] = useState("");
+  const [isLoadingScores, setIsLoadingScores] = useState(false);
 
   useEffect(() => {
     const fetchProjects = async () => {
@@ -123,15 +131,81 @@ export default function ProjectsPage() {
 
       if (error) {
         console.error("Error fetching projects:", error);
+        setIsLoading(false);
       } else {
-        setProjects(data || []);
-      }
+        const projectsData = data || [];
+        setProjects(projectsData);
+        setIsLoading(false);
 
-      setIsLoading(false);
+        // Fetch compatibility scores for discover tab if user is logged in
+        if (activeTab === "discover" && user) {
+          fetchCompatibilityScores(user.id, projectsData);
+        }
+      }
     };
 
     fetchProjects();
   }, [activeTab]);
+
+  const fetchCompatibilityScores = async (currentUserId: string, projectsList: Project[]) => {
+    if (projectsList.length === 0) return;
+    
+    setIsLoadingScores(true);
+    const supabase = createClient();
+
+    try {
+      // Fetch user's profile to check if it's complete
+      const { data: profile } = await supabase
+        .from("profiles")
+        .select("*")
+        .eq("user_id", currentUserId)
+        .single();
+
+      if (!profile) {
+        setIsLoadingScores(false);
+        return;
+      }
+
+      // Compute compatibility score for each project
+      const projectsWithScores = await Promise.all(
+        projectsList.map(async (project) => {
+          try {
+            const { data: breakdown, error } = await supabase.rpc(
+              "compute_match_breakdown",
+              {
+                profile_user_id: currentUserId,
+                target_project_id: project.id,
+              }
+            );
+
+            if (!error && breakdown) {
+              const overallScore =
+                breakdown.semantic * 0.4 +
+                breakdown.skills_overlap * 0.3 +
+                breakdown.experience_match * 0.15 +
+                breakdown.commitment_match * 0.15;
+
+              return {
+                ...project,
+                compatibility_score: overallScore,
+                score_breakdown: breakdown as ScoreBreakdown,
+              };
+            }
+          } catch (err) {
+            console.error(`Failed to compute score for project ${project.id}:`, err);
+          }
+
+          return project;
+        })
+      );
+
+      setProjects(projectsWithScores);
+    } catch (err) {
+      console.error("Failed to fetch compatibility scores:", err);
+    } finally {
+      setIsLoadingScores(false);
+    }
+  };
 
   const filteredProjects = projects.filter((project) => {
     if (!searchQuery) return true;
@@ -236,8 +310,8 @@ export default function ProjectsPage() {
               <Card key={project.id} className="overflow-hidden">
                 <CardHeader className="pb-4">
                   <div className="flex items-start justify-between gap-4">
-                    <div className="space-y-1">
-                      <div className="flex items-center gap-3">
+                    <div className="space-y-1 flex-1">
+                      <div className="flex items-center gap-3 flex-wrap">
                         <CardTitle className="text-xl">
                           {project.title}
                         </CardTitle>
@@ -252,9 +326,25 @@ export default function ProjectsPage() {
                             {project.status}
                           </Badge>
                         )}
+                        {/* Compatibility Score Badge */}
+                        {!isOwner && project.compatibility_score !== undefined && (
+                          <Badge 
+                            variant="default" 
+                            className="bg-green-500 hover:bg-green-600 flex items-center gap-1"
+                          >
+                            <Sparkles className="h-3 w-3" />
+                            {formatScore(project.compatibility_score)} match
+                          </Badge>
+                        )}
+                        {!isOwner && isLoadingScores && project.compatibility_score === undefined && (
+                          <Badge variant="outline" className="flex items-center gap-1">
+                            <Loader2 className="h-3 w-3 animate-spin" />
+                            Computing...
+                          </Badge>
+                        )}
                       </div>
                     </div>
-                    <div className="flex gap-2">
+                    <div className="flex gap-2 shrink-0">
                       <Button variant="outline" asChild>
                         <Link href={`/projects/${project.id}`}>
                           {isOwner ? "Edit" : "View Details"}
@@ -270,6 +360,34 @@ export default function ProjectsPage() {
                   <CardDescription className="text-sm line-clamp-2">
                     {project.description}
                   </CardDescription>
+
+                  {/* Compatibility Breakdown - only for non-owners with scores */}
+                  {!isOwner && project.score_breakdown && (
+                    <div className="rounded-lg border border-green-500/20 bg-green-50/50 dark:bg-green-950/20 p-3">
+                      <p className="text-xs font-medium text-green-700 dark:text-green-400 mb-2 flex items-center gap-1">
+                        <Sparkles className="h-3 w-3" />
+                        Your Compatibility Breakdown
+                      </p>
+                      <div className="grid grid-cols-2 sm:grid-cols-4 gap-2 text-xs">
+                        <div className="flex flex-col">
+                          <span className="text-muted-foreground">Skills</span>
+                          <span className="font-medium text-foreground">{formatScore(project.score_breakdown.skills_overlap)}</span>
+                        </div>
+                        <div className="flex flex-col">
+                          <span className="text-muted-foreground">Semantic</span>
+                          <span className="font-medium text-foreground">{formatScore(project.score_breakdown.semantic)}</span>
+                        </div>
+                        <div className="flex flex-col">
+                          <span className="text-muted-foreground">Experience</span>
+                          <span className="font-medium text-foreground">{formatScore(project.score_breakdown.experience_match)}</span>
+                        </div>
+                        <div className="flex flex-col">
+                          <span className="text-muted-foreground">Availability</span>
+                          <span className="font-medium text-foreground">{formatScore(project.score_breakdown.commitment_match)}</span>
+                        </div>
+                      </div>
+                    </div>
+                  )}
 
                   {/* Skills */}
                   {project.required_skills.length > 0 && (
