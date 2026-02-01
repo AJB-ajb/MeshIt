@@ -2,6 +2,26 @@ import { NextResponse } from "next/server";
 
 import { createClient } from "@/lib/supabase/server";
 
+/**
+ * Trigger async GitHub profile sync
+ * Fires and forgets - doesn't block the OAuth flow
+ */
+async function triggerGitHubSync(origin: string): Promise<void> {
+  try {
+    // Fire and forget - don't await
+    fetch(`${origin}/api/github/sync`, {
+      method: 'POST',
+      headers: {
+        'Content-Type': 'application/json',
+      },
+    }).catch((err) => {
+      console.error('[OAuth Callback] GitHub sync trigger failed:', err);
+    });
+  } catch (err) {
+    console.error('[OAuth Callback] Failed to trigger GitHub sync:', err);
+  }
+}
+
 export async function GET(request: Request) {
   const { searchParams, origin } = new URL(request.url);
   const code = searchParams.get("code");
@@ -20,6 +40,13 @@ export async function GET(request: Request) {
         return NextResponse.redirect(
           `${origin}/login?error=Authentication%20failed`
         );
+      }
+
+      // Check if user signed in with GitHub - trigger async profile sync
+      const provider = user.app_metadata?.provider;
+      if (provider === 'github') {
+        // Trigger GitHub profile extraction in background (async)
+        triggerGitHubSync(origin);
       }
 
       // Check if user has a profile in the database (existing user)
