@@ -102,11 +102,15 @@ function DeveloperOnboardingContent() {
           return;
         }
 
-        const { data } = await supabase
+        const { data, error } = await supabase
           .from("profiles")
           .select("*")
           .eq("user_id", user.id)
-          .single();
+          .maybeSingle(); // Use maybeSingle() to handle no rows without error
+
+        if (error) {
+          console.error("Error fetching profile:", error);
+        }
 
         if (data) {
           const preferences = data.project_preferences ?? {};

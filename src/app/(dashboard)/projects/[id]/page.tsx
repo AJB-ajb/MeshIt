@@ -50,6 +50,7 @@ type Project = {
   created_at: string;
   expires_at: string;
   creator_id: string;
+  image_url: string | null;
   profiles?: {
     full_name: string | null;
     headline: string | null;
@@ -908,6 +909,49 @@ export default function ProjectDetailPage() {
           </div>
         )}
       </div>
+
+      {/* Project Image */}
+      {project.image_url && (
+        <div className="relative aspect-video w-full overflow-hidden rounded-lg bg-muted group">
+          <img
+            src={project.image_url}
+            alt={project.title}
+            className="h-full w-full object-cover"
+          />
+          {isOwner && !isEditing && (
+            <div className="absolute inset-0 bg-black/60 opacity-0 group-hover:opacity-100 transition-opacity flex items-center justify-center">
+              <Button
+                variant="secondary"
+                size="sm"
+                onClick={async () => {
+                  if (confirm('Regenerate project image? This will replace the current image.')) {
+                    try {
+                      await fetch("/api/projects/generate-image", {
+                        method: "POST",
+                        headers: { "Content-Type": "application/json" },
+                        body: JSON.stringify({
+                          project_id: project.id,
+                          title: project.title,
+                          description: project.description,
+                          required_skills: project.required_skills,
+                          team_size: project.team_size,
+                          timeline: project.timeline,
+                        }),
+                      });
+                      alert('Image regeneration started! Refresh in a few seconds to see the new image.');
+                    } catch (err) {
+                      alert('Failed to regenerate image');
+                    }
+                  }
+                }}
+              >
+                <Sparkles className="h-4 w-4 mr-2" />
+                Regenerate Image
+              </Button>
+            </div>
+          )}
+        </div>
+      )}
 
       <div className="grid gap-6 lg:grid-cols-3">
         {/* Main content */}

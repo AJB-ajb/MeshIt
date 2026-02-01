@@ -33,46 +33,44 @@ const mapToPersonaState = (state: VoiceState): PersonaState => {
   }
 };
 
-// Conversational system prompt - warm, natural, efficient
-const SYSTEM_PROMPT = `You are Mesh, a friendly voice assistant helping developers set up their profile on MeshIt - a platform to find collaborators.
+// Conversational system prompt - efficient, 30-70 seconds target
+const SYSTEM_PROMPT = `You are Mesh, helping developers set up their MeshIt profile quickly. Be friendly but EFFICIENT - aim to finish in under 1 minute.
 
-## Your Vibe
-- Warm, casual, like talking to a colleague at a coffee shop
-- Keep responses SHORT (1-2 sentences). No lectures.
-- React naturally to what they say - "Oh nice!", "That's cool!", "Awesome!"
-- If they're chatty, vibe with them. If they're brief, be brief.
+## Your Style
+- Friendly but focused. No fluff.
+- SHORT responses (1 sentence max). Don't comment on every answer.
+- Ask 2-3 things at once when natural.
+- Move forward quickly after each answer.
 
-## What You Need to Learn
-Through natural conversation, find out:
-- Their name and what they build (tech stack, languages)
-- How experienced they are (junior/mid/senior vibes)
-- What projects excite them (AI? Games? SaaS? Open source?)
-- How much time they have (roughly hours/week)
-- How they like to work (calls? async messages? flexible?)
+## Info to Collect (in order)
+1. Name + location (city or timezone)
+2. Tech stack + role (frontend/backend/fullstack/mobile)
+3. Experience level + years
+4. Project interests + types (SaaS, AI, hackathons, open source)
+5. Hours per week + collab style (sync/async) + timeline preference
 
-## How to Flow
-Don't interrogate. Just chat. Weave questions naturally.
+## Flow (aim for 4-5 exchanges total)
 
-Start: "Hey! I'm Mesh. Tell me a bit about yourself - what do you build?"
+**Open:** "Hey! I'm Mesh. Quick intro - what's your name, where are you based, and what do you build?"
 
-Then just flow with it:
-- If they mention React: "Oh nice, React! How long have you been doing frontend stuff?"
-- If they seem senior: "Sounds like you've got solid experience. What kind of projects are you looking to jump into?"
-- If they mention time: "Gotcha. And when you're collabing - you more of a hop-on-a-call person or async messages?"
+**After they answer:** Don't say "cool" or "nice" - just ask the next thing:
+"Got it. How long have you been coding, and would you say junior, mid, or senior level?"
 
-## Wrapping Up
-When you have a good picture, summarize casually:
-"Alright, so you're [name], you work with [skills], interested in [interests], got about [hours] hours a week, and you're flexible with [collab style]. Did I get that right?"
+**Then:** "What kind of projects interest you - like AI, SaaS, games, open source?"
 
-When they confirm (yes/yeah/sounds good/that's right):
-Say: "Awesome! Let me set up your profile - one sec!"
-Then on a new line write: PROFILE_COMPLETE
+**Then:** "Last few things - how many hours a week can you commit, do you prefer sync calls or async messages, and are you into weekend projects or longer collabs?"
 
-## Important
-- Don't be robotic. No "Step 1" or "Question 2" stuff.
-- If they ramble, that's fine - extract what you can
-- If something's unclear, ask casually: "Wait, so you're more into backend or full-stack?"
-- NEVER say PROFILE_COMPLETE until they confirm the summary`;
+**Wrap up immediately:** "Perfect. So [name] from [location], [role] with [skills], [level] level, into [interests], [hours] hours/week, [style] style, [timeline] projects. Correct?"
+
+If yes: "Great, setting up your profile!"
+PROFILE_COMPLETE
+
+## Rules
+- NO filler words ("Oh nice!", "That's cool!", "Awesome!")
+- NO repeating what they said back unnecessarily  
+- Ask multiple questions per turn to save time
+- If they give partial info, ask for missing pieces in ONE follow-up
+- Target: 4-5 total exchanges, under 70 seconds`;
 
 export default function HumeRealTimeVoicePage() {
   const router = useRouter();
@@ -159,6 +157,7 @@ export default function HumeRealTimeVoicePage() {
     
     // Combine all conversation into text for the extraction API
     const conversationText = conversationRef.current.join('\n');
+    console.log('Conversation text for extraction:', conversationText);
     
     try {
       // Step 1: Use the SAME extraction API as the AI form extractor
@@ -170,13 +169,16 @@ export default function HumeRealTimeVoicePage() {
       });
       
       if (!extractResponse.ok) {
+        const errorText = await extractResponse.text();
+        console.error('Extraction API error:', errorText);
         throw new Error('Extraction failed');
       }
       
       const { profile: extractedData } = await extractResponse.json();
-      console.log('Extracted profile from voice:', extractedData);
+      console.log('Extracted profile from voice:', JSON.stringify(extractedData, null, 2));
       
       // Step 2: Save extracted profile directly to Supabase using existing endpoint
+      // Pass experience_level directly (AI returns: junior/intermediate/senior/lead)
       const saveResponse = await fetch('/api/profile/save', {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
@@ -184,11 +186,10 @@ export default function HumeRealTimeVoicePage() {
           profileData: {
             skills: extractedData.skills || [],
             interests: extractedData.interests || [],
-            experience_years: mapExperienceLevelToYears(extractedData.experience_level),
+            experience_level: extractedData.experience_level, // Pass directly, not years
             availability_hours: extractedData.availability_hours,
             collaboration_style: extractedData.collaboration_style,
             bio: extractedData.bio || extractedData.headline,
-            // These will be picked up by the form when it loads
             full_name: extractedData.full_name,
             headline: extractedData.headline,
             location: extractedData.location,
@@ -199,31 +200,25 @@ export default function HumeRealTimeVoicePage() {
       });
       
       if (!saveResponse.ok) {
-        console.warn('Profile save returned error, but continuing...');
+        const errorData = await saveResponse.json().catch(() => ({}));
+        console.error('Profile save error:', errorData);
+      } else {
+        const saveResult = await saveResponse.json();
+        console.log('Profile saved successfully to Supabase:', saveResult);
       }
       
       // Redirect to developer form - it will load the saved data from DB
+      // Wait a moment to ensure DB write is complete
       const redirectUrl = `/onboarding/developer?voice_complete=true${nextUrl !== '/profile' ? `&next=${encodeURIComponent(nextUrl)}` : ''}`;
-      setTimeout(() => router.push(redirectUrl), 1500);
+      setTimeout(() => router.push(redirectUrl), 500);
       
     } catch (err) {
       console.error('Voice extraction error:', err);
       // Still redirect - user can fill form manually
       const redirectUrl = `/onboarding/developer?voice_complete=true`;
-      setTimeout(() => router.push(redirectUrl), 1500);
+      setTimeout(() => router.push(redirectUrl), 500);
     }
   }, [disconnect, nextUrl, router]);
-
-  // Helper to convert experience level string to years (for the save API)
-  const mapExperienceLevelToYears = (level?: string): number => {
-    switch (level) {
-      case 'junior': return 1;
-      case 'intermediate': return 3;
-      case 'senior': return 6;
-      case 'lead': return 10;
-      default: return 2;
-    }
-  };
 
   // Handle Hume messages
   const handleMessage = useCallback((msg: Record<string, unknown>) => {

@@ -8,6 +8,7 @@ interface ExtendedProfileData extends Partial<ProfileData> {
   location?: string;
   portfolio_url?: string;
   github_url?: string;
+  experience_level?: string; // Direct from AI extraction: junior/intermediate/senior/lead
 }
 
 /**
@@ -17,8 +18,7 @@ interface ExtendedProfileData extends Partial<ProfileData> {
 export async function saveVoiceProfile(userId: string, data: ExtendedProfileData) {
   const supabase = await createClient();
 
-  // Map experience years to experience level
-  const experienceLevel = mapExperienceYearsToLevel(data.experience_years || 0);
+  console.log('saveVoiceProfile called with data:', JSON.stringify(data, null, 2));
 
   // Prepare update data - include ALL fields the AI extractor can return
   const updateData: Record<string, unknown> = {
@@ -51,9 +51,16 @@ export async function saveVoiceProfile(userId: string, data: ExtendedProfileData
     updateData.interests = data.interests;
   }
 
-  // Experience and availability
-  if (data.experience_years !== undefined) {
-    updateData.experience_level = experienceLevel;
+  // Experience level - use directly from AI extraction (already in correct format)
+  // AI returns: junior/intermediate/senior/lead (matches form's expected values)
+  if (data.experience_level) {
+    const validLevels = ['junior', 'intermediate', 'senior', 'lead'];
+    if (validLevels.includes(data.experience_level)) {
+      updateData.experience_level = data.experience_level;
+    }
+  } else if (data.experience_years !== undefined) {
+    // Fallback: map years to level if experience_level not provided
+    updateData.experience_level = mapExperienceYearsToLevel(data.experience_years);
   }
 
   if (data.availability_hours !== undefined) {
@@ -82,11 +89,16 @@ export async function saveVoiceProfile(userId: string, data: ExtendedProfileData
     updateData.github_url = data.github_url;
   }
 
-  // Update profile using user_id (not id)
+  // Add user_id for upsert
+  updateData.user_id = userId;
+
+  // Upsert profile (insert if not exists, update if exists)
   const { error } = await supabase
     .from('profiles')
-    .update(updateData)
-    .eq('user_id', userId);
+    .upsert(updateData, { 
+      onConflict: 'user_id',
+      ignoreDuplicates: false 
+    });
 
   if (error) {
     console.error('Error saving profile:', error);
@@ -98,12 +110,13 @@ export async function saveVoiceProfile(userId: string, data: ExtendedProfileData
 }
 
 /**
- * Map years of experience to experience level
+ * Map years of experience to experience level (matches form enum)
  */
-function mapExperienceYearsToLevel(years: number): 'beginner' | 'intermediate' | 'advanced' {
-  if (years < 2) return 'beginner';
+function mapExperienceYearsToLevel(years: number): 'junior' | 'intermediate' | 'senior' | 'lead' {
+  if (years < 2) return 'junior';
   if (years < 5) return 'intermediate';
-  return 'advanced';
+  if (years < 8) return 'senior';
+  return 'lead';
 }
 
 /**
