@@ -10,8 +10,15 @@ export function createClient() {
     );
   }
 
-  return createBrowserClient(
-    url,
-    anonKey
-  );
+  return createBrowserClient(url, anonKey, {
+    db: {
+      schema: "public",
+    },
+    global: {
+      headers: {
+        "Accept": "application/json",
+        "Content-Type": "application/json",
+      },
+    },
+  });
 }

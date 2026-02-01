@@ -53,7 +53,13 @@ export function subscribeToMessages(
         onMessageUpdate?.(payload.new);
       }
     )
-    .subscribe();
+    .subscribe((status) => {
+      if (status === "SUBSCRIBED") {
+        console.log(`[Realtime] Subscribed to messages for conversation ${conversationId}`);
+      } else if (status === "CHANNEL_ERROR") {
+        console.error(`[Realtime] Error subscribing to messages for conversation ${conversationId}`);
+      }
+    });
 
   return channel;
 }
@@ -107,7 +113,13 @@ export function subscribeToNotifications(
         onNotificationDelete?.(payload.old);
       }
     )
-    .subscribe();
+    .subscribe((status) => {
+      if (status === "SUBSCRIBED") {
+        console.log(`[Realtime] Subscribed to notifications for user ${userId}`);
+      } else if (status === "CHANNEL_ERROR") {
+        console.error(`[Realtime] Error subscribing to notifications for user ${userId}`);
+      }
+    });
 
   return channel;
 }
@@ -138,7 +150,13 @@ export function subscribeToConversations(
         }
       }
     )
-    .subscribe();
+    .subscribe((status) => {
+      if (status === "SUBSCRIBED") {
+        console.log(`[Realtime] Subscribed to conversations for user ${userId}`);
+      } else if (status === "CHANNEL_ERROR") {
+        console.error(`[Realtime] Error subscribing to conversations for user ${userId}`);
+      }
+    });
 
   return channel;
 }

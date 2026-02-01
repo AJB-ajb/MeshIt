@@ -139,11 +139,19 @@ export default function NewProjectPage() {
     }
 
     // First check if user has a profile (required for creator_id foreign key)
-    const { data: profile } = await supabase
+    const { data: profile, error: profileCheckError } = await supabase
       .from("profiles")
       .select("user_id")
       .eq("user_id", user.id)
       .single();
+
+    if (profileCheckError && profileCheckError.code !== 'PGRST116') {
+      // PGRST116 is "not found" which is expected if profile doesn't exist
+      setIsSaving(false);
+      console.error("Profile check error:", profileCheckError);
+      setError("Failed to verify your profile. Please try again.");
+      return;
+    }
 
     if (!profile) {
       // Create a minimal profile if it doesn't exist
@@ -155,7 +163,8 @@ export default function NewProjectPage() {
 
       if (profileError) {
         setIsSaving(false);
-        setError("Failed to create user profile. Please try again.");
+        console.error("Profile creation error:", profileError);
+        setError(`Failed to create user profile: ${profileError.message || "Please try again."}`);
         return;
       }
     }
@@ -201,7 +210,24 @@ export default function NewProjectPage() {
 
     if (insertError) {
       console.error("Insert error:", insertError);
-      setError("Failed to create project. Please try again.");
+      
+      // Provide more specific error messages
+      let errorMessage = "Failed to create project. Please try again.";
+      
+      if (insertError.code === '23503') {
+        // Foreign key violation - profile doesn't exist
+        errorMessage = "Your profile is missing. Please complete your profile first.";
+      } else if (insertError.code === '23505') {
+        // Unique violation
+        errorMessage = "A project with this information already exists.";
+      } else if (insertError.code === '23514') {
+        // Check constraint violation
+        errorMessage = `Invalid project data: ${insertError.message}`;
+      } else if (insertError.message) {
+        errorMessage = `Failed to create project: ${insertError.message}`;
+      }
+      
+      setError(errorMessage);
       return;
     }
 
