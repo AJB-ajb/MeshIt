@@ -73,10 +73,22 @@ function DeveloperOnboardingContent() {
   const [aiText, setAiText] = useState("");
   const [isExtracting, setIsExtracting] = useState(false);
   const [extractionSuccess, setExtractionSuccess] = useState(false);
+  const [voiceComplete, setVoiceComplete] = useState(false);
 
   const next = useMemo(() => {
     const value = searchParams.get("next") ?? "";
     return value && !value.startsWith("/onboarding") ? value : "";
+  }, [searchParams]);
+
+  // Check if coming from voice onboarding
+  useEffect(() => {
+    if (searchParams.get("voice_complete") === "true") {
+      setVoiceComplete(true);
+      // Clear the URL param without refresh
+      const url = new URL(window.location.href);
+      url.searchParams.delete("voice_complete");
+      window.history.replaceState({}, "", url.toString());
+    }
   }, [searchParams]);
 
   useEffect(() => {
@@ -295,6 +307,23 @@ function DeveloperOnboardingContent() {
             </p>
           ) : null}
 
+          {/* Voice Onboarding Success Banner */}
+          {voiceComplete && (
+            <div className="rounded-md border border-primary/30 bg-primary/10 px-4 py-3 animate-in fade-in slide-in-from-top-2">
+              <div className="flex items-center gap-3">
+                <CheckCircle className="h-5 w-5 text-primary flex-shrink-0" />
+                <div>
+                  <p className="text-sm font-medium text-foreground">
+                    Voice onboarding complete!
+                  </p>
+                  <p className="text-sm text-muted-foreground">
+                    We've filled in your profile based on our conversation. Review and edit below.
+                  </p>
+                </div>
+              </div>
+            </div>
+          )}
+
           {/* Input Mode Toggle */}
           <div className="flex items-center justify-center gap-2 rounded-lg border border-border bg-muted/30 p-1">
             <button
@@ -323,7 +352,7 @@ function DeveloperOnboardingContent() {
             </button>
             <button
               type="button"
-              onClick={() => router.push(`/onboarding/voice-livekit?next=${encodeURIComponent(next || "/dashboard")}`)}
+              onClick={() => router.push(`/onboarding/voice-hume?next=${encodeURIComponent(next || "/dashboard")}`)}
               className="flex items-center gap-2 rounded-md px-4 py-2 text-sm font-medium transition-colors text-muted-foreground hover:text-foreground"
             >
               <Mic className="h-4 w-4" />

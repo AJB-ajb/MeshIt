@@ -4,7 +4,7 @@ This document describes the Model Context Protocol (MCP) servers configured for 
 
 ## Overview
 
-MCP enables Cursor IDE to connect to external tools and data sources. This project uses 5 MCP servers:
+MCP enables Cursor IDE to connect to external tools and data sources. This project uses the following MCP servers:
 
 | Server     | Type          | Purpose                                    |
 | ---------- | ------------- | ------------------------------------------ |
@@ -13,6 +13,9 @@ MCP enables Cursor IDE to connect to external tools and data sources. This proje
 | Sentry     | Remote (HTTP) | Error tracking and monitoring              |
 | PostHog    | Remote (HTTP) | Product analytics and feature flags        |
 | Supabase   | Remote (HTTP) | Database, auth, and backend services       |
+| ElevenLabs | STDIO (local) | Voice TTS for match explanations           |
+| n8n-mcp    | Remote (supergateway) | Automation workflows (daily digest, sync)  |
+| Discord    | Docker (local container) | Community bot workflows        |
 
 ## Configuration Files
 
@@ -79,6 +82,31 @@ cp .env.example .env
    POSTHOG_HOST=https://app.posthog.com
    ```
    Note: Use `https://eu.posthog.com` if on EU cloud.
+
+#### n8n-mcp
+1. Log in to your n8n Cloud workspace (or self-host) and open **Settings → API**.
+2. Create a JWT API key with workflow read/execute permissions.
+3. Copy your MCP endpoint URL (for Cloud this is usually `https://<workspace>.n8n.cloud/mcp-server/http`).
+4. Add to `.env`:
+   ```
+   N8N_API_URL=https://your-workspace.n8n.cloud/mcp-server/http
+   N8N_API_KEY=xxxxxxxxxxxxxxxx
+   ```
+5. Ensure `.cursor/mcp.json` contains the `n8n-mcp` entry:
+   ```
+   "n8n-mcp": {
+     "command": "npx",
+     "args": [
+       "-y",
+       "supergateway",
+       "--streamableHttp",
+       "${env:N8N_API_URL}",
+       "--header",
+       "authorization:Bearer ${env:N8N_API_KEY}"
+     ]
+   }
+   ```
+6. Restart Cursor so the n8n MCP server picks up the new configuration.
 
 #### Playwright
 No configuration needed - runs locally without credentials.

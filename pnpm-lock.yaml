@@ -26,6 +26,9 @@ importers:
       '@radix-ui/react-tabs':
         specifier: ^1.1.13
         version: 1.1.13(@types/react-dom@19.2.3(@types/react@19.2.10))(@types/react@19.2.10)(react-dom@19.2.3(react@19.2.3))(react@19.2.3)
+      '@rive-app/react-webgl2':
+        specifier: ^4.26.2
+        version: 4.26.2(react@19.2.3)
       '@serwist/next':
         specifier: ^9.5.3
         version: 9.5.3(next@16.1.6(@babel/core@7.28.6)(@playwright/test@1.58.1)(react-dom@19.2.3(react@19.2.3))(react@19.2.3))(react@19.2.3)(typescript@5.9.3)
@@ -41,6 +44,9 @@ importers:
       clsx:
         specifier: ^2.1.1
         version: 2.1.1
+      hume:
+        specifier: ^0.15.11
+        version: 0.15.11
       livekit-client:
         specifier: ^2.17.0
         version: 2.17.0(@types/dom-mediacapture-record@1.0.22)
@@ -1298,6 +1304,14 @@ packages:
     peerDependenciesMeta:
       '@types/react':
         optional: true
+
+  '@rive-app/react-webgl2@4.26.2':
+    resolution: {integrity: sha512-AwJ7wzx6jzfTD2rrQ8Tt5u5W7b9B4ctnQQnHfIs4ldUM5DV3tE11d81sHOeYNrW9GishgOvU9jsMdHsSnozNzg==}
+    peerDependencies:
+      react: ^16.8.0 || ^17.0.0 || ^18.0.0 || ^19.0
+
+  '@rive-app/webgl2@2.34.2':
+    resolution: {integrity: sha512-o6KKQpnCldWMqo8yTD5ClZUKN8hx/26CuZPAcMTCKgP07fDa73KtbW1O0yj0R3o8tekevYNmjHTIicf/cDu+4A==}
 
   '@rolldown/binding-android-arm64@1.0.0-rc.1':
     resolution: {integrity: sha512-He6ZoCfv5D7dlRbrhNBkuMVIHd0GDnjJwbICE1OWpG7G3S2gmJ+eXkcNLJjzjNDpeI2aRy56ou39AJM9AD8YFA==}
@@ -2985,6 +2999,10 @@ packages:
     resolution: {integrity: sha512-B4FFZ6q/T2jhhksgkbEW3HBvWIfDW85snkQgawt07S7J5QXTk6BkNV+0yAeZrM5QpMAdYlocGoljn0sJ/WQkFw==}
     engines: {node: '>=10.17.0'}
 
+  hume@0.15.11:
+    resolution: {integrity: sha512-hYPo6AYIPDlVW4a9zITLcL49NS/Mfwb2iXk+KPesyj1Uy7XspBP51RcUOK1PPlGA/anJ6vFVJcKE3QHxWbIniQ==}
+    engines: {node: '>=18.0.0'}
+
   iceberg-js@0.8.1:
     resolution: {integrity: sha512-1dhVQZXhcHje7798IVM+xoo/1ZdVfzOMIc8/rgVSijRK38EDqOJoGula9N/8ZI5RD8QTxNQtK/Gozpr+qUqRRA==}
     engines: {node: '>=20.0.0'}
@@ -4328,6 +4346,10 @@ packages:
     peerDependencies:
       react: ^16.8.0 || ^17.0.0 || ^18.0.0 || ^19.0.0
 
+  uuid@9.0.1:
+    resolution: {integrity: sha512-b+1eJOlsR9K8HJpow9Ok3fiWOWSIcIzXodvv0rQjVoOVNpWMpxf1wZNpt4y9h10odCNrqnYp1OBzRktckBe3sA==}
+    hasBin: true
+
   v8-compile-cache-lib@3.0.1:
     resolution: {integrity: sha512-wa7YjyUGfNZngI/vtK0UHAN+lgDCxBPCylVXGp0zu59Fz5aiGtNXaq3DhIov063MorB+VfufLh3JlF2KdTK3xg==}
 
@@ -4562,6 +4584,9 @@ packages:
 
   zod@3.22.4:
     resolution: {integrity: sha512-iC+8Io04lddc+mVqQ9AZ7OQ2MrUKGN+oIQyq1vemgt46jwCwLfhq7/pwnBnNXXXZb8VTVLKwp9EDkx+ryxIWmg==}
+
+  zod@3.25.76:
+    resolution: {integrity: sha512-gzUt/qt81nXsFGKIFcC3YnfEAx5NkunCfnDlvuBSSFS02bcXu4Lmea0AFIUwbLWxWPx3d9p8S5QoaujKcNQxcQ==}
 
   zod@4.3.6:
     resolution: {integrity: sha512-rftlrkhHZOcjDwkGlnUtZZkvaPHCsDATp4pGpuOOMDaTdDDXF91wuVDJoWoPsKX/3YPQ5fHuF3STjcYyKr+Qhg==}
@@ -5470,6 +5495,13 @@ snapshots:
       react: 19.2.3
     optionalDependencies:
       '@types/react': 19.2.10
+
+  '@rive-app/react-webgl2@4.26.2(react@19.2.3)':
+    dependencies:
+      '@rive-app/webgl2': 2.34.2
+      react: 19.2.3
+
+  '@rive-app/webgl2@2.34.2': {}
 
   '@rolldown/binding-android-arm64@1.0.0-rc.1':
     optional: true
@@ -7502,6 +7534,15 @@ snapshots:
 
   human-signals@2.1.0: {}
 
+  hume@0.15.11:
+    dependencies:
+      uuid: 9.0.1
+      ws: 8.19.0
+      zod: 3.25.76
+    transitivePeerDependencies:
+      - bufferutil
+      - utf-8-validate
+
   iceberg-js@0.8.1: {}
 
   iconv-lite@0.4.24:
@@ -8915,6 +8956,8 @@ snapshots:
     dependencies:
       react: 19.2.3
 
+  uuid@9.0.1: {}
+
   v8-compile-cache-lib@3.0.1: {}
 
   vercel@50.9.6(rollup@4.57.1)(typescript@5.9.3):
@@ -9159,5 +9202,7 @@ snapshots:
       zod: 4.3.6
 
   zod@3.22.4: {}
+
+  zod@3.25.76: {}
 
   zod@4.3.6: {}

@@ -1,6 +1,6 @@
 "use client";
 
-import { useState } from "react";
+import { useState, useEffect } from "react";
 import Link from "next/link";
 import {
   LayoutDashboard,
@@ -12,6 +12,7 @@ import {
   X,
   User,
   Settings,
+  ChevronLeft,
 } from "lucide-react";
 
 import { cn } from "@/lib/utils";
@@ -37,6 +38,20 @@ interface SidebarProps {
 
 export function Sidebar({ className }: SidebarProps) {
   const [isMobileOpen, setIsMobileOpen] = useState(false);
+  const [isCollapsed, setIsCollapsed] = useState(false);
+
+  // Load collapsed state from localStorage
+  useEffect(() => {
+    const saved = localStorage.getItem('sidebar-collapsed');
+    if (saved) setIsCollapsed(JSON.parse(saved));
+  }, []);
+
+  // Save collapsed state
+  const toggleCollapse = () => {
+    const newState = !isCollapsed;
+    setIsCollapsed(newState);
+    localStorage.setItem('sidebar-collapsed', JSON.stringify(newState));
+  };
 
   return (
     <>
@@ -56,40 +71,74 @@ export function Sidebar({ className }: SidebarProps) {
       </Button>
 
       {/* Mobile overlay */}
-      {isMobileOpen && (
-        <div
-          className="fixed inset-0 z-40 bg-background/80 backdrop-blur-sm md:hidden"
-          onClick={() => setIsMobileOpen(false)}
-          aria-hidden="true"
-        />
-      )}
+      <div
+        className={cn(
+          "fixed inset-0 z-40 bg-background/80 backdrop-blur-sm transition-opacity duration-300 md:hidden",
+          isMobileOpen ? "opacity-100" : "opacity-0 pointer-events-none"
+        )}
+        onClick={() => setIsMobileOpen(false)}
+        aria-hidden="true"
+      />
 
       {/* Sidebar */}
       <aside
         className={cn(
-          "fixed inset-y-0 left-0 z-40 flex w-64 flex-col border-r border-sidebar-border bg-sidebar transition-transform duration-200 ease-in-out md:static md:translate-x-0",
-          isMobileOpen ? "translate-x-0" : "-translate-x-full",
+          "fixed inset-y-0 left-0 z-40 flex flex-col border-r border-sidebar-border bg-sidebar",
+          "transition-all duration-300 ease-in-out",
+          "md:static",
+          // Desktop: collapsed or expanded
+          isCollapsed ? "md:w-16" : "md:w-64",
+          // Mobile: slide in/out
+          isMobileOpen ? "translate-x-0 w-64" : "-translate-x-full md:translate-x-0",
           className
         )}
       >
         {/* Logo */}
-        <div className="flex h-16 items-center gap-2 border-b border-sidebar-border px-6">
-          <Logo href="/dashboard" />
+        <div className="flex h-16 items-center justify-between border-b border-sidebar-border px-4">
+          <div className={cn(
+            "transition-opacity duration-200",
+            isCollapsed ? "md:opacity-0 md:w-0" : "opacity-100"
+          )}>
+            <Logo href="/dashboard" />
+          </div>
+          {/* Collapse toggle - desktop only */}
+          <Button
+            variant="ghost"
+            size="icon"
+            className="hidden md:flex h-8 w-8 text-muted-foreground hover:text-foreground"
+            onClick={toggleCollapse}
+          >
+            <ChevronLeft className={cn(
+              "h-4 w-4 transition-transform duration-300",
+              isCollapsed && "rotate-180"
+            )} />
+          </Button>
         </div>
 
         {/* New Project button */}
-        <div className="px-4 py-4">
-          <Button className="w-full justify-start gap-2" asChild>
+        <div className="px-3 py-4">
+          <Button 
+            className={cn(
+              "w-full justify-start gap-2 transition-all duration-200",
+              isCollapsed && "md:justify-center md:px-2"
+            )} 
+            asChild
+          >
             <Link href="/projects/new">
-              <Plus className="h-4 w-4" />
-              New Project
+              <Plus className="h-4 w-4 flex-shrink-0" />
+              <span className={cn(
+                "transition-opacity duration-200",
+                isCollapsed && "md:hidden"
+              )}>
+                New Project
+              </span>
             </Link>
           </Button>
         </div>
 
         {/* Navigation */}
         <nav 
-          className="flex-1 space-y-1 px-4"
+          className="flex-1 space-y-1 px-3"
           role="navigation"
           aria-label="Main navigation"
         >
@@ -99,12 +148,13 @@ export function Sidebar({ className }: SidebarProps) {
               href={item.href}
               icon={item.icon}
               label={item.label}
+              collapsed={isCollapsed}
             />
           ))}
         </nav>
 
         {/* Secondary Navigation */}
-        <div className="border-t border-sidebar-border px-4 py-4">
+        <div className="border-t border-sidebar-border px-3 py-4">
           <nav className="space-y-1" aria-label="Secondary navigation">
             {secondaryNavigation.map((item) => (
               <NavItem
@@ -112,13 +162,17 @@ export function Sidebar({ className }: SidebarProps) {
                 href={item.href}
                 icon={item.icon}
                 label={item.label}
+                collapsed={isCollapsed}
               />
             ))}
           </nav>
         </div>
 
         {/* Footer */}
-        <div className="border-t border-sidebar-border p-4">
+        <div className={cn(
+          "border-t border-sidebar-border p-4 transition-opacity duration-200",
+          isCollapsed && "md:opacity-0"
+        )}>
           <p className="text-xs text-muted-foreground">
             © 2026 MeshIt
           </p>

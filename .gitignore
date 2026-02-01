@@ -82,6 +82,8 @@ venv/
 *.log
 logs/
 .env*.local
+ .claude/
+.pnpm-store/
 
 # Serwist
 public/sw*
