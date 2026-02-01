@@ -2,7 +2,13 @@
  * Voice Agent API Tests
  */
 
-import { describe, it, expect, vi } from 'vitest';
+import { describe, it, expect, vi, beforeAll } from 'vitest';
+
+// Set required env vars before importing route handlers
+beforeAll(() => {
+  process.env.OPENAI_API_KEY = 'test-openai-key';
+  process.env.ELEVENLABS_API_KEY = 'test-elevenlabs-key';
+});
 
 // Mock voice agent service
 vi.mock('@/lib/ai/voice-agent', () => ({

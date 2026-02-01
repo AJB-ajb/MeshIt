@@ -2,7 +2,9 @@
  * Voice Agent Tests
  */
 
+// @vitest-environment node
 import { describe, it, expect, beforeEach, vi } from 'vitest';
+
 import {
   startVoiceConversation,
   processVoiceTurn,

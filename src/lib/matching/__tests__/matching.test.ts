@@ -1,8 +1,17 @@
 import { describe, it, expect, vi, beforeEach } from "vitest";
 
-// Mock Supabase client before importing modules that use it
+// Mock dependencies before importing modules that use them
 vi.mock("@/lib/supabase/server", () => ({
   createClient: vi.fn(),
+}));
+
+vi.mock("@/lib/environment", () => ({
+  getTestDataValue: vi.fn(() => false),
+}));
+
+vi.mock("@/lib/ai/embeddings", () => ({
+  generateProfileEmbedding: vi.fn(() => { throw new Error("API key not configured"); }),
+  generateProjectEmbedding: vi.fn(() => { throw new Error("API key not configured"); }),
 }));
 
 import { createClient } from "@/lib/supabase/server";
@@ -210,37 +219,45 @@ describe("matchProjectToProfiles", () => {
   it("fetches project embedding and calls RPC function", async () => {
     const projectEmbedding = new Array(1536).fill(0.2);
     const { mockClient, mockFrom, mockRpc } = createMockSupabase();
-    
-    // Mock project fetch
+
+    // Mock project fetch — the code chains .eq("id", ...).eq("is_test_data", ...).single()
+    const mockSingle = vi.fn().mockResolvedValue({
+      data: { embedding: projectEmbedding, creator_id: "creator-1", title: "Test", description: "Test", required_skills: [] },
+      error: null,
+    });
+    const mockEqInner = vi.fn().mockReturnValue({ single: mockSingle });
     mockFrom.mockReturnValueOnce({
       select: vi.fn().mockReturnValue({
         eq: vi.fn().mockReturnValue({
-          single: vi.fn().mockResolvedValue({
-            data: { embedding: projectEmbedding, creator_id: "creator-1" },
-            error: null,
-          }),
+          eq: mockEqInner,
+          single: mockSingle,
         }),
       }),
     });
     
-    // Mock RPC call
-    mockRpc.mockResolvedValue({
-      data: [
-        {
-          user_id: "user-1",
-          similarity: 0.9,
-          full_name: "John Doe",
-          headline: "Developer",
-          bio: "I build things",
-          skills: ["TypeScript", "React"],
-          experience_level: "senior",
-          availability_hours: 20,
-          collaboration_style: "async",
-        },
-      ],
-      error: null,
-    });
-    
+    // Mock RPC calls: first for match_users_to_project, then for compute_match_breakdown
+    mockRpc
+      .mockResolvedValueOnce({
+        data: [
+          {
+            user_id: "user-1",
+            similarity: 0.9,
+            full_name: "John Doe",
+            headline: "Developer",
+            bio: "I build things",
+            skills: ["TypeScript", "React"],
+            experience_level: "senior",
+            availability_hours: 20,
+            collaboration_style: "async",
+          },
+        ],
+        error: null,
+      })
+      .mockResolvedValueOnce({
+        data: null,
+        error: null,
+      });
+
     // Mock existing matches check
     mockFrom.mockReturnValueOnce({
       select: vi.fn().mockReturnValue({
@@ -252,17 +269,17 @@ describe("matchProjectToProfiles", () => {
         }),
       }),
     });
-    
+
     vi.mocked(createClient).mockResolvedValue(mockClient as any);
-    
+
     const matches = await matchProjectToProfiles("proj-1");
-    
+
     expect(mockRpc).toHaveBeenCalledWith("match_users_to_project", {
       project_embedding: projectEmbedding,
       project_id_param: "proj-1",
       match_limit: 10,
     });
-    
+
     expect(matches).toHaveLength(1);
     expect(matches[0].score).toBe(0.9);
     expect(matches[0].profile.full_name).toBe("John Doe");
@@ -270,20 +287,22 @@ describe("matchProjectToProfiles", () => {
 
   it("throws error when project not found", async () => {
     const { mockClient, mockFrom } = createMockSupabase();
-    
+
+    const mockSingle = vi.fn().mockResolvedValue({
+      data: null,
+      error: { message: "Not found" },
+    });
     mockFrom.mockReturnValue({
       select: vi.fn().mockReturnValue({
         eq: vi.fn().mockReturnValue({
-          single: vi.fn().mockResolvedValue({
-            data: null,
-            error: { message: "Not found" },
-          }),
+          eq: vi.fn().mockReturnValue({ single: mockSingle }),
+          single: mockSingle,
         }),
       }),
     });
-    
+
     vi.mocked(createClient).mockResolvedValue(mockClient as any);
-    
+
     await expect(matchProjectToProfiles("nonexistent")).rejects.toThrow(
       "Project not found"
     );
@@ -291,14 +310,16 @@ describe("matchProjectToProfiles", () => {
 
   it("throws error when project has no embedding", async () => {
     const { mockClient, mockFrom } = createMockSupabase();
-    
+
+    const mockSingle = vi.fn().mockResolvedValue({
+      data: { embedding: null, creator_id: "creator-1", title: "Test", description: "Test", required_skills: [] },
+      error: null,
+    });
     mockFrom.mockReturnValue({
       select: vi.fn().mockReturnValue({
         eq: vi.fn().mockReturnValue({
-          single: vi.fn().mockResolvedValue({
-            data: { embedding: null, creator_id: "creator-1" },
-            error: null,
-          }),
+          eq: vi.fn().mockReturnValue({ single: mockSingle }),
+          single: mockSingle,
         }),
       }),
     });
