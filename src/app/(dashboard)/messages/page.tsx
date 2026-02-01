@@ -6,6 +6,7 @@ import { Input } from "@/components/ui/input";
 import { EmptyState } from "@/components/ui/empty-state";
 import { createClient } from "@/lib/supabase/server";
 import { getTestDataValue } from "@/lib/environment";
+import { getInitials } from "@/lib/format";
 
 export const metadata: Metadata = {
   title: "Messages",
@@ -24,16 +25,6 @@ const formatTimeAgo = (dateString: string) => {
   if (diffDays === 1) return "Yesterday";
   if (diffDays < 7) return `${diffDays} days ago`;
   return new Date(dateString).toLocaleDateString();
-};
-
-const getInitials = (name: string | null) => {
-  if (!name) return "U";
-  return name
-    .split(" ")
-    .map((n) => n[0])
-    .join("")
-    .toUpperCase()
-    .slice(0, 2);
 };
 
 export default async function MessagesPage() {
