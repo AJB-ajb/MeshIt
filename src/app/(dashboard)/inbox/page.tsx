@@ -204,11 +204,15 @@ function InboxPageContent() {
       }
 
       // Fetch conversations
-      const { data: conversationsData } = await supabase
+      const { data: conversationsData, error: conversationsError } = await supabase
         .from("conversations")
         .select("*")
         .or(`participant_1.eq.${user.id},participant_2.eq.${user.id}`)
         .order("updated_at", { ascending: false });
+
+      if (conversationsError) {
+        console.error("Error fetching conversations:", conversationsError);
+      }
 
       if (conversationsData) {
         // Enrich conversations with other user info and last message
@@ -220,32 +224,45 @@ function InboxPageContent() {
                 : conv.participant_1;
 
             // Get other user's profile
-            const { data: profile } = await supabase
+            const { data: profile, error: profileError } = await supabase
               .from("profiles")
               .select("full_name, headline, user_id")
               .eq("user_id", otherUserId)
-              .single();
+              .maybeSingle();
+
+            if (profileError && profileError.code !== 'PGRST116') {
+              console.error("Error fetching profile:", profileError);
+            }
 
             // Get project title if exists
             let project = null;
             if (conv.project_id) {
-              const { data: projectData } = await supabase
+              const { data: projectData, error: projectError } = await supabase
                 .from("projects")
                 .select("title")
                 .eq("id", conv.project_id)
                 .eq("is_test_data", getTestDataValue())
-                .single();
+                .maybeSingle();
+
+              if (projectError && projectError.code !== 'PGRST116') {
+                console.error("Error fetching project:", projectError);
+              }
               project = projectData;
             }
 
             // Get last message
-            const { data: lastMessageData } = await supabase
+            const { data: lastMessageData, error: lastMessageError } = await supabase
               .from("messages")
               .select("content, created_at, sender_id")
               .eq("conversation_id", conv.id)
               .order("created_at", { ascending: false })
               .limit(1)
-              .single();
+              .maybeSingle();
+
+            // Only log error if it's not a "not found" error
+            if (lastMessageError && lastMessageError.code !== 'PGRST116') {
+              console.error("Error fetching last message:", lastMessageError);
+            }
 
             // Get unread count
             const { count } = await supabase
@@ -339,19 +356,28 @@ function InboxPageContent() {
             ? conv.participant_2
             : conv.participant_1;
 
-        const { data: profile } = await supabase
+        const { data: profile, error: profileError } = await supabase
           .from("profiles")
           .select("full_name, headline, user_id")
           .eq("user_id", otherUserId)
-          .single();
+          .maybeSingle();
 
-        const { data: lastMessageData } = await supabase
+        if (profileError && profileError.code !== 'PGRST116') {
+          console.error("Error fetching profile in realtime:", profileError);
+        }
+
+        const { data: lastMessageData, error: lastMessageError } = await supabase
           .from("messages")
           .select("content, created_at, sender_id")
           .eq("conversation_id", conv.id)
           .order("created_at", { ascending: false })
           .limit(1)
-          .single();
+          .maybeSingle();
+
+        // Only log error if it's not a "not found" error
+        if (lastMessageError && lastMessageError.code !== 'PGRST116') {
+          console.error("Error fetching last message in realtime:", lastMessageError);
+        }
 
         const { count } = await supabase
           .from("messages")
@@ -394,23 +420,50 @@ function InboxPageContent() {
     if (!selectedConversation) return;
 
     const fetchMessages = async () => {
+      if (!selectedConversation?.id || !currentUserId) {
+        console.warn("Cannot fetch messages: missing conversation or user ID");
+        return;
+      }
+
       const supabase = createClient();
 
-      const { data: messagesData } = await supabase
+      console.log("Fetching messages for conversation:", selectedConversation.id);
+
+      const { data: messagesData, error: messagesError } = await supabase
         .from("messages")
         .select("*")
         .eq("conversation_id", selectedConversation.id)
         .order("created_at", { ascending: true });
 
+      if (messagesError) {
+        console.error("Error fetching messages:", messagesError);
+        console.error("Error details:", {
+          code: messagesError.code,
+          message: messagesError.message,
+          details: messagesError.details,
+          hint: messagesError.hint,
+        });
+        setMessages([]);
+        return;
+      }
+
+      console.log("Fetched messages:", messagesData?.length || 0, messagesData);
+
       if (messagesData) {
         setMessages(messagesData);
 
         // Mark messages as read
-        await supabase
+        const { error: updateError } = await supabase
           .from("messages")
           .update({ read: true })
           .eq("conversation_id", selectedConversation.id)
           .neq("sender_id", currentUserId);
+
+        if (updateError) {
+          console.error("Error marking messages as read:", updateError);
+        }
+      } else {
+        setMessages([]);
       }
     };
 
@@ -507,15 +560,22 @@ function InboxPageContent() {
       .from("profiles")
       .select("full_name")
       .eq("user_id", currentUserId)
-      .single();
+      .maybeSingle();
 
-    await supabase.from("notifications").insert({
-      user_id: otherUserId,
-      type: "new_message",
-      title: "New Message",
-      body: `${profile?.full_name || "Someone"}: ${newMessage.trim().slice(0, 50)}${newMessage.length > 50 ? "..." : ""}`,
-      related_user_id: currentUserId,
-    });
+    // Create notification for other user (don't block on this - fire and forget)
+    (async () => {
+      const { error } = await supabase.from("notifications").insert({
+        user_id: otherUserId,
+        type: "new_message",
+        title: "New Message",
+        body: `${profile?.full_name || "Someone"}: ${newMessage.trim().slice(0, 50)}${newMessage.length > 50 ? "..." : ""}`,
+        related_user_id: currentUserId,
+      });
+      if (error) {
+        console.error("Error creating notification:", error);
+        // Don't block message sending if notification fails
+      }
+    })();
 
     setIsSendingMessage(false);
   }, [newMessage, selectedConversation, currentUserId]);
