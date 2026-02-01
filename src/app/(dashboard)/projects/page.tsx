@@ -17,7 +17,6 @@ import {
 import { createClient } from "@/lib/supabase/client";
 import { formatScore } from "@/lib/matching/scoring";
 import type { ScoreBreakdown } from "@/lib/supabase/types";
-import { getTestDataValue } from "@/lib/environment";
 
 type Project = {
   id: string;
@@ -116,7 +115,6 @@ export default function ProjectsPage() {
           )
         `
         )
-        .eq("is_test_data", getTestDataValue())
         .order("created_at", { ascending: false });
 
       if (activeTab === "my-projects" && user) {
