@@ -6,67 +6,70 @@ Mesh helps developers and creators find the perfect collaborators for their proj
 
 ## Tech Stack
 
-| Category | Technology |
-|----------|------------|
-| **Framework** | Next.js 16 (App Router, Turbopack) |
-| **Runtime** | React 19 |
-| **Language** | TypeScript 5.x (strict mode) |
-| **Styling** | Tailwind CSS 4.x |
-| **Components** | shadcn/ui |
-| **Database** | Supabase PostgreSQL + pgvector |
-| **Auth** | Supabase Auth (Google, GitHub, LinkedIn, Slack, Discord) |
-| **AI** | Gemini 2.0 Flash, OpenAI Embeddings, LangChain.js |
-| **Voice** | OpenAI Whisper (STT), ElevenLabs (TTS) |
-| **Email** | Resend |
-| **Testing** | Vitest (unit), Playwright (E2E) |
-| **Deployment** | Vercel |
+- **Frontend**: Next.js 16 (App Router, Turbopack), React 19, TypeScript 5.x (strict mode)
+- **Styling**: Tailwind CSS 4.x, shadcn/ui
+- **Database**: Supabase PostgreSQL + pgvector
+- **Auth**: Supabase Auth (Google, GitHub, LinkedIn, Slack, Discord)
+- **AI/ML**: Gemini 2.0 Flash, OpenAI Embeddings, LangChain.js
+- **Voice**: OpenAI Whisper (STT), ElevenLabs (TTS)
+- **Email**: Resend
+- **Testing**: Vitest (unit), Playwright (E2E)
+- **Hosting**: Vercel
 
-## Prerequisites
+## How to Run
+
+### Prerequisites
 
 - **Node.js** 18.17 or later
 - **pnpm** 8.x or later (required - npm/yarn not supported)
 
-### Installing pnpm
-
 ```bash
-# Using corepack (recommended, comes with Node.js 16.13+)
+# Install pnpm via corepack (recommended, comes with Node.js 16.13+)
 corepack enable
 corepack prepare pnpm@latest --activate
-
-# Or using npm
-npm install -g pnpm
-
-# Or using Homebrew (macOS)
-brew install pnpm
 ```
 
-## Getting Started
-
-### 1. Clone and Install
+### Setup
 
 ```bash
+# Clone the repo
 git clone https://github.com/your-team/meshit.git
 cd meshit
+
+# Install dependencies
 pnpm install
-```
 
-### 2. Environment Setup
-
-```bash
+# Set up environment variables
 cp .env.example .env.local
-```
+# Add your API keys to .env.local (see below)
 
-Edit `.env.local` with your API keys. See [Environment Variables](#environment-variables) for details.
-
-### 3. Run Development Server
-
-```bash
+# Run the development server
 pnpm dev
 ```
 
 Open [http://localhost:3000](http://localhost:3000) in your browser.
 
-## Available Scripts
+### Environment Variables
+
+Copy `.env.example` to `.env.local` and configure the following:
+
+**Required**:
+- `NEXT_PUBLIC_SUPABASE_URL` — Supabase project URL
+- `NEXT_PUBLIC_SUPABASE_ANON_KEY` — Supabase anonymous key
+- `SUPABASE_SERVICE_ROLE_KEY` — Supabase service role key (server-side only)
+- `GOOGLE_AI_API_KEY` — Google AI API key (Gemini)
+- `OPENAI_API_KEY` — OpenAI API key (Whisper, Embeddings)
+- `ELEVENLABS_API_KEY` — ElevenLabs API key (TTS)
+- `RESEND_API_KEY` — Resend API key (email)
+
+**Optional**:
+- `NEXT_PUBLIC_POSTHOG_KEY` — PostHog analytics key
+- `NEXT_PUBLIC_POSTHOG_HOST` — PostHog host URL
+- `SENTRY_DSN` — Sentry error tracking DSN
+
+## Details
+
+### Available Scripts
 
 | Command | Description |
 |---------|-------------|
@@ -81,7 +84,7 @@ Open [http://localhost:3000](http://localhost:3000) in your browser.
 | `pnpm test:e2e:ui` | Run E2E tests with Playwright UI |
 | `pnpm test:e2e:debug` | Run E2E tests in debug mode |
 
-## Project Structure
+### Project Structure
 
 ```
 meshit/
@@ -111,86 +114,11 @@ meshit/
 └── spec/                      # Specifications
 ```
 
-## Environment Variables
+### Deployment
 
-Copy `.env.example` to `.env.local` and configure the following:
+Deploy to [Vercel](https://vercel.com) (recommended). See [Vercel Deployment Guide](./docs/VERCEL_DEPLOYMENT.md) for detailed instructions.
 
-### Required
-
-| Variable | Description |
-|----------|-------------|
-| `NEXT_PUBLIC_SUPABASE_URL` | Supabase project URL |
-| `NEXT_PUBLIC_SUPABASE_ANON_KEY` | Supabase anonymous key |
-| `SUPABASE_SERVICE_ROLE_KEY` | Supabase service role key (server-side only) |
-| `GOOGLE_AI_API_KEY` | Google AI API key (Gemini) |
-| `OPENAI_API_KEY` | OpenAI API key (Whisper, Embeddings) |
-| `ELEVENLABS_API_KEY` | ElevenLabs API key (TTS) |
-| `RESEND_API_KEY` | Resend API key (email) |
-
-### Optional
-
-| Variable | Description |
-|----------|-------------|
-| `NEXT_PUBLIC_POSTHOG_KEY` | PostHog analytics key |
-| `NEXT_PUBLIC_POSTHOG_HOST` | PostHog host URL |
-| `SENTRY_DSN` | Sentry error tracking DSN |
-
-## Adding UI Components
-
-This project uses [shadcn/ui](https://ui.shadcn.com). To add new components:
-
-```bash
-pnpm dlx shadcn@latest add [component-name]
-
-# Examples
-pnpm dlx shadcn@latest add dialog
-pnpm dlx shadcn@latest add dropdown-menu
-pnpm dlx shadcn@latest add toast
-```
-
-## Deployment
-
-### Vercel (Recommended)
-
-```bash
-# Install Vercel CLI
-pnpm add -g vercel
-
-# Login
-vercel login
-
-# Deploy to preview
-vercel
-
-# Deploy to production
-vercel --prod
-```
-
-See [Vercel Deployment Guide](./docs/VERCEL_DEPLOYMENT.md) for detailed instructions on:
-- Setting up environment variables
-- Configuring Supabase auth redirects
-- Managing preview vs production environments
-- Security best practices
-
-### Environment Variables Checklist
-
-Before deploying, ensure these are set in Vercel:
-
-**Required**:
-- ✅ `NEXT_PUBLIC_SUPABASE_URL`
-- ✅ `NEXT_PUBLIC_SUPABASE_ANON_KEY`
-- ✅ `SUPABASE_SERVICE_ROLE_KEY`
-- ✅ `GOOGLE_AI_API_KEY`
-- ✅ `OPENAI_API_KEY`
-- ✅ `ELEVENLABS_API_KEY`
-- ✅ `RESEND_API_KEY`
-
-**Optional** (for analytics):
-- `NEXT_PUBLIC_POSTHOG_KEY`
-- `NEXT_PUBLIC_POSTHOG_HOST`
-- `SENTRY_DSN`
-
-## Documentation
+### Documentation
 
 - [Vercel Deployment Guide](./docs/VERCEL_DEPLOYMENT.md)
 - [Architecture](./_bmad-output/planning-artifacts/architecture.md)
