@@ -9,7 +9,7 @@
   },
   "scripts": {
     "preinstall": "npx only-allow pnpm",
-    "dev": "next dev",
+    "dev": "next dev -H localhost",
     "build": "next build --webpack",
     "start": "next start",
     "lint": "eslint",
