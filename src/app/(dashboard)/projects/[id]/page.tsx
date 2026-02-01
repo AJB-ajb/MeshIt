@@ -239,12 +239,17 @@ export default function ProjectDetailPage() {
 
       // Check if user has already applied (for non-owners)
       if (user && !ownerCheck) {
-        const { data: applicationData } = await supabase
+        const { data: applicationData, error: applicationError } = await supabase
           .from("applications")
           .select("*")
           .eq("project_id", projectId)
           .eq("applicant_id", user.id)
-          .single();
+          .maybeSingle();
+
+        // Only handle error if it's not a "not found" error (PGRST116)
+        if (applicationError && applicationError.code !== 'PGRST116') {
+          console.error("Error fetching application:", applicationError);
+        }
 
         if (applicationData) {
           setHasApplied(true);
@@ -267,11 +272,15 @@ export default function ProjectDetailPage() {
 
       // If owner, fetch all applications
       if (ownerCheck) {
-        const { data: applicationsData } = await supabase
+        const { data: applicationsData, error: applicationsError } = await supabase
           .from("applications")
           .select("*")
           .eq("project_id", projectId)
           .order("created_at", { ascending: false });
+
+        if (applicationsError) {
+          console.error("Error fetching applications:", applicationsError);
+        }
 
         if (applicationsData && applicationsData.length > 0) {
           // Fetch profiles for each applicant
