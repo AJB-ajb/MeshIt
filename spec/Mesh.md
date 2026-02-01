@@ -1,6 +1,6 @@
 # Mesh
 
-Project collaboration matching platform for small teams (2-5 people).
+Project collaboration matching platform for small teams (2-5 people)
 
 ## Problem
 - Finding collaborators requires high effort (scanning Slack/WhatsApp channels) 
