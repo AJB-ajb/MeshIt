@@ -2,7 +2,7 @@
 
 import { Suspense, useEffect, useMemo, useState } from "react";
 import { useRouter, useSearchParams } from "next/navigation";
-import { Sparkles, FileText, Loader2, CheckCircle } from "lucide-react";
+import { Sparkles, FileText, Loader2, CheckCircle, Mic } from "lucide-react";
 
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
@@ -320,6 +320,14 @@ function DeveloperOnboardingContent() {
             >
               <Sparkles className="h-4 w-4" />
               AI Extract
+            </button>
+            <button
+              type="button"
+              onClick={() => router.push(`/onboarding/voice-livekit?next=${encodeURIComponent(next || "/dashboard")}`)}
+              className="flex items-center gap-2 rounded-md px-4 py-2 text-sm font-medium transition-colors text-muted-foreground hover:text-foreground"
+            >
+              <Mic className="h-4 w-4" />
+              Voice Chat
             </button>
           </div>
 

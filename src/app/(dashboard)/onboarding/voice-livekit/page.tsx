@@ -5,14 +5,21 @@
 
 'use client';
 
-import { useState } from 'react';
-import { useRouter } from 'next/navigation';
+import { useState, useEffect, useMemo } from 'react';
+import { useRouter, useSearchParams } from 'next/navigation';
 import { LiveKitVoiceInterface } from '@/components/voice/livekit-voice-interface';
+import { createClient } from '@/lib/supabase/client';
 import type { ProfileData } from '@/lib/voice/types';
 
 export default function LiveKitVoicePage() {
   const router = useRouter();
+  const searchParams = useSearchParams();
   const [isSaving, setIsSaving] = useState(false);
+
+  const next = useMemo(() => {
+    const value = searchParams.get('next') ?? '';
+    return value && !value.startsWith('/onboarding') ? value : '/dashboard';
+  }, [searchParams]);
 
   const handleComplete = async (profile: ProfileData) => {
     setIsSaving(true);
@@ -20,15 +27,53 @@ export default function LiveKitVoicePage() {
     try {
       console.log('✅ LiveKit voice onboarding complete:', profile);
 
-      // TODO: Save profile to Supabase
-      // const { error } = await supabase
-      //   .from('profiles')
-      //   .insert({ ...profile, user_id: userId });
+      const supabase = createClient();
+      const { data: { user } } = await supabase.auth.getUser();
 
-      // For now, just log and redirect
-      await new Promise((resolve) => setTimeout(resolve, 1000));
+      if (!user) {
+        console.error('❌ No user found');
+        router.push('/login');
+        return;
+      }
 
-      router.push('/dashboard');
+      // Map experience years to level
+      const getExperienceLevel = (years: number): string => {
+        if (years < 2) return 'junior';
+        if (years < 5) return 'intermediate';
+        if (years < 10) return 'senior';
+        return 'lead';
+      };
+
+      // Save profile to Supabase
+      const { error } = await supabase
+        .from('profiles')
+        .upsert({
+          user_id: user.id,
+          full_name: user.user_metadata?.full_name || '',
+          headline: profile.role || '',
+          bio: profile.bio || '',
+          skills: profile.skills || [],
+          experience_level: getExperienceLevel(profile.experience_years || 0),
+          interests: profile.interests || [],
+          availability_hours: typeof profile.availability_hours === 'string'
+            ? parseInt(profile.availability_hours, 10)
+            : (profile.availability_hours || 0),
+          collaboration_style: profile.collaboration_style || 'async',
+          updated_at: new Date().toISOString(),
+        }, { onConflict: 'user_id' });
+
+      if (error) {
+        console.error('❌ Error saving profile:', error);
+        throw error;
+      }
+
+      // Mark profile as completed
+      await supabase.auth.updateUser({
+        data: { profile_completed: true },
+      });
+
+      // Redirect to destination
+      router.push(next);
     } catch (error) {
       console.error('❌ Error saving profile:', error);
       setIsSaving(false);
