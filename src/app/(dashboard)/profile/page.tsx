@@ -3,7 +3,7 @@
 import { useEffect, useState, useCallback } from "react";
 import { useRouter } from "next/navigation";
 import Link from "next/link";
-import { ArrowLeft, Loader2, Github, RefreshCw, Check, AlertCircle, Sparkles } from "lucide-react";
+import { ArrowLeft, Loader2, Github, RefreshCw, Check, AlertCircle, Sparkles, Linkedin } from "lucide-react";
 
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
@@ -16,6 +16,7 @@ import {
 } from "@/components/ui/card";
 import { Badge } from "@/components/ui/badge";
 import { createClient } from "@/lib/supabase/client";
+import { GoogleIcon } from "@/components/icons/auth-icons";
 
 // GitHub sync status type
 type GitHubSyncStatus = {
@@ -123,6 +124,17 @@ export default function ProfilePage() {
   const [isGithubSyncing, setIsGithubSyncing] = useState(false);
   const [githubSyncError, setGithubSyncError] = useState<string | null>(null);
   const [isGithubProvider, setIsGithubProvider] = useState(false);
+  
+  // Connected providers state
+  const [connectedProviders, setConnectedProviders] = useState<{
+    github: boolean;
+    google: boolean;
+    linkedin: boolean;
+  }>({
+    github: false,
+    google: false,
+    linkedin: false,
+  });
 
   // Fetch GitHub sync status
   const fetchGithubSyncStatus = useCallback(async () => {
@@ -191,6 +203,21 @@ export default function ProfilePage() {
     setIsEditing(true);
   };
 
+  // Link OAuth provider
+  const handleLinkProvider = async (provider: 'github' | 'google' | 'linkedin_oidc') => {
+    const supabase = createClient();
+    const { error } = await supabase.auth.linkIdentity({
+      provider,
+      options: {
+        redirectTo: `${window.location.origin}/callback`,
+      },
+    });
+
+    if (error) {
+      setError(`Failed to link ${provider}: ${error.message}`);
+    }
+  };
+
   useEffect(() => {
     const supabase = createClient();
 
@@ -204,11 +231,18 @@ export default function ProfilePage() {
 
         setUserEmail(user.email ?? null);
         
+        // Check connected providers from user identities
+        const identities = user.identities || [];
+        setConnectedProviders({
+          github: identities.some((id: { provider: string }) => id.provider === 'github'),
+          google: identities.some((id: { provider: string }) => id.provider === 'google'),
+          linkedin: identities.some((id: { provider: string }) => id.provider === 'linkedin_oidc'),
+        });
+        
         // Check if user signed in with GitHub
         // Supabase stores provider info in multiple places depending on the auth method
         const appProvider = user.app_metadata?.provider;
         const appProviders = user.app_metadata?.providers || [];
-        const identities = user.identities || [];
         const hasGithubIdentity = identities.some((identity: { provider: string }) => identity.provider === 'github');
         const hasGithubProvider = appProvider === 'github' || appProviders.includes('github') || hasGithubIdentity;
         
@@ -662,6 +696,97 @@ export default function ProfilePage() {
                     placeholder="https://github.com/username"
                   />
                 </div>
+              </div>
+            </CardContent>
+          </Card>
+
+          <Card>
+            <CardHeader>
+              <CardTitle>Integrations</CardTitle>
+              <CardDescription>
+                Connect your GitHub, LinkedIn, and Google accounts to enrich your profile
+              </CardDescription>
+            </CardHeader>
+            <CardContent className="space-y-3">
+              {/* GitHub */}
+              <div className="flex items-center justify-between rounded-lg border p-4">
+                <div className="flex items-center gap-3">
+                  <Github className="h-5 w-5" />
+                  <div>
+                    <p className="font-medium">GitHub</p>
+                    <p className="text-xs text-muted-foreground">
+                      Primary filter for project matching
+                    </p>
+                  </div>
+                </div>
+                {connectedProviders.github ? (
+                  <div className="flex items-center gap-2 text-green-600 dark:text-green-400">
+                    <Check className="h-4 w-4" />
+                    <span className="text-sm font-medium">Connected</span>
+                  </div>
+                ) : (
+                  <Button
+                    onClick={() => handleLinkProvider('github')}
+                    variant="outline"
+                    size="sm"
+                  >
+                    Connect
+                  </Button>
+                )}
+              </div>
+
+              {/* LinkedIn */}
+              <div className="flex items-center justify-between rounded-lg border p-4">
+                <div className="flex items-center gap-3">
+                  <Linkedin className="h-5 w-5" />
+                  <div>
+                    <p className="font-medium">LinkedIn</p>
+                    <p className="text-xs text-muted-foreground">
+                      Professional profile enrichment
+                    </p>
+                  </div>
+                </div>
+                {connectedProviders.linkedin ? (
+                  <div className="flex items-center gap-2 text-green-600 dark:text-green-400">
+                    <Check className="h-4 w-4" />
+                    <span className="text-sm font-medium">Connected</span>
+                  </div>
+                ) : (
+                  <Button
+                    onClick={() => handleLinkProvider('linkedin_oidc')}
+                    variant="outline"
+                    size="sm"
+                  >
+                    Connect
+                  </Button>
+                )}
+              </div>
+
+              {/* Google */}
+              <div className="flex items-center justify-between rounded-lg border p-4">
+                <div className="flex items-center gap-3">
+                  <GoogleIcon className="h-5 w-5" />
+                  <div>
+                    <p className="font-medium">Google</p>
+                    <p className="text-xs text-muted-foreground">
+                      Enhanced account security
+                    </p>
+                  </div>
+                </div>
+                {connectedProviders.google ? (
+                  <div className="flex items-center gap-2 text-green-600 dark:text-green-400">
+                    <Check className="h-4 w-4" />
+                    <span className="text-sm font-medium">Connected</span>
+                  </div>
+                ) : (
+                  <Button
+                    onClick={() => handleLinkProvider('google')}
+                    variant="outline"
+                    size="sm"
+                  >
+                    Connect
+                  </Button>
+                )}
               </div>
             </CardContent>
           </Card>
@@ -1238,6 +1363,79 @@ export default function ProfilePage() {
                     <p className="font-medium">Not provided</p>
                   )}
                 </div>
+              </div>
+            </CardContent>
+          </Card>
+
+          <Card>
+            <CardHeader>
+              <CardTitle>Integrations</CardTitle>
+              <CardDescription>
+                Connected accounts for profile enrichment
+              </CardDescription>
+            </CardHeader>
+            <CardContent className="space-y-3">
+              {/* GitHub */}
+              <div className="flex items-center justify-between rounded-lg border p-4">
+                <div className="flex items-center gap-3">
+                  <Github className="h-5 w-5" />
+                  <div>
+                    <p className="font-medium">GitHub</p>
+                    <p className="text-xs text-muted-foreground">
+                      Primary filter for project matching
+                    </p>
+                  </div>
+                </div>
+                {connectedProviders.github ? (
+                  <div className="flex items-center gap-2 text-green-600 dark:text-green-400">
+                    <Check className="h-4 w-4" />
+                    <span className="text-sm font-medium">Connected</span>
+                  </div>
+                ) : (
+                  <span className="text-sm text-muted-foreground">Not connected</span>
+                )}
+              </div>
+
+              {/* LinkedIn */}
+              <div className="flex items-center justify-between rounded-lg border p-4">
+                <div className="flex items-center gap-3">
+                  <Linkedin className="h-5 w-5" />
+                  <div>
+                    <p className="font-medium">LinkedIn</p>
+                    <p className="text-xs text-muted-foreground">
+                      Professional profile enrichment
+                    </p>
+                  </div>
+                </div>
+                {connectedProviders.linkedin ? (
+                  <div className="flex items-center gap-2 text-green-600 dark:text-green-400">
+                    <Check className="h-4 w-4" />
+                    <span className="text-sm font-medium">Connected</span>
+                  </div>
+                ) : (
+                  <span className="text-sm text-muted-foreground">Not connected</span>
+                )}
+              </div>
+
+              {/* Google */}
+              <div className="flex items-center justify-between rounded-lg border p-4">
+                <div className="flex items-center gap-3">
+                  <GoogleIcon className="h-5 w-5" />
+                  <div>
+                    <p className="font-medium">Google</p>
+                    <p className="text-xs text-muted-foreground">
+                      Enhanced account security
+                    </p>
+                  </div>
+                </div>
+                {connectedProviders.google ? (
+                  <div className="flex items-center gap-2 text-green-600 dark:text-green-400">
+                    <Check className="h-4 w-4" />
+                    <span className="text-sm font-medium">Connected</span>
+                  </div>
+                ) : (
+                  <span className="text-sm text-muted-foreground">Not connected</span>
+                )}
               </div>
             </CardContent>
           </Card>

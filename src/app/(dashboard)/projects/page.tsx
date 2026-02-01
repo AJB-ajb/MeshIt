@@ -17,7 +17,6 @@ import {
 import { createClient } from "@/lib/supabase/client";
 import { formatScore } from "@/lib/matching/scoring";
 import type { ScoreBreakdown } from "@/lib/supabase/types";
-import { getTestDataValue } from "@/lib/environment";
 
 type Project = {
   id: string;
@@ -30,7 +29,6 @@ type Project = {
   status: string;
   created_at: string;
   creator_id: string;
-  image_url: string | null;
   profiles?: {
     full_name: string | null;
     user_id: string;
@@ -117,7 +115,6 @@ export default function ProjectsPage() {
           )
         `
         )
-        .eq("is_test_data", getTestDataValue())
         .order("created_at", { ascending: false });
 
       if (activeTab === "my-projects" && user) {
@@ -365,18 +362,6 @@ export default function ProjectsPage() {
                   </div>
                 </CardHeader>
                 <CardContent className="space-y-4">
-                  {/* Project Image */}
-                  {project.image_url && (
-                    <div className="relative aspect-video w-full overflow-hidden rounded-lg bg-muted">
-                      <img
-                        src={project.image_url}
-                        alt={project.title}
-                        className="h-full w-full object-cover"
-                        loading="lazy"
-                      />
-                    </div>
-                  )}
-
                   <CardDescription className="text-sm line-clamp-2">
                     {project.description}
                   </CardDescription>

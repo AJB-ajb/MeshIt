@@ -231,23 +231,6 @@ export default function NewProjectPage() {
       return;
     }
 
-    // Trigger image generation asynchronously (don't wait for it)
-    fetch("/api/projects/generate-image", {
-      method: "POST",
-      headers: { "Content-Type": "application/json" },
-      body: JSON.stringify({
-        project_id: project.id,
-        title: project.title,
-        description: project.description,
-        required_skills: project.required_skills,
-        team_size: project.team_size,
-        timeline: project.timeline,
-      }),
-    }).catch((err) => {
-      console.error("Background image generation failed:", err);
-      // Don't block user experience if image generation fails
-    });
-
     // Redirect to the new project's page
     router.push(`/projects/${project.id}`);
   };

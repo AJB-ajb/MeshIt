@@ -565,12 +565,12 @@ function InboxPageContent() {
     // Create notification for other user (don't block on this - fire and forget)
     (async () => {
       const { error } = await supabase.from("notifications").insert({
-        user_id: otherUserId,
-        type: "new_message",
-        title: "New Message",
-        body: `${profile?.full_name || "Someone"}: ${newMessage.trim().slice(0, 50)}${newMessage.length > 50 ? "..." : ""}`,
-        related_user_id: currentUserId,
-      });
+      user_id: otherUserId,
+      type: "new_message",
+      title: "New Message",
+      body: `${profile?.full_name || "Someone"}: ${newMessage.trim().slice(0, 50)}${newMessage.length > 50 ? "..." : ""}`,
+      related_user_id: currentUserId,
+    });
       if (error) {
         console.error("Error creating notification:", error);
         // Don't block message sending if notification fails
