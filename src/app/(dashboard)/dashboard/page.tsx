@@ -928,9 +928,9 @@ export default async function DashboardPage() {
           {user ? (
             <RecentActivityList supabase={supabase} userId={user.id} persona={persona} />
           ) : (
-            <p className="text-sm text-muted-foreground">
+          <p className="text-sm text-muted-foreground">
               Sign in to see your recent activity
-            </p>
+          </p>
           )}
         </CardContent>
       </Card>
