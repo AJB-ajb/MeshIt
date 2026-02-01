@@ -1,55 +1,95 @@
 "use client";
 
 import { Suspense, useState } from "react";
-import { useSearchParams } from "next/navigation";
+import { useSearchParams, useRouter } from "next/navigation";
+import Link from "next/link";
 
 import { Logo } from "@/components/layout/logo";
 import { Button } from "@/components/ui/button";
+import { Input } from "@/components/ui/input";
 import { createClient } from "@/lib/supabase/client";
+import { GoogleIcon, GitHubIcon, LinkedInIcon, LoaderIcon } from "@/components/icons/auth-icons";
+
+type OAuthProvider = "google" | "github" | "linkedin" | null;
 
 function LoginForm() {
   const searchParams = useSearchParams();
+  const router = useRouter();
   const [isLoading, setIsLoading] = useState(false);
+  const [loadingProvider, setLoadingProvider] = useState<OAuthProvider>(null);
+  const [email, setEmail] = useState("");
+  const [password, setPassword] = useState("");
+  const [formError, setFormError] = useState<string | null>(null);
   const error = searchParams.get("error");
-  const next = searchParams.get("next") ?? "/dashboard";
 
-  const handleGoogleSignIn = async () => {
+  const handleEmailSignIn = async (e: React.FormEvent) => {
+    e.preventDefault();
     setIsLoading(true);
+    setFormError(null);
 
     const supabase = createClient();
-    const callbackUrl = new URL("/callback", window.location.origin);
-    callbackUrl.searchParams.set("next", next);
+    const { error: signInError } = await supabase.auth.signInWithPassword({
+      email,
+      password,
+    });
 
+    if (signInError) {
+      setFormError(signInError.message);
+      setIsLoading(false);
+    } else {
+      router.push("/dashboard");
+    }
+  };
+
+  const handleGoogleSignIn = async () => {
+    setLoadingProvider("google");
+
+    const supabase = createClient();
     const { error: signInError } = await supabase.auth.signInWithOAuth({
       provider: "google",
       options: {
-        redirectTo: callbackUrl.toString(),
+        redirectTo: `${window.location.origin}/callback`,
       },
     });
 
     if (signInError) {
-      setIsLoading(false);
+      setLoadingProvider(null);
     }
   };
 
   const handleGitHubSignIn = async () => {
-    setIsLoading(true);
+    setLoadingProvider("github");
 
     const supabase = createClient();
-    const callbackUrl = new URL("/callback", window.location.origin);
-    callbackUrl.searchParams.set("next", next);
-
     const { error: signInError } = await supabase.auth.signInWithOAuth({
       provider: "github",
       options: {
-        redirectTo: callbackUrl.toString(),
+        redirectTo: `${window.location.origin}/callback`,
       },
     });
 
     if (signInError) {
-      setIsLoading(false);
+      setLoadingProvider(null);
     }
   };
+
+  const handleLinkedInSignIn = async () => {
+    setLoadingProvider("linkedin");
+
+    const supabase = createClient();
+    const { error: signInError } = await supabase.auth.signInWithOAuth({
+      provider: "linkedin_oidc",
+      options: {
+        redirectTo: `${window.location.origin}/callback`,
+      },
+    });
+
+    if (signInError) {
+      setLoadingProvider(null);
+    }
+  };
+
+  const isOAuthLoading = loadingProvider !== null;
 
   return (
     <div className="w-full max-w-md rounded-2xl border border-border bg-card p-8 shadow-sm">
@@ -60,31 +100,111 @@ function LoginForm() {
         </p>
       </div>
 
-      {error ? (
+      {error || formError ? (
         <p className="mt-6 rounded-md border border-destructive/30 bg-destructive/10 px-4 py-3 text-sm text-destructive">
-          {error}
+          {error || formError}
         </p>
       ) : null}
 
-      <div className="mt-6 space-y-3">
+      <form onSubmit={handleEmailSignIn} className="mt-6 space-y-4">
+        <div className="space-y-2">
+          <label htmlFor="email" className="text-sm font-medium">
+            Email
+          </label>
+          <Input
+            id="email"
+            type="email"
+            placeholder="you@example.com"
+            value={email}
+            onChange={(e) => setEmail(e.target.value)}
+            required
+            disabled={isLoading || isOAuthLoading}
+          />
+        </div>
+        <div className="space-y-2">
+          <div className="flex items-center justify-between">
+            <label htmlFor="password" className="text-sm font-medium">
+              Password
+            </label>
+            <Link
+              href="/forgot-password"
+              className="text-sm text-primary hover:underline"
+            >
+              Forgot password?
+            </Link>
+          </div>
+          <Input
+            id="password"
+            type="password"
+            placeholder="••••••••"
+            value={password}
+            onChange={(e) => setPassword(e.target.value)}
+            required
+            disabled={isLoading || isOAuthLoading}
+          />
+        </div>
+        <Button type="submit" className="w-full" disabled={isLoading || isOAuthLoading}>
+          {isLoading ? "Signing in..." : "Sign in"}
+        </Button>
+      </form>
+
+      <div className="relative my-6">
+        <div className="absolute inset-0 flex items-center">
+          <span className="w-full border-t border-border" />
+        </div>
+        <div className="relative flex justify-center text-xs uppercase">
+          <span className="bg-card px-2 text-muted-foreground">Or continue with</span>
+        </div>
+      </div>
+
+      <div className="flex gap-3">
         <Button
           type="button"
-          className="w-full"
+          variant="outline"
+          className="flex-1"
           onClick={handleGoogleSignIn}
-          disabled={isLoading}
+          disabled={isLoading || isOAuthLoading}
         >
-          {isLoading ? "Redirecting..." : "Continue with Google"}
+          {loadingProvider === "google" ? (
+            <LoaderIcon className="h-5 w-5" />
+          ) : (
+            <GoogleIcon className="h-5 w-5" />
+          )}
         </Button>
         <Button
           type="button"
           variant="outline"
-          className="w-full"
+          className="flex-1"
           onClick={handleGitHubSignIn}
-          disabled={isLoading}
+          disabled={isLoading || isOAuthLoading}
         >
-          {isLoading ? "Redirecting..." : "Continue with GitHub"}
+          {loadingProvider === "github" ? (
+            <LoaderIcon className="h-5 w-5" />
+          ) : (
+            <GitHubIcon className="h-5 w-5" />
+          )}
+        </Button>
+        <Button
+          type="button"
+          variant="outline"
+          className="flex-1"
+          onClick={handleLinkedInSignIn}
+          disabled={isLoading || isOAuthLoading}
+        >
+          {loadingProvider === "linkedin" ? (
+            <LoaderIcon className="h-5 w-5" />
+          ) : (
+            <LinkedInIcon className="h-5 w-5" />
+          )}
         </Button>
       </div>
+
+      <p className="mt-6 text-center text-sm text-muted-foreground">
+        Don&apos;t have an account?{" "}
+        <Link href="/signup" className="text-primary hover:underline">
+          Sign up
+        </Link>
+      </p>
     </div>
   );
 }
