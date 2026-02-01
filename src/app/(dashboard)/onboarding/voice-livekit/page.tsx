@@ -5,13 +5,13 @@
 
 'use client';
 
-import { useState, useMemo } from 'react';
+import { Suspense, useState, useMemo } from 'react';
 import { useRouter, useSearchParams } from 'next/navigation';
 import { CleanLiveKitVoice } from '@/components/voice/clean-livekit-voice';
 import { createClient } from '@/lib/supabase/client';
 import type { ProfileData } from '@/lib/voice/types';
 
-export default function LiveKitVoicePage() {
+function LiveKitVoiceContent() {
   const router = useRouter();
   const searchParams = useSearchParams();
   const [isSaving, setIsSaving] = useState(false);
@@ -93,5 +93,18 @@ export default function LiveKitVoicePage() {
         <CleanLiveKitVoice onComplete={handleComplete} />
       )}
     </div>
+  );
+}
+
+export default function LiveKitVoicePage() {
+  return (
+    <Suspense fallback={
+      <div className="flex flex-col items-center justify-center min-h-screen">
+        <div className="animate-spin rounded-full h-12 w-12 border-b-2 border-primary mx-auto mb-4"></div>
+        <p className="text-muted-foreground">Loading...</p>
+      </div>
+    }>
+      <LiveKitVoiceContent />
+    </Suspense>
   );
 }
