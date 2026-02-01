@@ -3,7 +3,7 @@
 import { useEffect, useState, useCallback } from "react";
 import { useRouter } from "next/navigation";
 import Link from "next/link";
-import { ArrowLeft, Loader2, Github, RefreshCw, Check, AlertCircle, Sparkles, Linkedin } from "lucide-react";
+import { ArrowLeft, Loader2, Github, RefreshCw, Check, AlertCircle, Sparkles, Linkedin, MapPin, Search } from "lucide-react";
 
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
@@ -17,6 +17,8 @@ import {
 import { Badge } from "@/components/ui/badge";
 import { createClient } from "@/lib/supabase/client";
 import { GoogleIcon } from "@/components/icons/auth-icons";
+import { LocationAutocomplete } from "@/components/location/location-autocomplete";
+import { reverseGeocode, type GeocodingResult } from "@/lib/geocoding";
 
 // GitHub sync status type
 type GitHubSyncStatus = {
@@ -118,13 +120,18 @@ export default function ProfilePage() {
   const [success, setSuccess] = useState(false);
   const [isEditing, setIsEditing] = useState(false);
   const [userEmail, setUserEmail] = useState<string | null>(null);
-  
+
+  // Location-related state
+  const [isGeolocating, setIsGeolocating] = useState(false);
+  const [geoError, setGeoError] = useState<string | null>(null);
+  const [showAutocomplete, setShowAutocomplete] = useState(false);
+
   // GitHub sync state
   const [githubSync, setGithubSync] = useState<GitHubSyncStatus | null>(null);
   const [isGithubSyncing, setIsGithubSyncing] = useState(false);
   const [githubSyncError, setGithubSyncError] = useState<string | null>(null);
   const [isGithubProvider, setIsGithubProvider] = useState(false);
-  
+
   // Connected providers state
   const [connectedProviders, setConnectedProviders] = useState<{
     github: boolean;
@@ -182,8 +189,8 @@ export default function ProfilePage() {
       window.location.reload();
     } catch (err) {
       console.error('GitHub sync error:', err);
-      const errorMessage = err instanceof Error 
-        ? err.message 
+      const errorMessage = err instanceof Error
+        ? err.message
         : 'Failed to sync GitHub profile. Please try again.';
       setGithubSyncError(errorMessage);
     } finally {
@@ -218,6 +225,86 @@ export default function ProfilePage() {
     }
   };
 
+  // Handle browser geolocation
+  const handleUseCurrentLocation = async () => {
+    setIsGeolocating(true);
+    setGeoError(null);
+
+    // Check if geolocation is supported
+    if (!navigator.geolocation) {
+      setGeoError("Geolocation is not supported by your browser");
+      setIsGeolocating(false);
+      return;
+    }
+
+    navigator.geolocation.getCurrentPosition(
+      async (position) => {
+        const lat = position.coords.latitude;
+        const lng = position.coords.longitude;
+
+        try {
+          // Reverse geocode to get address
+          const result = await reverseGeocode(lat, lng);
+
+          setForm(prev => ({
+            ...prev,
+            location: result.displayName,
+            locationLat: lat.toString(),
+            locationLng: lng.toString(),
+          }));
+
+          setShowAutocomplete(false);
+          setSuccess(false);
+        } catch (err) {
+          setGeoError("Failed to get address from coordinates");
+          console.error('Reverse geocoding error:', err);
+        } finally {
+          setIsGeolocating(false);
+        }
+      },
+      (error) => {
+        // Handle geolocation errors
+        let errorMessage = "Failed to get your location";
+        switch (error.code) {
+          case error.PERMISSION_DENIED:
+            errorMessage = "Location permission denied. Please use search or manual entry.";
+            break;
+          case error.POSITION_UNAVAILABLE:
+            errorMessage = "Location information unavailable. Please try search instead.";
+            break;
+          case error.TIMEOUT:
+            errorMessage = "Location request timed out. Please try again.";
+            break;
+        }
+        setGeoError(errorMessage);
+        setIsGeolocating(false);
+      },
+      {
+        enableHighAccuracy: true,
+        timeout: 10000,
+        maximumAge: 0,
+      }
+    );
+  };
+
+  // Handle location selection from autocomplete
+  const handleLocationSelect = (result: GeocodingResult) => {
+    setForm(prev => ({
+      ...prev,
+      location: result.displayName,
+      locationLat: result.lat.toString(),
+      locationLng: result.lng.toString(),
+    }));
+    setShowAutocomplete(false);
+    setSuccess(false);
+  };
+
+  // Handle manual location input change
+  const handleLocationInputChange = (value: string) => {
+    setForm(prev => ({ ...prev, location: value }));
+    setSuccess(false);
+  };
+
   useEffect(() => {
     const supabase = createClient();
 
@@ -230,7 +317,7 @@ export default function ProfilePage() {
         }
 
         setUserEmail(user.email ?? null);
-        
+
         // Check connected providers from user identities
         const identities = user.identities || [];
         setConnectedProviders({
@@ -238,17 +325,17 @@ export default function ProfilePage() {
           google: identities.some((id: { provider: string }) => id.provider === 'google'),
           linkedin: identities.some((id: { provider: string }) => id.provider === 'linkedin_oidc'),
         });
-        
+
         // Check if user signed in with GitHub
         // Supabase stores provider info in multiple places depending on the auth method
         const appProvider = user.app_metadata?.provider;
         const appProviders = user.app_metadata?.providers || [];
         const hasGithubIdentity = identities.some((identity: { provider: string }) => identity.provider === 'github');
         const hasGithubProvider = appProvider === 'github' || appProviders.includes('github') || hasGithubIdentity;
-        
+
         console.log('GitHub auth check:', { appProvider, appProviders, identities, hasGithubProvider });
         setIsGithubProvider(hasGithubProvider);
-        
+
         // Fetch GitHub sync status if GitHub provider
         if (hasGithubProvider) {
           fetchGithubSyncStatus();
@@ -503,66 +590,120 @@ export default function ProfilePage() {
                 />
               </div>
 
-              <div className="grid gap-4 md:grid-cols-2">
+              {/* Location Section */}
+              <div className="space-y-4">
                 <div className="space-y-2">
                   <label htmlFor="location" className="text-sm font-medium">
                     Location
                   </label>
-                  <Input
-                    id="location"
-                    value={form.location}
-                    onChange={(e) => handleChange("location", e.target.value)}
-                    placeholder="e.g., Berlin, Germany"
-                  />
-                </div>
-                <div className="space-y-2">
-                  <label
-                    htmlFor="availabilityHours"
-                    className="text-sm font-medium"
-                  >
-                    Availability (hrs/week)
-                  </label>
-                  <Input
-                    id="availabilityHours"
-                    value={form.availabilityHours}
-                    onChange={(e) =>
-                      handleChange("availabilityHours", e.target.value)
-                    }
-                    placeholder="e.g., 10"
-                  />
+
+                  {showAutocomplete ? (
+                    <LocationAutocomplete
+                      value={form.location}
+                      onSelect={handleLocationSelect}
+                      onChange={handleLocationInputChange}
+                      placeholder="Search for a location..."
+                    />
+                  ) : (
+                    <Input
+                      id="location"
+                      value={form.location}
+                      onChange={(e) => handleLocationInputChange(e.target.value)}
+                      placeholder="e.g., Berlin, Germany"
+                    />
+                  )}
+
                   <p className="text-xs text-muted-foreground">
-                    Your actual weekly availability for projects. This is used for matching with project requirements.
+                    Use the buttons below to auto-fill your location, or type manually.
                   </p>
                 </div>
+
+                {/* Location action buttons */}
+                <div className="flex flex-wrap gap-2">
+                  <Button
+                    type="button"
+                    variant="outline"
+                    size="sm"
+                    onClick={handleUseCurrentLocation}
+                    disabled={isGeolocating}
+                  >
+                    {isGeolocating ? (
+                      <>
+                        <Loader2 className="mr-2 h-4 w-4 animate-spin" />
+                        Getting location...
+                      </>
+                    ) : (
+                      <>
+                        <MapPin className="mr-2 h-4 w-4" />
+                        Use current location
+                      </>
+                    )}
+                  </Button>
+
+                  <Button
+                    type="button"
+                    variant="outline"
+                    size="sm"
+                    onClick={() => setShowAutocomplete(!showAutocomplete)}
+                  >
+                    <Search className="mr-2 h-4 w-4" />
+                    {showAutocomplete ? 'Manual entry' : 'Search location'}
+                  </Button>
+                </div>
+
+                {/* Geolocation error */}
+                {geoError && (
+                  <p className="text-sm text-destructive">{geoError}</p>
+                )}
+
+                {/* Coordinates (read-only, auto-filled) */}
+                {(form.locationLat || form.locationLng) && (
+                  <div className="grid gap-4 md:grid-cols-2">
+                    <div className="space-y-2">
+                      <label className="text-sm font-medium text-muted-foreground">
+                        Latitude
+                      </label>
+                      <Input
+                        value={form.locationLat}
+                        readOnly
+                        className="bg-muted cursor-not-allowed"
+                        placeholder="Auto-filled"
+                      />
+                    </div>
+                    <div className="space-y-2">
+                      <label className="text-sm font-medium text-muted-foreground">
+                        Longitude
+                      </label>
+                      <Input
+                        value={form.locationLng}
+                        readOnly
+                        className="bg-muted cursor-not-allowed"
+                        placeholder="Auto-filled"
+                      />
+                    </div>
+                  </div>
+                )}
               </div>
 
-              <div className="grid gap-4 md:grid-cols-2">
-                <div className="space-y-2">
-                  <label htmlFor="locationLat" className="text-sm font-medium">
-                    Latitude (for matching)
-                  </label>
-                  <Input
-                    id="locationLat"
-                    type="number"
-                    step="any"
-                    value={form.locationLat}
-                    onChange={(e) => handleChange("locationLat", e.target.value)}
-                    placeholder="e.g., 52.52"
-                  />
-                </div>
-                <div className="space-y-2">
-                  <label htmlFor="locationLng" className="text-sm font-medium">
-                    Longitude (for matching)
-                  </label>
-                  <Input
-                    id="locationLng"
-                    type="number"
-                    step="any"
-                    value={form.locationLng}
-                    onChange={(e) => handleChange("locationLng", e.target.value)}
-                    placeholder="e.g., 13.405"
-                  />
-                </div>
+              {/* Availability */}
+              <div className="space-y-2">
+                <label
+                  htmlFor="availabilityHours"
+                  className="text-sm font-medium"
+                >
+                  Availability (hrs/week)
+                </label>
+                <Input
+                  id="availabilityHours"
+                  value={form.availabilityHours}
+                  onChange={(e) =>
+                    handleChange("availabilityHours", e.target.value)
+                  }
+                  placeholder="e.g., 10"
+                />
+                <p className="text-xs text-muted-foreground">
+                  Your actual weekly availability for projects. This is used for matching with project requirements.
+                </p>
               </div>
 
               <div className="space-y-2">
@@ -801,8 +942,8 @@ export default function ProfilePage() {
             <CardContent className="space-y-5">
               <div className="rounded-md border border-blue-200 bg-blue-50/50 dark:bg-blue-950/20 dark:border-blue-900 p-3">
                 <p className="text-xs text-blue-700 dark:text-blue-300">
-                  <strong>Note:</strong> "Preferred project commitment" is different from "Availability" above. 
-                  Availability is your actual weekly hours available, while preferred commitment is the project 
+                  <strong>Note:</strong> "Preferred project commitment" is different from "Availability" above.
+                  Availability is your actual weekly hours available, while preferred commitment is the project
                   commitment level you're looking for. Make sure both are set for accurate matching.
                 </p>
               </div>
@@ -1028,7 +1169,7 @@ export default function ProfilePage() {
               {!isGithubProvider && (
                 <div className="rounded-md border border-amber-200 dark:border-amber-800 bg-amber-50/50 dark:bg-amber-950/30 p-4">
                   <p className="text-sm text-amber-700 dark:text-amber-300">
-                    <strong>Connect with GitHub</strong> to automatically analyze your repositories, 
+                    <strong>Connect with GitHub</strong> to automatically analyze your repositories,
                     commit messages, and coding style to enrich your profile with AI-powered insights.
                   </p>
                   <p className="text-xs text-amber-600 dark:text-amber-400 mt-2">
