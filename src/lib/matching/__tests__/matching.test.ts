@@ -22,13 +22,13 @@ import { matchProjectToProfiles, createMatchRecordsForProject } from "../project
 function createMockSupabase(overrides: Record<string, any> = {}) {
   const mockFrom = vi.fn();
   const mockRpc = vi.fn();
-  
+
   const mockClient = {
     from: mockFrom,
     rpc: mockRpc,
     ...overrides,
   };
-  
+
   return { mockClient, mockFrom, mockRpc };
 }
 
@@ -40,7 +40,7 @@ describe("matchProfileToProjects", () => {
   it("fetches user profile embedding and calls RPC function", async () => {
     const userEmbedding = new Array(1536).fill(0.1);
     const { mockClient, mockFrom, mockRpc } = createMockSupabase();
-    
+
     // Mock profile fetch
     mockFrom.mockReturnValue({
       select: vi.fn().mockReturnValue({
@@ -52,7 +52,7 @@ describe("matchProfileToProjects", () => {
         }),
       }),
     });
-    
+
     // Mock RPC call
     mockRpc.mockResolvedValue({
       data: [
@@ -73,7 +73,7 @@ describe("matchProfileToProjects", () => {
       ],
       error: null,
     });
-    
+
     // Mock existing matches check
     mockFrom.mockReturnValueOnce({
       select: vi.fn().mockReturnValue({
@@ -85,7 +85,7 @@ describe("matchProfileToProjects", () => {
         }),
       }),
     });
-    
+
     mockFrom.mockReturnValueOnce({
       select: vi.fn().mockReturnValue({
         eq: vi.fn().mockReturnValue({
@@ -96,17 +96,17 @@ describe("matchProfileToProjects", () => {
         }),
       }),
     });
-    
+
     vi.mocked(createClient).mockResolvedValue(mockClient as any);
-    
+
     const matches = await matchProfileToProjects("user-1");
-    
+
     expect(mockRpc).toHaveBeenCalledWith("match_projects_to_user", {
       user_embedding: userEmbedding,
       user_id_param: "user-1",
       match_limit: 10,
     });
-    
+
     expect(matches).toHaveLength(1);
     expect(matches[0].score).toBe(0.85);
     expect(matches[0].project.title).toBe("AI Project");
@@ -114,7 +114,7 @@ describe("matchProfileToProjects", () => {
 
   it("throws error when profile not found", async () => {
     const { mockClient, mockFrom } = createMockSupabase();
-    
+
     mockFrom.mockReturnValue({
       select: vi.fn().mockReturnValue({
         eq: vi.fn().mockReturnValue({
@@ -125,9 +125,9 @@ describe("matchProfileToProjects", () => {
         }),
       }),
     });
-    
+
     vi.mocked(createClient).mockResolvedValue(mockClient as any);
-    
+
     await expect(matchProfileToProjects("nonexistent")).rejects.toThrow(
       "Profile not found"
     );
@@ -135,7 +135,7 @@ describe("matchProfileToProjects", () => {
 
   it("throws error when profile has no embedding", async () => {
     const { mockClient, mockFrom } = createMockSupabase();
-    
+
     mockFrom.mockReturnValue({
       select: vi.fn().mockReturnValue({
         eq: vi.fn().mockReturnValue({
@@ -146,9 +146,9 @@ describe("matchProfileToProjects", () => {
         }),
       }),
     });
-    
+
     vi.mocked(createClient).mockResolvedValue(mockClient as any);
-    
+
     await expect(matchProfileToProjects("user-1")).rejects.toThrow(
       "Could not generate profile embedding"
     );
@@ -157,7 +157,7 @@ describe("matchProfileToProjects", () => {
   it("returns empty array when no matches found", async () => {
     const userEmbedding = new Array(1536).fill(0.1);
     const { mockClient, mockFrom, mockRpc } = createMockSupabase();
-    
+
     mockFrom.mockReturnValue({
       select: vi.fn().mockReturnValue({
         eq: vi.fn().mockReturnValue({
@@ -168,14 +168,14 @@ describe("matchProfileToProjects", () => {
         }),
       }),
     });
-    
+
     mockRpc.mockResolvedValue({
       data: [],
       error: null,
     });
-    
+
     vi.mocked(createClient).mockResolvedValue(mockClient as any);
-    
+
     const matches = await matchProfileToProjects("user-1");
     expect(matches).toEqual([]);
   });
@@ -183,7 +183,7 @@ describe("matchProfileToProjects", () => {
   it("respects limit parameter", async () => {
     const userEmbedding = new Array(1536).fill(0.1);
     const { mockClient, mockFrom, mockRpc } = createMockSupabase();
-    
+
     mockFrom.mockReturnValue({
       select: vi.fn().mockReturnValue({
         eq: vi.fn().mockReturnValue({
@@ -194,16 +194,16 @@ describe("matchProfileToProjects", () => {
         }),
       }),
     });
-    
+
     mockRpc.mockResolvedValue({
       data: [],
       error: null,
     });
-    
+
     vi.mocked(createClient).mockResolvedValue(mockClient as any);
-    
+
     await matchProfileToProjects("user-1", 5);
-    
+
     expect(mockRpc).toHaveBeenCalledWith(
       "match_projects_to_user",
       expect.objectContaining({ match_limit: 5 })
@@ -234,7 +234,7 @@ describe("matchProjectToProfiles", () => {
         }),
       }),
     });
-    
+
     // Mock RPC calls: first for match_users_to_project, then for compute_match_breakdown
     mockRpc
       .mockResolvedValueOnce({
@@ -323,9 +323,9 @@ describe("matchProjectToProfiles", () => {
         }),
       }),
     });
-    
+
     vi.mocked(createClient).mockResolvedValue(mockClient as any);
-    
+
     await expect(matchProjectToProfiles("proj-1")).rejects.toThrow(
       "Could not generate project embedding"
     );
@@ -339,14 +339,14 @@ describe("createMatchRecords", () => {
 
   it("creates match records for new matches", async () => {
     const { mockClient, mockFrom } = createMockSupabase();
-    
+
     const mockUpsert = vi.fn().mockResolvedValue({ error: null });
     mockFrom.mockReturnValue({
       upsert: mockUpsert,
     });
-    
+
     vi.mocked(createClient).mockResolvedValue(mockClient as any);
-    
+
     await createMatchRecords("user-1", [
       {
         project: {
@@ -370,7 +370,7 @@ describe("createMatchRecords", () => {
         scoreBreakdown: null,
       },
     ]);
-    
+
     expect(mockUpsert).toHaveBeenCalledWith(
       [
         {
@@ -389,14 +389,14 @@ describe("createMatchRecords", () => {
 
   it("skips matches that already exist", async () => {
     const { mockClient, mockFrom } = createMockSupabase();
-    
+
     const mockUpsert = vi.fn().mockResolvedValue({ error: null });
     mockFrom.mockReturnValue({
       upsert: mockUpsert,
     });
-    
+
     vi.mocked(createClient).mockResolvedValue(mockClient as any);
-    
+
     await createMatchRecords("user-1", [
       {
         project: {
@@ -421,23 +421,23 @@ describe("createMatchRecords", () => {
         matchId: "existing-match-id", // Already exists
       },
     ]);
-    
+
     // Should not call upsert when all matches already exist
     expect(mockUpsert).not.toHaveBeenCalled();
   });
 
   it("does nothing with empty matches array", async () => {
     const { mockClient, mockFrom } = createMockSupabase();
-    
+
     const mockUpsert = vi.fn();
     mockFrom.mockReturnValue({
       upsert: mockUpsert,
     });
-    
+
     vi.mocked(createClient).mockResolvedValue(mockClient as any);
-    
+
     await createMatchRecords("user-1", []);
-    
+
     expect(mockUpsert).not.toHaveBeenCalled();
   });
 });
@@ -449,14 +449,14 @@ describe("createMatchRecordsForProject", () => {
 
   it("creates match records for project matches", async () => {
     const { mockClient, mockFrom } = createMockSupabase();
-    
+
     const mockUpsert = vi.fn().mockResolvedValue({ error: null });
     mockFrom.mockReturnValue({
       upsert: mockUpsert,
     });
-    
+
     vi.mocked(createClient).mockResolvedValue(mockClient as any);
-    
+
     await createMatchRecordsForProject("proj-1", [
       {
         profile: {
@@ -486,7 +486,7 @@ describe("createMatchRecordsForProject", () => {
         scoreBreakdown: null,
       },
     ]);
-    
+
     expect(mockUpsert).toHaveBeenCalledWith(
       [
         {

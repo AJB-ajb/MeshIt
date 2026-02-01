@@ -126,26 +126,54 @@ See [Matching.md](Matching.md) for detailed matching algorithm considerations.
 ## Tech Stack
 
 ### Core
-- **Next.js 16** (TypeScript, App Router)
-- **React 19**
-- **pnpm** (package manager)
+- **Next.js 16.1.6** (TypeScript, App Router)
+- **React 19.2.3**
+- **pnpm 10.28.1** (package manager)
 - **fnm** (Node.js version manager)
 
-### Database
-- **PostgreSQL** with **Prisma 7**
-- **@prisma/adapter-pg** (connection adapter)
-- **@prisma/extension-accelerate** (connection pooling)
+### Database & Backend
+- **Supabase** (PostgreSQL-based)
+  - `@supabase/supabase-js` - Client library
+  - `@supabase/ssr` - Server-side rendering support
+  - Supabase Auth (OAuth: Google, GitHub, LinkedIn)
+  - Real-time subscriptions
 
-### Authentication
-- **NextAuth.js v5** (Google OAuth)
-- **@auth/prisma-adapter**
+### AI & Voice
+- **Google Gemini** (`@google/generative-ai`) - AI text generation
+- **OpenAI** - GPT integration
+- **Deepgram** (`@deepgram/sdk`) - Speech-to-text
+- **ElevenLabs** (`@elevenlabs/elevenlabs-js`) - Text-to-speech
+- **Hume AI** - Emotion detection
+- **LiveKit** (`livekit-client`, `livekit-server-sdk`) - Real-time voice/video
+
+### UI & Styling
+- **Tailwind CSS 4** - Styling framework
+- **Radix UI** - Accessible component primitives
+  - `@radix-ui/react-alert-dialog`
+  - `@radix-ui/react-avatar`
+  - `@radix-ui/react-slot`
+  - `@radix-ui/react-tabs`
+- **Lucide React** - Icon library
+- **next-themes** - Dark mode support
+- **class-variance-authority** - Component variants
+- **Rive** (`@rive-app/react-webgl2`) - Animations
+
+### PWA
+- **Serwist** (`@serwist/next`) - Service worker management
 
 ### Testing
-- **Playwright** (E2E testing)
-- **Vitest** (unit/integration testing)
+- **Playwright** (`@playwright/test`) - E2E testing
+- **Vitest** - Unit/integration testing
+- **React Testing Library** - Component testing
+
+### Development Tools
+- **TypeScript 5**
+- **ESLint 9** with Next.js config
+- **Vercel CLI** - Deployment tooling
+- **Supabase CLI** - Database management
 
 ### Deployment
-- **Vercel**
+- **Vercel** - Hosting platform
 
 ## Development
 
