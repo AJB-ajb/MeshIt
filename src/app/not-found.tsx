@@ -16,8 +16,8 @@ export default function NotFound() {
       
       {/* Description */}
       <p className="mt-4 max-w-md text-muted-foreground">
-        Sorry, we couldn&apos;t find the page you&apos;re looking for. It might have
-        been moved or doesn&apos;t exist.
+        Sorry, we couldnt find the page youre looking for. It might have
+        been moved or doesnt exist.
       </p>
       
       {/* Actions */}

@@ -1,305 +1,206 @@
 # Deploying MeshIt to Vercel
 
-This guide walks you through deploying MeshIt to Vercel and configuring environment variables.
-
-## Quick Deploy
-
-### Option 1: Deploy with Vercel CLI (Recommended)
-
-1. **Install Vercel CLI**:
-   ```bash
-   pnpm add -g vercel
-   ```
-
-2. **Login to Vercel**:
-   ```bash
-   vercel login
-   ```
-
-3. **Deploy from your project directory**:
-   ```bash
-   vercel
-   ```
-
-4. **Configure environment variables** (see below)
-
-5. **Deploy to production**:
-   ```bash
-   vercel --prod
-   ```
-
-### Option 2: Deploy via Vercel Dashboard
-
-1. Go to [vercel.com/new](https://vercel.com/new)
-2. Import your Git repository
-3. Vercel will auto-detect Next.js
-4. Configure environment variables (see below)
-5. Click "Deploy"
-
-## Environment Variables Configuration
-
-### Setting Environment Variables in Vercel
-
-You can set environment variables in three ways:
-
-#### Method 1: Via Vercel Dashboard (Recommended)
-
-1. Go to your project settings: `https://vercel.com/[your-team]/meshit/settings/environment-variables`
-2. Add each variable with appropriate environment scope:
-   - **Production**: Used in production deployments
-   - **Preview**: Used in preview deployments (PR branches)
-   - **Development**: Used with `vercel dev` command
-
-#### Method 2: Via Vercel CLI
+## Prerequisites
 
 ```bash
-# Set a variable for all environments
-vercel env add NEXT_PUBLIC_SUPABASE_URL
+# Install Vercel CLI
+pnpm add -g vercel
 
-# Set for specific environment
-vercel env add SUPABASE_SERVICE_ROLE_KEY production
-vercel env add SUPABASE_SERVICE_ROLE_KEY preview
-
-# Pull environment variables to local
-vercel env pull .env.local
+# Login to Vercel
+pnpm vercel login
 ```
 
-#### Method 3: Using `.env` file during deployment
+## Deployment Steps
+
+### 1. Add Environment Variables
+
+Add all required environment variables from your `.env` file to Vercel:
 
 ```bash
-# Deploy with specific env file
-vercel --env-file=.env.production
+# Production URL (Required - for environment detection)
+pnpm vercel env add NEXT_PUBLIC_VERCEL_URL
+
+# Supabase (Required - Critical for auth & middleware)
+pnpm vercel env add NEXT_PUBLIC_SUPABASE_URL
+pnpm vercel env add NEXT_PUBLIC_SUPABASE_ANON_KEY
+pnpm vercel env add SUPABASE_SERVICE_ROLE_KEY
+
+# GitHub (Required for OAuth)
+pnpm vercel env add GITHUB_PERSONAL_ACCESS_TOKEN
+
+# AI Services (Required for matching)
+pnpm vercel env add GOOGLE_AI_API_KEY
+pnpm vercel env add OPENAI_API_KEY
+pnpm vercel env add ELEVENLABS_API_KEY
+
+# Email (Required for notifications)
+pnpm vercel env add RESEND_API_KEY
+
+# Analytics & Monitoring (Optional)
+pnpm vercel env add NEXT_PUBLIC_POSTHOG_KEY
+pnpm vercel env add NEXT_PUBLIC_POSTHOG_HOST
+pnpm vercel env add SENTRY_DSN
+pnpm vercel env add SENTRY_AUTH_TOKEN
+pnpm vercel env add SENTRY_ORG
+pnpm vercel env add SENTRY_PROJECT
 ```
 
-### Required Environment Variables
+**For NEXT_PUBLIC_VERCEL_URL:**
+- Value: `mesh-it.vercel.app` (for production environment only)
+- **IMPORTANT**: Only set this for the **Production** environment, NOT for Preview or Development
+- This determines when the app shows real production data vs test data
 
-Set these variables for **Production** and **Preview** environments:
+**For other variables:**
+- Mark secrets as sensitive (y)
+- Paste the value from your `.env` file
+- Select **Production** and **Preview** environments
 
-#### Supabase (Required)
+### 2. Verify Variables Are Set
 
-```
-NEXT_PUBLIC_SUPABASE_URL=https://xxxxx.supabase.co
-NEXT_PUBLIC_SUPABASE_ANON_KEY=eyJxxx...
-SUPABASE_SERVICE_ROLE_KEY=eyJxxx...
-```
-
-**Where to get these:**
-- Go to [Supabase Dashboard](https://supabase.com/dashboard)
-- Select your project → Settings → API
-- Copy URL and keys
-
-⚠️ **Important**: 
-- `NEXT_PUBLIC_*` variables are exposed to the browser
-- `SUPABASE_SERVICE_ROLE_KEY` is server-only and should NEVER be prefixed with `NEXT_PUBLIC_`
-
-#### AI Services (Required for matching)
-
-```
-GOOGLE_AI_API_KEY=AIza...
-OPENAI_API_KEY=sk-...
-ELEVENLABS_API_KEY=xi-...
+```bash
+pnpm vercel env ls
 ```
 
-**Where to get these:**
-- **Google AI**: [Google AI Studio](https://aistudio.google.com/app/apikey)
-- **OpenAI**: [OpenAI Platform](https://platform.openai.com/api-keys)
-- **ElevenLabs**: [ElevenLabs Profile](https://elevenlabs.io/app/settings/api-keys)
+### 3. Deploy
 
-#### Email Service (Required)
+```bash
+# Deploy to preview
+pnpm vercel
 
-```
-RESEND_API_KEY=re_xxx
-```
-
-**Where to get this:**
-- [Resend Dashboard](https://resend.com/api-keys)
-
-### Optional Environment Variables
-
-These are recommended but not required for basic functionality:
-
-#### Analytics & Monitoring
-
-```
-NEXT_PUBLIC_POSTHOG_KEY=phc_xxx
-NEXT_PUBLIC_POSTHOG_HOST=https://app.posthog.com
-SENTRY_DSN=https://xxx@sentry.io/xxx
+# Deploy to production
+pnpm vercel --prod
 ```
 
-**Where to get these:**
-- **PostHog**: [PostHog Settings](https://app.posthog.com/project/settings)
-- **Sentry**: [Sentry Settings](https://sentry.io/settings/)
+## Environment Variables Reference
 
-## Vercel Project Settings
+Copy values from your `.env` file for these variables:
 
-### Build & Development Settings
+### Required
 
-Vercel should auto-detect these, but verify:
+| Variable | Description | Get From |
+|----------|-------------|----------|
+| `NEXT_PUBLIC_VERCEL_URL` | Production URL (set to `mesh-it.vercel.app` for production only) | Production environment only |
+| `NEXT_PUBLIC_SUPABASE_URL` | Supabase project URL | [Supabase Dashboard](https://supabase.com/dashboard) → Settings → API |
+| `NEXT_PUBLIC_SUPABASE_ANON_KEY` | Supabase anon/public key | [Supabase Dashboard](https://supabase.com/dashboard) → Settings → API |
+| `SUPABASE_SERVICE_ROLE_KEY` | Supabase service role key (⚠️ sensitive) | [Supabase Dashboard](https://supabase.com/dashboard) → Settings → API |
+| `GITHUB_PERSONAL_ACCESS_TOKEN` | GitHub PAT (scopes: repo, read:org, read:user) | [GitHub Settings → Tokens](https://github.com/settings/tokens) |
+| `GOOGLE_AI_API_KEY` | Google AI / Gemini API key | [Google AI Studio](https://aistudio.google.com/app/apikey) |
+| `OPENAI_API_KEY` | OpenAI API key | [OpenAI Platform](https://platform.openai.com/api-keys) |
+| `ELEVENLABS_API_KEY` | ElevenLabs API key | [ElevenLabs Settings](https://elevenlabs.io/app/settings/api-keys) |
+| `RESEND_API_KEY` | Resend email API key | [Resend Dashboard](https://resend.com/api-keys) |
 
-| Setting | Value |
-|---------|-------|
-| **Framework Preset** | Next.js |
-| **Build Command** | `pnpm build` |
-| **Output Directory** | `.next` (default) |
-| **Install Command** | `pnpm install` |
-| **Development Command** | `pnpm dev` |
-| **Node.js Version** | 18.x or later |
+### Optional
 
-### Environment-Specific Configuration
-
-For different environments, you might want different values:
-
-**Production**:
-- Use production Supabase project
-- Use production API keys with higher rate limits
-- Enable analytics and monitoring
-
-**Preview** (for PR deployments):
-- Can use same as production OR separate preview/staging project
-- Useful for testing without affecting production data
-
-**Development** (local with `vercel dev`):
-- Use `.env.local` file
-- Can use development/test API keys
-
-## Vercel-Specific Features
-
-### Automatic HTTPS
-
-Vercel provides automatic HTTPS for all deployments. Update your Supabase auth settings:
-
-1. Go to Supabase Dashboard → Authentication → URL Configuration
-2. Add your Vercel domain to **Redirect URLs**:
-   ```
-   https://your-project.vercel.app/callback
-   https://your-custom-domain.com/callback
-   ```
-
-### Preview Deployments
-
-Every pull request gets a unique preview URL. To test auth on preview deployments:
-
-1. Add wildcard domain to Supabase Redirect URLs:
-   ```
-   https://*.vercel.app/callback
-   ```
-
-2. Or add each preview URL individually (more secure)
-
-### Custom Domains
-
-1. Go to Project Settings → Domains
-2. Add your custom domain
-3. Update DNS records as instructed
-4. Update Supabase redirect URLs with new domain
-
-## Security Best Practices
-
-### DO ✅
-
-- Use environment variables for all sensitive data
-- Set appropriate environment scopes (production, preview, development)
-- Use `NEXT_PUBLIC_*` prefix ONLY for values safe to expose to browser
-- Rotate API keys regularly
-- Use different API keys for production vs preview/dev
-- Enable Vercel's built-in security features
-
-### DON'T ❌
-
-- Never commit `.env` files to git
-- Never prefix server-only secrets with `NEXT_PUBLIC_`
-- Never expose `SUPABASE_SERVICE_ROLE_KEY` to the client
-- Don't use production keys in preview deployments (if handling real user data)
-
-## Verifying Deployment
-
-After deployment, verify:
-
-1. **Check build logs**: No errors during build
-2. **Test authentication**: Try logging in with Google/GitHub
-3. **Check environment variables**: 
-   ```bash
-   vercel env ls
-   ```
-4. **Monitor runtime logs**:
-   ```bash
-   vercel logs
-   ```
+| Variable | Description |
+|----------|-------------|
+| `NEXT_PUBLIC_POSTHOG_KEY` | PostHog analytics key |
+| `NEXT_PUBLIC_POSTHOG_HOST` | PostHog host (e.g., https://app.posthog.com) |
+| `SENTRY_DSN` | Sentry error tracking DSN |
+| `SENTRY_AUTH_TOKEN` | Sentry auth token |
+| `SENTRY_ORG` | Sentry organization slug |
+| `SENTRY_PROJECT` | Sentry project slug |
 
 ## Troubleshooting
 
-### Build Fails
+### App Shows "Test Mode" in Production
 
+If your production deployment at `mesh-it.vercel.app` shows the test mode banner:
+
+**Cause:** `NEXT_PUBLIC_VERCEL_URL` is not set or is set incorrectly.
+
+**Solution:**
 ```bash
-# Check local build first
-pnpm build
+# Add the environment variable (Production environment only)
+pnpm vercel env add NEXT_PUBLIC_VERCEL_URL
 
-# Check Vercel logs
-vercel logs --follow
+# When prompted:
+# - Value: mesh-it.vercel.app
+# - Environments: Select ONLY "Production" (not Preview or Development)
+
+# Redeploy
+pnpm vercel --prod
 ```
 
-### Environment Variables Not Working
+After redeployment, the banner will disappear and the app will show "MeshIt" instead of "MeshIt - Test".
+
+**Verification:** Visit `https://mesh-it.vercel.app/api/debug/env` to see environment detection status.
+
+### MIDDLEWARE_INVOCATION_FAILED Error
+
+This means Supabase environment variables are missing:
 
 ```bash
-# Pull current variables to local
-vercel env pull
+# Check which variables are set
+pnpm vercel env ls | grep SUPABASE
 
-# Verify variables are set
-vercel env ls
+# Add missing SUPABASE_SERVICE_ROLE_KEY
+pnpm vercel env add SUPABASE_SERVICE_ROLE_KEY
+
+# Redeploy
+pnpm vercel --prod
 ```
 
-### Authentication Fails
+### Update an Environment Variable
 
-1. Verify Supabase redirect URLs include your Vercel domain
-2. Check that `NEXT_PUBLIC_SUPABASE_URL` and `NEXT_PUBLIC_SUPABASE_ANON_KEY` are set
-3. Verify OAuth provider settings in Supabase
+```bash
+# Remove old value
+pnpm vercel env rm VARIABLE_NAME
 
-### API Rate Limits
+# Add new value
+pnpm vercel env add VARIABLE_NAME
 
-- Upgrade API keys to higher tiers for production
-- Implement caching where appropriate
-- Monitor usage in respective dashboards
+# Redeploy to apply changes
+pnpm vercel --prod
+```
+
+### Pull Environment Variables Locally
+
+```bash
+# Download all Vercel env vars to .env.local
+pnpm vercel env pull .env.local
+```
 
 ## Useful Commands
 
 ```bash
+# List all environment variables
+pnpm vercel env ls
+
+# Add a new variable
+pnpm vercel env add VARIABLE_NAME
+
+# Remove a variable
+pnpm vercel env rm VARIABLE_NAME
+
+# Pull variables to local file
+pnpm vercel env pull .env.local
+
 # Deploy to preview
-vercel
+pnpm vercel
 
 # Deploy to production
-vercel --prod
+pnpm vercel --prod
+
+# View live logs
+pnpm vercel logs --follow
 
 # List deployments
-vercel ls
-
-# View logs
-vercel logs [deployment-url]
-
-# Open project settings
-vercel project
-
-# List environment variables
-vercel env ls
-
-# Pull environment variables
-vercel env pull .env.local
-
-# Remove deployment
-vercel rm [deployment-url]
+pnpm vercel ls
 ```
 
-## Monitoring & Analytics
+## Supabase Configuration
 
-After deployment, monitor:
+After deployment, add your Vercel domain to Supabase auth redirects:
 
-1. **Vercel Analytics**: Built-in performance monitoring
-2. **PostHog**: User analytics and feature flags
-3. **Sentry**: Error tracking and performance
-4. **Supabase**: Database performance and auth logs
+1. Go to Supabase Dashboard → Authentication → URL Configuration
+2. Add redirect URLs:
+   ```
+   https://your-project.vercel.app/callback
+   https://*.vercel.app/callback
+   ```
 
 ## Additional Resources
 
-- [Vercel Documentation](https://vercel.com/docs)
-- [Next.js Deployment](https://nextjs.org/docs/deployment)
 - [Vercel CLI Reference](https://vercel.com/docs/cli)
+- [Next.js Deployment](https://nextjs.org/docs/deployment)
 - [Environment Variables in Vercel](https://vercel.com/docs/environment-variables)

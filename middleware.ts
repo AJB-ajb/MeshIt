@@ -8,9 +8,12 @@ export async function middleware(request: NextRequest) {
 
   const isLoginRoute = pathname.startsWith("/login");
   const isDashboardRoute = pathname.startsWith("/dashboard");
+  const isOnboardingRoute = pathname.startsWith("/onboarding");
 
-  if (!user && isDashboardRoute) {
-    return NextResponse.redirect(new URL("/login", request.url));
+  if (!user && (isDashboardRoute || isOnboardingRoute)) {
+    const redirectUrl = new URL("/login", request.url);
+    redirectUrl.searchParams.set("next", pathname);
+    return NextResponse.redirect(redirectUrl);
   }
 
   if (user && isLoginRoute) {

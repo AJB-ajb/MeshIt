@@ -1,10 +1,12 @@
 import Link from "next/link";
 import { cn } from "@/lib/utils";
+import { isTestMode } from "@/lib/environment";
 
 interface LogoProps {
   className?: string;
   size?: "sm" | "md" | "lg";
   showText?: boolean;
+  href?: string;
 }
 
 const sizeClasses = {
@@ -19,10 +21,13 @@ const textSizeClasses = {
   lg: "text-xl",
 };
 
-export function Logo({ className, size = "md", showText = true }: LogoProps) {
+export function Logo({ className, size = "md", showText = true, href = "/" }: LogoProps) {
+  const testMode = isTestMode();
+  const displayName = testMode ? "MeshIt - Test" : "MeshIt";
+  
   return (
     <Link
-      href="/"
+      href={href}
       className={cn("flex items-center gap-2 font-semibold", className)}
     >
       <div
@@ -37,7 +42,7 @@ export function Logo({ className, size = "md", showText = true }: LogoProps) {
       </div>
       {showText && (
         <span className={cn("font-semibold", textSizeClasses[size])}>
-          MeshIt
+          {displayName}
         </span>
       )}
     </Link>

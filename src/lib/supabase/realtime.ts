@@ -1,0 +1,260 @@
+/**
+ * Real-time utilities for Supabase
+ * Handles messages, notifications, typing indicators, and presence
+ */
+
+import { RealtimeChannel, RealtimePresenceState } from "@supabase/supabase-js";
+import { createClient } from "./client";
+
+export type PresenceState = {
+  user_id: string;
+  online_at: string;
+  typing_in?: string; // conversation_id if typing
+};
+
+export type TypingUser = {
+  user_id: string;
+  conversation_id: string;
+};
+
+/**
+ * Subscribe to real-time messages for a conversation
+ */
+export function subscribeToMessages(
+  conversationId: string,
+  onNewMessage: (message: any) => void,
+  onMessageUpdate?: (message: any) => void
+): RealtimeChannel {
+  const supabase = createClient();
+
+  const channel = supabase
+    .channel(`messages:${conversationId}`)
+    .on(
+      "postgres_changes",
+      {
+        event: "INSERT",
+        schema: "public",
+        table: "messages",
+        filter: `conversation_id=eq.${conversationId}`,
+      },
+      (payload) => {
+        onNewMessage(payload.new);
+      }
+    )
+    .on(
+      "postgres_changes",
+      {
+        event: "UPDATE",
+        schema: "public",
+        table: "messages",
+        filter: `conversation_id=eq.${conversationId}`,
+      },
+      (payload) => {
+        onMessageUpdate?.(payload.new);
+      }
+    )
+    .subscribe();
+
+  return channel;
+}
+
+/**
+ * Subscribe to real-time notifications for a user
+ */
+export function subscribeToNotifications(
+  userId: string,
+  onNewNotification: (notification: any) => void,
+  onNotificationUpdate?: (notification: any) => void,
+  onNotificationDelete?: (notification: any) => void
+): RealtimeChannel {
+  const supabase = createClient();
+
+  const channel = supabase
+    .channel(`notifications:${userId}`)
+    .on(
+      "postgres_changes",
+      {
+        event: "INSERT",
+        schema: "public",
+        table: "notifications",
+        filter: `user_id=eq.${userId}`,
+      },
+      (payload) => {
+        onNewNotification(payload.new);
+      }
+    )
+    .on(
+      "postgres_changes",
+      {
+        event: "UPDATE",
+        schema: "public",
+        table: "notifications",
+        filter: `user_id=eq.${userId}`,
+      },
+      (payload) => {
+        onNotificationUpdate?.(payload.new);
+      }
+    )
+    .on(
+      "postgres_changes",
+      {
+        event: "DELETE",
+        schema: "public",
+        table: "notifications",
+        filter: `user_id=eq.${userId}`,
+      },
+      (payload) => {
+        onNotificationDelete?.(payload.old);
+      }
+    )
+    .subscribe();
+
+  return channel;
+}
+
+/**
+ * Subscribe to conversation updates (for last message, etc.)
+ */
+export function subscribeToConversations(
+  userId: string,
+  onConversationUpdate: (conversation: any) => void
+): RealtimeChannel {
+  const supabase = createClient();
+
+  const channel = supabase
+    .channel(`conversations:${userId}`)
+    .on(
+      "postgres_changes",
+      {
+        event: "*",
+        schema: "public",
+        table: "conversations",
+      },
+      (payload) => {
+        const conv = payload.new as any;
+        // Only process if user is a participant
+        if (conv && (conv.participant_1 === userId || conv.participant_2 === userId)) {
+          onConversationUpdate(conv);
+        }
+      }
+    )
+    .subscribe();
+
+  return channel;
+}
+
+/**
+ * Create a presence channel for typing indicators and online status
+ */
+export function createPresenceChannel(
+  roomId: string,
+  userId: string,
+  onPresenceSync: (state: RealtimePresenceState<PresenceState>) => void,
+  onPresenceJoin?: (key: string, newPresence: PresenceState[]) => void,
+  onPresenceLeave?: (key: string, leftPresence: PresenceState[]) => void
+): RealtimeChannel {
+  const supabase = createClient();
+
+  const channel = supabase.channel(roomId, {
+    config: {
+      presence: {
+        key: userId,
+      },
+    },
+  });
+
+  channel
+    .on("presence", { event: "sync" }, () => {
+      const state = channel.presenceState<PresenceState>();
+      onPresenceSync(state);
+    })
+    .on("presence", { event: "join" }, ({ key, newPresences }) => {
+      onPresenceJoin?.(key, newPresences as unknown as PresenceState[]);
+    })
+    .on("presence", { event: "leave" }, ({ key, leftPresences }) => {
+      onPresenceLeave?.(key, leftPresences as unknown as PresenceState[]);
+    })
+    .subscribe(async (status) => {
+      if (status === "SUBSCRIBED") {
+        await channel.track({
+          user_id: userId,
+          online_at: new Date().toISOString(),
+        } as PresenceState);
+      }
+    });
+
+  return channel;
+}
+
+/**
+ * Update typing status in a presence channel
+ */
+export async function updateTypingStatus(
+  channel: RealtimeChannel,
+  userId: string,
+  conversationId: string | null
+): Promise<void> {
+  await channel.track({
+    user_id: userId,
+    online_at: new Date().toISOString(),
+    typing_in: conversationId || undefined,
+  } as PresenceState);
+}
+
+/**
+ * Clean up a channel subscription
+ */
+export function unsubscribeChannel(channel: RealtimeChannel): void {
+  const supabase = createClient();
+  supabase.removeChannel(channel);
+}
+
+/**
+ * Request browser notification permission
+ */
+export async function requestNotificationPermission(): Promise<boolean> {
+  if (!("Notification" in window)) {
+    return false;
+  }
+
+  if (Notification.permission === "granted") {
+    return true;
+  }
+
+  if (Notification.permission !== "denied") {
+    const permission = await Notification.requestPermission();
+    return permission === "granted";
+  }
+
+  return false;
+}
+
+/**
+ * Show a browser notification
+ */
+export function showBrowserNotification(
+  title: string,
+  body: string,
+  onClick?: () => void
+): void {
+  if (!("Notification" in window) || Notification.permission !== "granted") {
+    return;
+  }
+
+  const notification = new Notification(title, {
+    body,
+    icon: "/icons/icon.svg",
+    badge: "/icons/icon.svg",
+  });
+
+  if (onClick) {
+    notification.onclick = () => {
+      window.focus();
+      onClick();
+      notification.close();
+    };
+  }
+
+  // Auto-close after 5 seconds
+  setTimeout(() => notification.close(), 5000);
+}

@@ -1,11 +1,22 @@
+import { redirect } from "next/navigation";
 import Link from "next/link";
 import { ArrowRight, Sparkles } from "lucide-react";
 
 import { Button } from "@/components/ui/button";
 import { Logo } from "@/components/layout/logo";
 import { ThemeToggle } from "@/components/ui/theme-toggle";
+import { createClient } from "@/lib/supabase/server";
 
-export default function LandingPage() {
+export default async function LandingPage() {
+  // Check if user is already logged in
+  const supabase = await createClient();
+  const { data: { user } } = await supabase.auth.getUser();
+  
+  // If logged in, redirect to dashboard
+  if (user) {
+    redirect("/dashboard");
+  }
+
   return (
     <div className="flex min-h-screen flex-col bg-background">
       {/* Header */}
@@ -101,7 +112,7 @@ export default function LandingPage() {
                 <h3 className="text-xl font-semibold">Connect and collaborate</h3>
                 <p className="mt-2 text-muted-foreground">
                   See why you matched, message your team, and start building
-                  together. It&apos;s that simple.
+                  together. Its that simple.
                 </p>
               </div>
             </div>
