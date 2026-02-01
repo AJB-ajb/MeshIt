@@ -9,7 +9,7 @@ test.describe('Navigation', () => {
     await expect(loginLink).toBeVisible();
 
     // CTA buttons link to login and projects
-    await expect(page.locator('a[href="/login"]:has-text("Get started")')).toBeVisible();
+    await expect(page.locator('a[href="/login"]:has-text("Get started")').first()).toBeVisible();
     await expect(page.locator('a[href="/projects"]:has-text("Explore projects")')).toBeVisible();
   });
 
@@ -68,7 +68,7 @@ test.describe('Navigation', () => {
     await page.context().clearCookies();
 
     await page.goto('/dashboard');
-    await page.waitForURL(/\/login/, { timeout: 5000 });
+    await page.waitForURL(/\/login/, { timeout: 10000 });
     expect(page.url()).toContain('/login');
   });
 

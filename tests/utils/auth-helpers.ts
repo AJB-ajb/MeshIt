@@ -8,7 +8,7 @@
 
 import { Page } from "@playwright/test";
 import { supabaseAdmin } from "./supabase";
-import { createUser, type TestUser } from "../factories/user-factory";
+import { createUser, type TestUser } from "./factories/user-factory";
 
 /**
  * Login a user via the UI (tests actual login flow).
