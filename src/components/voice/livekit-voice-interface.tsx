@@ -255,30 +255,23 @@ export function LiveKitVoiceInterface({
           cancelAnimationFrame(animationFrameRef.current);
           animationFrameRef.current = null;
         }
-        
+
         if (audioChunksRef.current.length > 0 && !isAgentSpeaking) {
           const audioBlob = new Blob(audioChunksRef.current, {
             type: 'audio/webm;codecs=opus',
           });
-          
+
           // Only process if audio is substantial
           if (audioBlob.size > 5000) {
             await processVoiceInput(audioBlob);
           }
         }
-        
+
         audioChunksRef.current = [];
         isSpeakingRef.current = false;
-        
-        // Continue listening if not muted and not agent speaking
-        if (!isMuted && !isAgentSpeaking && isConnected && localTrackRef.current) {
-          setTimeout(() => {
-            // Create new MediaRecorder instance - can't reuse old one
-            if (localTrackRef.current && !isAgentSpeaking && !isMuted) {
-              startContinuousListening(localTrackRef.current);
-            }
-          }, 500);
-        }
+
+        // DON'T auto-restart - let processVoiceInput handle it after agent responds
+        // This prevents the MediaRecorder restart errors
       };
 
       // Start recording
@@ -590,14 +583,18 @@ export function LiveKitVoiceInterface({
     if (greetingAudioRef.current) {
       const handleEnded = () => {
         setIsAgentSpeaking(false);
-        // Resume listening when agent finishes speaking
-        if (isConnected && !isMuted) {
-          setTimeout(resumeListening, 500);
+        // Restart listening when agent finishes speaking
+        if (isConnected && !isMuted && localTrackRef.current) {
+          setTimeout(() => {
+            if (localTrackRef.current && !isMuted) {
+              startContinuousListening(localTrackRef.current);
+            }
+          }, 500);
         }
       };
-      
+
       greetingAudioRef.current.addEventListener('ended', handleEnded);
-      
+
       return () => {
         greetingAudioRef.current?.removeEventListener('ended', handleEnded);
       };

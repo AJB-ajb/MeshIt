@@ -1,13 +1,13 @@
 /**
  * LiveKit Voice Onboarding Page
- * Test concurrent voice sessions with WebRTC
+ * Clean voice bot visualization with auto-redirect
  */
 
 'use client';
 
-import { useState, useEffect, useMemo } from 'react';
+import { useState, useMemo } from 'react';
 import { useRouter, useSearchParams } from 'next/navigation';
-import { LiveKitVoiceInterface } from '@/components/voice/livekit-voice-interface';
+import { CleanLiveKitVoice } from '@/components/voice/clean-livekit-voice';
 import { createClient } from '@/lib/supabase/client';
 import type { ProfileData } from '@/lib/voice/types';
 
@@ -72,6 +72,8 @@ export default function LiveKitVoicePage() {
         data: { profile_completed: true },
       });
 
+      console.log('✅ Profile saved to Supabase, redirecting...');
+
       // Redirect to destination
       router.push(next);
     } catch (error) {
@@ -88,7 +90,7 @@ export default function LiveKitVoicePage() {
           <p className="text-muted-foreground">Saving your profile...</p>
         </div>
       ) : (
-        <LiveKitVoiceInterface onComplete={handleComplete} />
+        <CleanLiveKitVoice onComplete={handleComplete} />
       )}
     </div>
   );
