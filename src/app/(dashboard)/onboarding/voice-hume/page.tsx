@@ -12,7 +12,7 @@
  * - Caption display underneath
  */
 
-import { useEffect, useRef, useState, useCallback } from 'react';
+import { useEffect, useRef, useState, useCallback, Suspense } from 'react';
 import { useRouter, useSearchParams } from 'next/navigation';
 import { ArrowLeft, Check } from 'lucide-react';
 import { Button } from '@/components/ui/button';
@@ -72,17 +72,17 @@ PROFILE_COMPLETE
 - If they give partial info, ask for missing pieces in ONE follow-up
 - Target: 4-5 total exchanges, under 70 seconds`;
 
-export default function HumeRealTimeVoicePage() {
+function HumeRealTimeVoiceContent() {
   const router = useRouter();
   const searchParams = useSearchParams();
   const nextUrl = searchParams.get('next') || '/profile';
-  
+
   const [voiceState, setVoiceState] = useState<VoiceState>('idle');
   const [caption, setCaption] = useState('');
   const [userTranscript, setUserTranscript] = useState('');
   const [error, setError] = useState<string | null>(null);
   const [isComplete, setIsComplete] = useState(false);
-  
+
   const socketRef = useRef<WebSocket | null>(null);
   const recorderRef = useRef<MediaRecorder | null>(null);
   const streamRef = useRef<MediaStream | null>(null);
@@ -106,23 +106,23 @@ export default function HumeRealTimeVoicePage() {
       recorderRef.current.stop();
     }
     recorderRef.current = null;
-    
+
     // Stop all tracks
     streamRef.current?.getTracks().forEach(t => t.stop());
     streamRef.current = null;
-    
+
     // Close AudioContext only if not already closed
     if (audioContextRef.current?.state !== 'closed') {
-      audioContextRef.current?.close().catch(() => {});
+      audioContextRef.current?.close().catch(() => { });
     }
     audioContextRef.current = null;
-    
+
     // Close WebSocket
     if (socketRef.current?.readyState === WebSocket.OPEN) {
       socketRef.current.close();
     }
     socketRef.current = null;
-    
+
     stopPlayback();
   }, [stopPlayback]);
 
@@ -136,7 +136,7 @@ export default function HumeRealTimeVoicePage() {
 
     isPlayingRef.current = true;
     const data = audioQueueRef.current.shift()!;
-    
+
     if (audioElementRef.current) {
       audioElementRef.current.src = `data:audio/mp3;base64,${data}`;
       audioElementRef.current.play().catch(() => playNextAudio());
@@ -154,11 +154,11 @@ export default function HumeRealTimeVoicePage() {
   const handleProfileComplete = useCallback(async () => {
     setIsComplete(true);
     disconnect();
-    
+
     // Combine all conversation into text for the extraction API
     const conversationText = conversationRef.current.join('\n');
     console.log('Conversation text for extraction:', conversationText);
-    
+
     try {
       // Step 1: Use the SAME extraction API as the AI form extractor
       // This uses OpenAI function calling with structured schema (same as the form's AI Extract)
@@ -167,16 +167,16 @@ export default function HumeRealTimeVoicePage() {
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({ text: conversationText }),
       });
-      
+
       if (!extractResponse.ok) {
         const errorText = await extractResponse.text();
         console.error('Extraction API error:', errorText);
         throw new Error('Extraction failed');
       }
-      
+
       const { profile: extractedData } = await extractResponse.json();
       console.log('Extracted profile from voice:', JSON.stringify(extractedData, null, 2));
-      
+
       // Step 2: Save extracted profile directly to Supabase using existing endpoint
       // Pass experience_level directly (AI returns: junior/intermediate/senior/lead)
       const saveResponse = await fetch('/api/profile/save', {
@@ -198,7 +198,7 @@ export default function HumeRealTimeVoicePage() {
           },
         }),
       });
-      
+
       if (!saveResponse.ok) {
         const errorData = await saveResponse.json().catch(() => ({}));
         console.error('Profile save error:', errorData);
@@ -206,12 +206,12 @@ export default function HumeRealTimeVoicePage() {
         const saveResult = await saveResponse.json();
         console.log('Profile saved successfully to Supabase:', saveResult);
       }
-      
+
       // Redirect to developer form - it will load the saved data from DB
       // Wait a moment to ensure DB write is complete
       const redirectUrl = `/onboarding/developer?voice_complete=true${nextUrl !== '/profile' ? `&next=${encodeURIComponent(nextUrl)}` : ''}`;
       setTimeout(() => router.push(redirectUrl), 500);
-      
+
     } catch (err) {
       console.error('Voice extraction error:', err);
       // Still redirect - user can fill form manually
@@ -223,7 +223,7 @@ export default function HumeRealTimeVoicePage() {
   // Handle Hume messages
   const handleMessage = useCallback((msg: Record<string, unknown>) => {
     const type = msg.type as string;
-    
+
     switch (type) {
       case 'audio_output':
         if (msg.data) {
@@ -311,7 +311,7 @@ export default function HumeRealTimeVoicePage() {
 
       ws.onopen = async () => {
         console.log('✅ Hume EVI connected');
-        
+
         // Configure with tight system prompt
         ws.send(JSON.stringify({
           type: 'session_settings',
@@ -323,12 +323,12 @@ export default function HumeRealTimeVoicePage() {
       };
 
       ws.onmessage = (e) => handleMessage(JSON.parse(e.data));
-      
+
       ws.onerror = () => {
         setError('Connection failed');
         setVoiceState('idle');
       };
-      
+
       ws.onclose = () => {
         if (!isComplete) setVoiceState('idle');
       };
@@ -348,7 +348,7 @@ export default function HumeRealTimeVoicePage() {
     router.push('/onboarding/developer');
   };
 
-  const blobToBase64 = (blob: Blob): Promise<string> => 
+  const blobToBase64 = (blob: Blob): Promise<string> =>
     new Promise(resolve => {
       const reader = new FileReader();
       reader.onloadend = () => resolve((reader.result as string).split(',')[1]);
@@ -370,20 +370,20 @@ export default function HumeRealTimeVoicePage() {
     <div className="fixed inset-0 flex flex-col bg-background dark:bg-black">
       {/* Header */}
       <header className="flex items-center justify-between px-6 py-4">
-        <Button 
-          variant="ghost" 
-          size="sm" 
-          onClick={handleBack} 
+        <Button
+          variant="ghost"
+          size="sm"
+          onClick={handleBack}
           className="text-muted-foreground hover:text-foreground"
         >
           <ArrowLeft className="h-4 w-4 mr-2" />
           Back
         </Button>
-        
+
         <span className="text-sm font-medium text-foreground">
           Voice Setup
         </span>
-        
+
         {/* Empty div for spacing */}
         <div className="w-20" />
       </header>
@@ -475,3 +475,18 @@ export default function HumeRealTimeVoicePage() {
     </div>
   );
 }
+
+export default function HumeRealTimeVoicePage() {
+  return (
+    <Suspense fallback={
+      <div className="fixed inset-0 flex items-center justify-center bg-background dark:bg-black">
+        <div className="text-center">
+          <p className="text-muted-foreground">Loading...</p>
+        </div>
+      </div>
+    }>
+      <HumeRealTimeVoiceContent />
+    </Suspense>
+  );
+}
+

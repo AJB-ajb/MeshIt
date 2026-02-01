@@ -23,8 +23,8 @@ const textSizeClasses = {
 
 export function Logo({ className, size = "md", showText = true, href = "/" }: LogoProps) {
   const testMode = isTestMode();
-  const displayName = testMode ? "MeshIt - Test" : "MeshIt";
-  
+  const displayName = testMode ? "MeshIt - Demo" : "MeshIt";
+
   return (
     <Link
       href={href}
