@@ -1,4 +1,8 @@
 import { defineConfig, devices } from '@playwright/test';
+import path from 'path';
+
+// Load .env for test utilities (supabase client, seed helpers, etc.)
+require('dotenv').config({ path: path.resolve(__dirname, '.env') });
 
 export default defineConfig({
   testDir: './tests/e2e',

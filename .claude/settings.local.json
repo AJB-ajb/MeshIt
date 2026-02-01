@@ -15,7 +15,11 @@
       "Bash(git commit -m \"$\\(cat <<''EOF''\nAdd CI/CD pipeline, E2E navigation tests, and fix pre-existing test failures\n\n- Create GitHub Actions CI workflow with lint, typecheck, unit test, E2E, and build jobs\n- Add navigation E2E tests covering landing page, login page, and auth redirects\n- Fix .gitignore to allow .github/ directory \\(was blocked by .github* pattern\\)\n- Add test:ci and test:e2e:ci scripts for CI-optimized test runs\n- Fix voice-agent-api tests: set required env vars \\(OPENAI_API_KEY, ELEVENLABS_API_KEY\\)\n- Fix voice-agent tests: use node environment to avoid OpenAI browser check in jsdom\n- Fix matching tests: mock @/lib/environment and @/lib/ai/embeddings, fix chained .eq\\(\\) mocks\n\nCo-Authored-By: Claude Opus 4.5 <noreply@anthropic.com>\nEOF\n\\)\")",
       "Bash(git merge:*)",
       "Bash(git commit -m \"$\\(cat <<''EOF''\nAdd withAuth middleware and refactor match API routes\n\nPhase 2: Extract auth boilerplate into reusable withAuth HOF.\n\n- Create src/lib/api/with-auth.ts wrapping route handlers with auth check\n- Refactor all 6 match API routes to use withAuth:\n  - GET /api/matches/[id]\n  - PATCH /api/matches/[id]/apply\n  - PATCH /api/matches/[id]/accept\n  - PATCH /api/matches/[id]/decline\n  - GET /api/matches/for-me\n  - GET /api/matches/for-project/[id]\n- Replace inline auth checks and try/catch with middleware\n- Use apiError helper for consistent error responses\n- Add 6 unit tests for withAuth middleware\n\nCo-Authored-By: Claude Opus 4.5 <noreply@anthropic.com>\nEOF\n\\)\")",
-      "Bash(cat:*)"
+      "Bash(cat:*)",
+      "Bash(pnpm test:*)",
+      "Bash(npx tsc:*)",
+      "Bash(npx vitest run:*)",
+      "Bash(pnpm add:*)"
     ]
   }
 }
