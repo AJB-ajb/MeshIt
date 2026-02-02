@@ -16,8 +16,7 @@ Idea-based social platform for quickly finding people to do things with — proj
 - High responsiveness — postings should be fresh and active
 
 ## Scope
-- Primary: 1:1 matching (find one person for an activity or project)
-- Secondary: Small groups (2-5 people)
+- Primary: Small groups (2-5 people), especially pairs
 - Projects, activities, and social plans are all first-class posting types
 - Don't artificially limit applicability
 
