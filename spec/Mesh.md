@@ -72,7 +72,7 @@ See [Matching.md](Matching.md) for the matching algorithm.
 - Posting keywords for similarity matching
 - One-click OAuth login, no setup required
 - Notifications: daily digest + instant for high matches
-- Friend-ask mode for sequential 1:1 requests
+- _Cascading invites_: Friend-ask mode for sequential 1:1 requests
 
 ### Future
 - Calendar integration (auto-suggest time slots / auto update availability)
