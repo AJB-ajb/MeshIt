@@ -3,7 +3,7 @@
  * Creates test profile data for MeshIt profiles table
  */
 
-import { faker } from "@faker/js/faker";
+import { faker } from "@faker-js/faker";
 
 export type TestProfile = {
   user_id: string;

@@ -6,6 +6,8 @@
 import { test, expect } from "@playwright/test";
 import { seedUser } from "../utils/seed-helpers";
 import { createUser } from "../utils/factories/user-factory";
+// Note: API mocking infrastructure available in ../utils/mock-api.ts
+// Currently using real API keys in CI (see .github/workflows/ci.yml)
 
 test.describe("Profile API", () => {
   let authToken: string;
@@ -109,8 +111,8 @@ test.describe("Profile API", () => {
 
       expect(extracted.skills).toContain("React");
       expect(extracted.skills).toContain("Node.js");
-      expect(extracted.experience_level).toBe("advanced");
-      expect(extracted.availability_hours).toBeGreaterThan(0);
+      expect(extracted.experience_level).toBe("senior");
+      expect(extracted.availability_hours).toBe(20);
     });
 
     test("handles minimal input gracefully", async ({ request }) => {
