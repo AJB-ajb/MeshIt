@@ -13,11 +13,13 @@ export const GET = withAuth(async (_req, { user, supabase, params }) => {
   // Fetch match with joined profile and project data
   const { data: match, error: matchError } = await supabase
     .from("matches")
-    .select(`
+    .select(
+      `
       *,
       project:projects(*),
       profile:profiles(*)
-    `)
+    `,
+    )
     .eq("id", matchId)
     .single();
 
@@ -35,8 +37,8 @@ export const GET = withAuth(async (_req, { user, supabase, params }) => {
 
   const response: MatchResponse = {
     id: match.id,
-    project: project as MatchResponse["project"],
-    profile: profile as MatchResponse["profile"],
+    project: project as unknown as MatchResponse["project"],
+    profile: profile as unknown as MatchResponse["profile"],
     score: match.similarity_score,
     explanation: match.explanation,
     score_breakdown: match.score_breakdown,

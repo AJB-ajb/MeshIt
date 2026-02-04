@@ -35,27 +35,14 @@ import {
   unsubscribeChannel,
   requestNotificationPermission,
   showBrowserNotification,
+  type Notification as RealtimeNotification,
+  type Conversation as RealtimeConversation,
 } from "@/lib/supabase/realtime";
 
-type Notification = {
-  id: string;
-  type: string;
-  title: string;
-  body: string | null;
-  read: boolean;
-  related_project_id: string | null;
-  related_application_id: string | null;
-  related_user_id: string | null;
-  created_at: string;
-};
+type Notification = RealtimeNotification;
 
-type Conversation = {
-  id: string;
+type Conversation = RealtimeConversation & {
   project_id: string | null;
-  participant_1: string;
-  participant_2: string;
-  created_at: string;
-  updated_at: string;
   other_user?: {
     full_name: string | null;
     headline: string | null;
@@ -381,8 +368,9 @@ function InboxPageContent() {
           .eq("read", false)
           .neq("sender_id", currentUserId);
 
-        const enrichedConv = {
+        const enrichedConv: Conversation = {
           ...conv,
+          project_id: null,
           other_user: profile || undefined,
           last_message: lastMessageData || undefined,
           unread_count: count || 0,

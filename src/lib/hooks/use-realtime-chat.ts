@@ -8,16 +8,8 @@ import {
   updateTypingStatus,
   unsubscribeChannel,
   type PresenceState,
+  type Message,
 } from "@/lib/supabase/realtime";
-
-type Message = {
-  id: string;
-  conversation_id: string;
-  sender_id: string;
-  content: string;
-  read: boolean;
-  created_at: string;
-};
 
 type UseRealtimeChatOptions = {
   conversationId: string | null;

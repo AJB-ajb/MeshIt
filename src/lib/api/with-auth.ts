@@ -15,10 +15,7 @@ export interface AuthContext {
   params: Record<string, string>;
 }
 
-type AuthHandler = (
-  req: Request,
-  ctx: AuthContext
-) => Promise<NextResponse>;
+type AuthHandler = (req: Request, ctx: AuthContext) => Promise<NextResponse>;
 
 /**
  * Higher-order function that wraps a route handler with auth check.
@@ -30,7 +27,7 @@ type AuthHandler = (
 export function withAuth(handler: AuthHandler) {
   return async (
     req: Request,
-    routeContext?: { params?: Promise<Record<string, string>> }
+    routeContext: { params?: Promise<Record<string, string>> } = {},
   ): Promise<NextResponse> => {
     try {
       const supabase = await createClient();
@@ -51,7 +48,7 @@ export function withAuth(handler: AuthHandler) {
       return apiError(
         "INTERNAL",
         error instanceof Error ? error.message : "Internal server error",
-        500
+        500,
       );
     }
   };

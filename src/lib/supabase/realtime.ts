@@ -17,13 +17,44 @@ export type TypingUser = {
   conversation_id: string;
 };
 
+export type Message = {
+  id: string;
+  conversation_id: string;
+  sender_id: string;
+  content: string;
+  read: boolean;
+  created_at: string;
+};
+
+export type Notification = {
+  id: string;
+  user_id: string;
+  type: string;
+  title: string;
+  body: string | null;
+  read: boolean;
+  related_project_id: string | null;
+  related_application_id: string | null;
+  related_user_id: string | null;
+  created_at: string;
+};
+
+export type Conversation = {
+  id: string;
+  participant_1: string;
+  participant_2: string;
+  last_message_at: string | null;
+  created_at: string;
+  updated_at: string;
+};
+
 /**
  * Subscribe to real-time messages for a conversation
  */
 export function subscribeToMessages(
   conversationId: string,
-  onNewMessage: (message: unknown) => void,
-  onMessageUpdate?: (message: unknown) => void,
+  onNewMessage: (message: Message) => void,
+  onMessageUpdate?: (message: Message) => void,
 ): RealtimeChannel {
   const supabase = createClient();
 
@@ -38,7 +69,7 @@ export function subscribeToMessages(
         filter: `conversation_id=eq.${conversationId}`,
       },
       (payload) => {
-        onNewMessage(payload.new);
+        onNewMessage(payload.new as unknown as Message);
       },
     )
     .on(
@@ -50,7 +81,7 @@ export function subscribeToMessages(
         filter: `conversation_id=eq.${conversationId}`,
       },
       (payload) => {
-        onMessageUpdate?.(payload.new);
+        onMessageUpdate?.(payload.new as unknown as Message);
       },
     )
     .subscribe((status) => {
@@ -73,9 +104,9 @@ export function subscribeToMessages(
  */
 export function subscribeToNotifications(
   userId: string,
-  onNewNotification: (notification: unknown) => void,
-  onNotificationUpdate?: (notification: unknown) => void,
-  onNotificationDelete?: (notification: unknown) => void,
+  onNewNotification: (notification: Notification) => void,
+  onNotificationUpdate?: (notification: Notification) => void,
+  onNotificationDelete?: (notification: Notification) => void,
 ): RealtimeChannel {
   const supabase = createClient();
 
@@ -90,7 +121,7 @@ export function subscribeToNotifications(
         filter: `user_id=eq.${userId}`,
       },
       (payload) => {
-        onNewNotification(payload.new);
+        onNewNotification(payload.new as unknown as Notification);
       },
     )
     .on(
@@ -102,7 +133,7 @@ export function subscribeToNotifications(
         filter: `user_id=eq.${userId}`,
       },
       (payload) => {
-        onNotificationUpdate?.(payload.new);
+        onNotificationUpdate?.(payload.new as unknown as Notification);
       },
     )
     .on(
@@ -114,7 +145,7 @@ export function subscribeToNotifications(
         filter: `user_id=eq.${userId}`,
       },
       (payload) => {
-        onNotificationDelete?.(payload.old);
+        onNotificationDelete?.(payload.old as unknown as Notification);
       },
     )
     .subscribe((status) => {
@@ -137,7 +168,7 @@ export function subscribeToNotifications(
  */
 export function subscribeToConversations(
   userId: string,
-  onConversationUpdate: (conversation: unknown) => void,
+  onConversationUpdate: (conversation: Conversation) => void,
 ): RealtimeChannel {
   const supabase = createClient();
 
@@ -151,7 +182,7 @@ export function subscribeToConversations(
         table: "conversations",
       },
       (payload) => {
-        const conv = payload.new as Record<string, unknown>;
+        const conv = payload.new as unknown as Conversation;
         // Only process if user is a participant
         if (
           conv &&

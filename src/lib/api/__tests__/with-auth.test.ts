@@ -12,7 +12,7 @@ vi.mock("@/lib/supabase/server", () => ({
   })),
 }));
 
-import { withAuth } from "../with-auth";
+import { withAuth, type AuthContext } from "../with-auth";
 
 describe("withAuth", () => {
   beforeEach(() => {
@@ -60,16 +60,15 @@ describe("withAuth", () => {
       error: null,
     });
 
-    const handler = vi.fn(async () =>
-      NextResponse.json({ ok: true })
-    );
+    const handler = vi.fn(async () => NextResponse.json({ ok: true }));
     const wrappedHandler = withAuth(handler);
 
     const req = new Request("http://localhost/api/test");
     await wrappedHandler(req);
 
     expect(handler).toHaveBeenCalledTimes(1);
-    const ctx = handler.mock.calls[0][1];
+    // @ts-expect-error - vitest mock type inference issue
+    const ctx: AuthContext = handler.mock.calls[0][1];
     expect(ctx.user).toEqual(mockUser);
     expect(ctx.supabase).toBeDefined();
     expect(ctx.supabase.auth.getUser).toBeDefined();
@@ -82,9 +81,7 @@ describe("withAuth", () => {
       error: null,
     });
 
-    const handler = vi.fn(async () =>
-      NextResponse.json({ ok: true })
-    );
+    const handler = vi.fn(async () => NextResponse.json({ ok: true }));
     const wrappedHandler = withAuth(handler);
 
     const req = new Request("http://localhost/api/matches/abc-123");
@@ -92,7 +89,8 @@ describe("withAuth", () => {
       params: Promise.resolve({ id: "abc-123" }),
     });
 
-    const ctx = handler.mock.calls[0][1];
+    // @ts-expect-error - vitest mock type inference issue
+    const ctx: AuthContext = handler.mock.calls[0][1];
     expect(ctx.params).toEqual({ id: "abc-123" });
   });
 
@@ -103,15 +101,14 @@ describe("withAuth", () => {
       error: null,
     });
 
-    const handler = vi.fn(async () =>
-      NextResponse.json({ ok: true })
-    );
+    const handler = vi.fn(async () => NextResponse.json({ ok: true }));
     const wrappedHandler = withAuth(handler);
 
     const req = new Request("http://localhost/api/test");
     await wrappedHandler(req);
 
-    const ctx = handler.mock.calls[0][1];
+    // @ts-expect-error - vitest mock type inference issue
+    const ctx: AuthContext = handler.mock.calls[0][1];
     expect(ctx.params).toEqual({});
   });
 

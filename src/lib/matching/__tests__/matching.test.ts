@@ -107,7 +107,9 @@ describe("matchProfileToProjects", () => {
       }),
     });
 
-    vi.mocked(createClient).mockResolvedValue(mockClient as unknown);
+    vi.mocked(createClient).mockResolvedValue(
+      mockClient as unknown as Awaited<ReturnType<typeof createClient>>,
+    );
 
     const matches = await matchProfileToProjects("user-1");
 
@@ -136,7 +138,9 @@ describe("matchProfileToProjects", () => {
       }),
     });
 
-    vi.mocked(createClient).mockResolvedValue(mockClient as unknown);
+    vi.mocked(createClient).mockResolvedValue(
+      mockClient as unknown as Awaited<ReturnType<typeof createClient>>,
+    );
 
     await expect(matchProfileToProjects("nonexistent")).rejects.toThrow(
       "Profile not found",
@@ -157,7 +161,9 @@ describe("matchProfileToProjects", () => {
       }),
     });
 
-    vi.mocked(createClient).mockResolvedValue(mockClient as unknown);
+    vi.mocked(createClient).mockResolvedValue(
+      mockClient as unknown as Awaited<ReturnType<typeof createClient>>,
+    );
 
     await expect(matchProfileToProjects("user-1")).rejects.toThrow(
       "Could not generate profile embedding",
@@ -184,7 +190,9 @@ describe("matchProfileToProjects", () => {
       error: null,
     });
 
-    vi.mocked(createClient).mockResolvedValue(mockClient as unknown);
+    vi.mocked(createClient).mockResolvedValue(
+      mockClient as unknown as Awaited<ReturnType<typeof createClient>>,
+    );
 
     const matches = await matchProfileToProjects("user-1");
     expect(matches).toEqual([]);
@@ -210,7 +218,9 @@ describe("matchProfileToProjects", () => {
       error: null,
     });
 
-    vi.mocked(createClient).mockResolvedValue(mockClient as unknown);
+    vi.mocked(createClient).mockResolvedValue(
+      mockClient as unknown as Awaited<ReturnType<typeof createClient>>,
+    );
 
     await matchProfileToProjects("user-1", 5);
 
@@ -286,7 +296,9 @@ describe("matchProjectToProfiles", () => {
       }),
     });
 
-    vi.mocked(createClient).mockResolvedValue(mockClient as unknown);
+    vi.mocked(createClient).mockResolvedValue(
+      mockClient as unknown as Awaited<ReturnType<typeof createClient>>,
+    );
 
     const matches = await matchProjectToProfiles("proj-1");
 
@@ -317,7 +329,9 @@ describe("matchProjectToProfiles", () => {
       }),
     });
 
-    vi.mocked(createClient).mockResolvedValue(mockClient as unknown);
+    vi.mocked(createClient).mockResolvedValue(
+      mockClient as unknown as Awaited<ReturnType<typeof createClient>>,
+    );
 
     await expect(matchProjectToProfiles("nonexistent")).rejects.toThrow(
       "Project not found",
@@ -346,7 +360,9 @@ describe("matchProjectToProfiles", () => {
       }),
     });
 
-    vi.mocked(createClient).mockResolvedValue(mockClient as unknown);
+    vi.mocked(createClient).mockResolvedValue(
+      mockClient as unknown as Awaited<ReturnType<typeof createClient>>,
+    );
 
     await expect(matchProjectToProfiles("proj-1")).rejects.toThrow(
       "Could not generate project embedding",
@@ -367,7 +383,9 @@ describe("createMatchRecords", () => {
       upsert: mockUpsert,
     });
 
-    vi.mocked(createClient).mockResolvedValue(mockClient as unknown);
+    vi.mocked(createClient).mockResolvedValue(
+      mockClient as unknown as Awaited<ReturnType<typeof createClient>>,
+    );
 
     await createMatchRecords("user-1", [
       {
@@ -384,6 +402,7 @@ describe("createMatchRecords", () => {
           hard_filters: null,
           embedding: null,
           status: "open",
+          is_test_data: false,
           created_at: "",
           updated_at: "",
           expires_at: "",
@@ -417,7 +436,9 @@ describe("createMatchRecords", () => {
       upsert: mockUpsert,
     });
 
-    vi.mocked(createClient).mockResolvedValue(mockClient as unknown);
+    vi.mocked(createClient).mockResolvedValue(
+      mockClient as unknown as Awaited<ReturnType<typeof createClient>>,
+    );
 
     await createMatchRecords("user-1", [
       {
@@ -434,6 +455,7 @@ describe("createMatchRecords", () => {
           hard_filters: null,
           embedding: null,
           status: "open",
+          is_test_data: false,
           created_at: "",
           updated_at: "",
           expires_at: "",
@@ -456,7 +478,9 @@ describe("createMatchRecords", () => {
       upsert: mockUpsert,
     });
 
-    vi.mocked(createClient).mockResolvedValue(mockClient as unknown);
+    vi.mocked(createClient).mockResolvedValue(
+      mockClient as unknown as Awaited<ReturnType<typeof createClient>>,
+    );
 
     await createMatchRecords("user-1", []);
 
@@ -477,7 +501,9 @@ describe("createMatchRecordsForProject", () => {
       upsert: mockUpsert,
     });
 
-    vi.mocked(createClient).mockResolvedValue(mockClient as unknown);
+    vi.mocked(createClient).mockResolvedValue(
+      mockClient as unknown as Awaited<ReturnType<typeof createClient>>,
+    );
 
     await createMatchRecordsForProject("proj-1", [
       {
@@ -501,6 +527,7 @@ describe("createMatchRecordsForProject", () => {
           project_preferences: {},
           hard_filters: null,
           embedding: null,
+          is_test_data: false,
           created_at: "",
           updated_at: "",
         },
