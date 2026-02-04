@@ -24,10 +24,17 @@ type AuthHandler = (req: Request, ctx: AuthContext) => Promise<NextResponse>;
  *   const { data: { user }, error } = await supabase.auth.getUser();
  *   if (error || !user) return 401;
  */
-export function withAuth(handler: AuthHandler) {
+export function withAuth(
+  handler: AuthHandler,
+): (
+  req: Request,
+  context: { params: Promise<Record<string, string>> },
+) => Promise<NextResponse> {
   return async (
     req: Request,
-    routeContext: { params?: Promise<Record<string, string>> } = {},
+    routeContext: { params?: Promise<Record<string, string>> } = {
+      params: Promise.resolve({}),
+    },
   ): Promise<NextResponse> => {
     try {
       const supabase = await createClient();

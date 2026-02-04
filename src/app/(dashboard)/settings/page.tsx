@@ -1,9 +1,18 @@
 "use client";
 
-import { useEffect, useState } from "react";
+import { Suspense, useCallback, useEffect, useState } from "react";
 import { useRouter, useSearchParams } from "next/navigation";
 import Link from "next/link";
-import { ArrowLeft, Loader2, Check, X, Github, Linkedin, AlertCircle, RefreshCw } from "lucide-react";
+import {
+  ArrowLeft,
+  Loader2,
+  Check,
+  X,
+  Github,
+  Linkedin,
+  AlertCircle,
+  RefreshCw,
+} from "lucide-react";
 
 import { Button } from "@/components/ui/button";
 import {
@@ -35,7 +44,7 @@ type ConnectedProvider = {
   isPrimary: boolean;
 };
 
-export default function SettingsPage() {
+function SettingsContent() {
   const router = useRouter();
   const searchParams = useSearchParams();
   const [isLoading, setIsLoading] = useState(true);
@@ -43,7 +52,9 @@ export default function SettingsPage() {
   const [persona, setPersona] = useState<string | null>(null);
   const [providers, setProviders] = useState<ConnectedProvider[]>([]);
   const [linkingProvider, setLinkingProvider] = useState<Provider | null>(null);
-  const [unlinkingProvider, setUnlinkingProvider] = useState<Provider | null>(null);
+  const [unlinkingProvider, setUnlinkingProvider] = useState<Provider | null>(
+    null,
+  );
   const [showUnlinkDialog, setShowUnlinkDialog] = useState(false);
   const [error, setError] = useState<string | null>(null);
   const [success, setSuccess] = useState<string | null>(null);
@@ -56,9 +67,11 @@ export default function SettingsPage() {
   } | null>(null);
   const [isGithubSyncing, setIsGithubSyncing] = useState(false);
 
-  const fetchProviders = async () => {
+  const fetchProviders = useCallback(async () => {
     const supabase = createClient();
-    const { data: { user } } = await supabase.auth.getUser();
+    const {
+      data: { user },
+    } = await supabase.auth.getUser();
 
     if (!user) return;
 
@@ -68,17 +81,23 @@ export default function SettingsPage() {
     const providerList: ConnectedProvider[] = [
       {
         provider: "google",
-        connected: identities.some((id: { provider: string }) => id.provider === "google"),
+        connected: identities.some(
+          (id: { provider: string }) => id.provider === "google",
+        ),
         isPrimary: primaryProvider === "google",
       },
       {
         provider: "github",
-        connected: identities.some((id: { provider: string }) => id.provider === "github"),
+        connected: identities.some(
+          (id: { provider: string }) => id.provider === "github",
+        ),
         isPrimary: primaryProvider === "github",
       },
       {
         provider: "linkedin_oidc",
-        connected: identities.some((id: { provider: string }) => id.provider === "linkedin_oidc"),
+        connected: identities.some(
+          (id: { provider: string }) => id.provider === "linkedin_oidc",
+        ),
         isPrimary: primaryProvider === "linkedin_oidc",
       },
     ];
@@ -86,10 +105,10 @@ export default function SettingsPage() {
     setProviders(providerList);
 
     // Fetch GitHub sync status if GitHub is connected
-    if (providerList.find(p => p.provider === "github")?.connected) {
+    if (providerList.find((p) => p.provider === "github")?.connected) {
       fetchGithubSyncStatus();
     }
-  };
+  }, []);
 
   const fetchGithubSyncStatus = async () => {
     try {
@@ -98,8 +117,8 @@ export default function SettingsPage() {
         const data = await response.json();
         setGithubSyncStatus(data);
       }
-    } catch (err) {
-      console.error("Failed to fetch GitHub sync status:", err);
+    } catch {
+      console.error("Failed to fetch GitHub sync status");
     }
   };
 
@@ -140,7 +159,7 @@ export default function SettingsPage() {
       .finally(() => {
         setIsLoading(false);
       });
-  }, [router, searchParams]);
+  }, [router, searchParams, fetchProviders]);
 
   const handleLinkProvider = async (provider: Provider) => {
     setError(null);
@@ -156,7 +175,9 @@ export default function SettingsPage() {
     });
 
     if (linkError) {
-      setError(`Failed to link ${getProviderName(provider)}: ${linkError.message}`);
+      setError(
+        `Failed to link ${getProviderName(provider)}: ${linkError.message}`,
+      );
       setLinkingProvider(null);
     }
     // Note: If successful, user will be redirected to OAuth flow
@@ -168,7 +189,7 @@ export default function SettingsPage() {
     setError(null);
     setSuccess(null);
 
-    const connectedCount = providers.filter(p => p.connected).length;
+    const connectedCount = providers.filter((p) => p.connected).length;
     if (connectedCount <= 1) {
       setError("You must have at least one connected account");
       setShowUnlinkDialog(false);
@@ -177,7 +198,9 @@ export default function SettingsPage() {
     }
 
     const supabase = createClient();
-    const { data: { user } } = await supabase.auth.getUser();
+    const {
+      data: { user },
+    } = await supabase.auth.getUser();
 
     if (!user) {
       setError("Please sign in again");
@@ -188,7 +211,7 @@ export default function SettingsPage() {
 
     // Find the identity to unlink
     const identity = user.identities?.find(
-      (id: { provider: string }) => id.provider === unlinkingProvider
+      (id: { provider: string }) => id.provider === unlinkingProvider,
     );
 
     if (!identity) {
@@ -201,7 +224,9 @@ export default function SettingsPage() {
     const { error: unlinkError } = await supabase.auth.unlinkIdentity(identity);
 
     if (unlinkError) {
-      setError(`Failed to unlink ${getProviderName(unlinkingProvider)}: ${unlinkError.message}`);
+      setError(
+        `Failed to unlink ${getProviderName(unlinkingProvider)}: ${unlinkError.message}`,
+      );
     } else {
       setSuccess(`${getProviderName(unlinkingProvider)} has been disconnected`);
       await fetchProviders();
@@ -273,8 +298,10 @@ export default function SettingsPage() {
     );
   }
 
-  const connectedCount = providers.filter(p => p.connected).length;
-  const githubConnected = providers.find(p => p.provider === "github")?.connected;
+  const connectedCount = providers.filter((p) => p.connected).length;
+  const githubConnected = providers.find(
+    (p) => p.provider === "github",
+  )?.connected;
 
   return (
     <div className="mx-auto max-w-3xl space-y-6">
@@ -338,7 +365,8 @@ export default function SettingsPage() {
         <CardHeader>
           <CardTitle>Connected Accounts</CardTitle>
           <CardDescription>
-            Link multiple providers to access all features. You need at least one connected account.
+            Link multiple providers to access all features. You need at least
+            one connected account.
           </CardDescription>
         </CardHeader>
         <CardContent className="space-y-4">
@@ -351,7 +379,9 @@ export default function SettingsPage() {
                 {getProviderIcon(providerData.provider)}
                 <div>
                   <div className="flex items-center gap-2">
-                    <p className="font-medium">{getProviderName(providerData.provider)}</p>
+                    <p className="font-medium">
+                      {getProviderName(providerData.provider)}
+                    </p>
                     {providerData.isPrimary && (
                       <Badge variant="secondary" className="text-xs">
                         Primary
@@ -408,7 +438,8 @@ export default function SettingsPage() {
           <CardHeader>
             <CardTitle>GitHub Profile Sync</CardTitle>
             <CardDescription>
-              Automatically enrich your profile with data from your GitHub account
+              Automatically enrich your profile with data from your GitHub
+              account
             </CardDescription>
           </CardHeader>
           <CardContent className="space-y-4">
@@ -421,7 +452,10 @@ export default function SettingsPage() {
                     : "Never"}
                 </p>
                 <p className="text-muted-foreground">
-                  Status: <span className="capitalize">{githubSyncStatus.syncStatus}</span>
+                  Status:{" "}
+                  <span className="capitalize">
+                    {githubSyncStatus.syncStatus}
+                  </span>
                 </p>
               </div>
             )}
@@ -483,13 +517,18 @@ export default function SettingsPage() {
       <AlertDialog open={showUnlinkDialog} onOpenChange={setShowUnlinkDialog}>
         <AlertDialogContent>
           <AlertDialogHeader>
-            <AlertDialogTitle>Disconnect {unlinkingProvider && getProviderName(unlinkingProvider)}?</AlertDialogTitle>
+            <AlertDialogTitle>
+              Disconnect{" "}
+              {unlinkingProvider && getProviderName(unlinkingProvider)}?
+            </AlertDialogTitle>
             <AlertDialogDescription>
-              This will remove {unlinkingProvider && getProviderName(unlinkingProvider)} from your connected accounts.
-              You can reconnect it later if needed.
+              This will remove{" "}
+              {unlinkingProvider && getProviderName(unlinkingProvider)} from
+              your connected accounts. You can reconnect it later if needed.
               {unlinkingProvider === "github" && (
                 <span className="block mt-2 text-yellow-600 dark:text-yellow-500">
-                  Note: Disconnecting GitHub will prevent automatic profile syncing.
+                  Note: Disconnecting GitHub will prevent automatic profile
+                  syncing.
                 </span>
               )}
             </AlertDialogDescription>
@@ -498,12 +537,29 @@ export default function SettingsPage() {
             <AlertDialogCancel onClick={() => setUnlinkingProvider(null)}>
               Cancel
             </AlertDialogCancel>
-            <AlertDialogAction onClick={handleUnlinkProvider} className="bg-destructive text-destructive-foreground hover:bg-destructive/90">
+            <AlertDialogAction
+              onClick={handleUnlinkProvider}
+              className="bg-destructive text-destructive-foreground hover:bg-destructive/90"
+            >
               Disconnect
             </AlertDialogAction>
           </AlertDialogFooter>
         </AlertDialogContent>
       </AlertDialog>
     </div>
+  );
+}
+
+export default function SettingsPage() {
+  return (
+    <Suspense
+      fallback={
+        <div className="flex min-h-[50vh] items-center justify-center">
+          <Loader2 className="h-8 w-8 animate-spin text-muted-foreground" />
+        </div>
+      }
+    >
+      <SettingsContent />
+    </Suspense>
   );
 }
