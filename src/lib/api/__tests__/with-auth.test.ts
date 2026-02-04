@@ -29,7 +29,7 @@ describe("withAuth", () => {
     const wrappedHandler = withAuth(handler);
 
     const req = new Request("http://localhost/api/test");
-    const response = await wrappedHandler(req);
+    const response = await wrappedHandler(req, { params: Promise.resolve({}) });
     const body = await response.json();
 
     expect(response.status).toBe(401);
@@ -47,7 +47,7 @@ describe("withAuth", () => {
     const wrappedHandler = withAuth(handler);
 
     const req = new Request("http://localhost/api/test");
-    const response = await wrappedHandler(req);
+    const response = await wrappedHandler(req, { params: Promise.resolve({}) });
 
     expect(response.status).toBe(401);
     expect(handler).not.toHaveBeenCalled();
@@ -64,7 +64,7 @@ describe("withAuth", () => {
     const wrappedHandler = withAuth(handler);
 
     const req = new Request("http://localhost/api/test");
-    await wrappedHandler(req);
+    await wrappedHandler(req, { params: Promise.resolve({}) });
 
     expect(handler).toHaveBeenCalledTimes(1);
     // @ts-expect-error - vitest mock type inference issue
@@ -105,7 +105,7 @@ describe("withAuth", () => {
     const wrappedHandler = withAuth(handler);
 
     const req = new Request("http://localhost/api/test");
-    await wrappedHandler(req);
+    await wrappedHandler(req, { params: Promise.resolve({}) });
 
     // @ts-expect-error - vitest mock type inference issue
     const ctx: AuthContext = handler.mock.calls[0][1];
@@ -125,7 +125,7 @@ describe("withAuth", () => {
     const wrappedHandler = withAuth(handler);
 
     const req = new Request("http://localhost/api/test");
-    const response = await wrappedHandler(req);
+    const response = await wrappedHandler(req, { params: Promise.resolve({}) });
     const body = await response.json();
 
     expect(response.status).toBe(500);

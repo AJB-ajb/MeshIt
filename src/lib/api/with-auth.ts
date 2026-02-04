@@ -24,17 +24,10 @@ type AuthHandler = (req: Request, ctx: AuthContext) => Promise<NextResponse>;
  *   const { data: { user }, error } = await supabase.auth.getUser();
  *   if (error || !user) return 401;
  */
-export function withAuth(
-  handler: AuthHandler,
-): (
-  req: Request,
-  context: { params: Promise<Record<string, string>> },
-) => Promise<NextResponse> {
-  return async (
+export function withAuth(handler: AuthHandler) {
+  const fn = async (
     req: Request,
-    routeContext: { params?: Promise<Record<string, string>> } = {
-      params: Promise.resolve({}),
-    },
+    routeContext?: { params?: Promise<Record<string, string>> },
   ): Promise<NextResponse> => {
     try {
       const supabase = await createClient();
@@ -59,4 +52,11 @@ export function withAuth(
       );
     }
   };
+
+  // Cast to satisfy Next.js's strict route handler type requirements
+  // while still allowing calls without the second parameter
+  return fn as (
+    req: Request,
+    context: { params: Promise<Record<string, string>> },
+  ) => Promise<NextResponse>;
 }
