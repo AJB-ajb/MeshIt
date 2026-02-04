@@ -14,21 +14,13 @@ import {
   ArrowLeft,
   Loader2,
   FolderKanban,
-  User,
-  X,
   Wifi,
   WifiOff,
 } from "lucide-react";
 
 import { Button } from "@/components/ui/button";
 import { Badge } from "@/components/ui/badge";
-import {
-  Card,
-  CardContent,
-  CardDescription,
-  CardHeader,
-  CardTitle,
-} from "@/components/ui/card";
+import { Card, CardContent, CardHeader } from "@/components/ui/card";
 import { TypingIndicator } from "@/components/ui/typing-indicator";
 import { OnlineStatus, OnlineStatusBadge } from "@/components/ui/online-status";
 import { cn } from "@/lib/utils";
@@ -127,7 +119,7 @@ function InboxPageContent() {
   const { isUserOnline } = usePresenceContext();
 
   const [activeTab, setActiveTab] = useState<Tab>(
-    conversationParam ? "messages" : "notifications"
+    conversationParam ? "messages" : "notifications",
   );
   const [isLoading, setIsLoading] = useState(true);
   const [currentUserId, setCurrentUserId] = useState<string | null>(null);
@@ -154,14 +146,20 @@ function InboxPageContent() {
     });
   }, []);
 
-  const { typingUsers, onlineUsers, setIsTyping, isConnected } = useRealtimeChat({
+  const {
+    typingUsers,
+    onlineUsers: _onlineUsers,
+    setIsTyping,
+    isConnected,
+  } = useRealtimeChat({
     conversationId: selectedConversation?.id || null,
     currentUserId,
     onNewMessage: handleNewMessage,
   });
 
   // Get the other user's name for typing indicator
-  const otherUserName = selectedConversation?.other_user?.full_name || "Someone";
+  const otherUserName =
+    selectedConversation?.other_user?.full_name || "Someone";
 
   // Fetch data
   useEffect(() => {
@@ -189,17 +187,16 @@ function InboxPageContent() {
 
       if (notificationsData) {
         setNotifications(notificationsData);
-        setUnreadNotifications(
-          notificationsData.filter((n) => !n.read).length
-        );
+        setUnreadNotifications(notificationsData.filter((n) => !n.read).length);
       }
 
       // Fetch conversations
-      const { data: conversationsData, error: conversationsError } = await supabase
-        .from("conversations")
-        .select("*")
-        .or(`participant_1.eq.${user.id},participant_2.eq.${user.id}`)
-        .order("updated_at", { ascending: false });
+      const { data: conversationsData, error: conversationsError } =
+        await supabase
+          .from("conversations")
+          .select("*")
+          .or(`participant_1.eq.${user.id},participant_2.eq.${user.id}`)
+          .order("updated_at", { ascending: false });
 
       if (conversationsError) {
         console.error("Error fetching conversations:", conversationsError);
@@ -221,7 +218,7 @@ function InboxPageContent() {
               .eq("user_id", otherUserId)
               .maybeSingle();
 
-            if (profileError && profileError.code !== 'PGRST116') {
+            if (profileError && profileError.code !== "PGRST116") {
               console.error("Error fetching profile:", profileError);
             }
 
@@ -235,23 +232,24 @@ function InboxPageContent() {
                 .eq("is_test_data", getTestDataValue())
                 .maybeSingle();
 
-              if (projectError && projectError.code !== 'PGRST116') {
+              if (projectError && projectError.code !== "PGRST116") {
                 console.error("Error fetching project:", projectError);
               }
               project = projectData;
             }
 
             // Get last message
-            const { data: lastMessageData, error: lastMessageError } = await supabase
-              .from("messages")
-              .select("content, created_at, sender_id")
-              .eq("conversation_id", conv.id)
-              .order("created_at", { ascending: false })
-              .limit(1)
-              .maybeSingle();
+            const { data: lastMessageData, error: lastMessageError } =
+              await supabase
+                .from("messages")
+                .select("content, created_at, sender_id")
+                .eq("conversation_id", conv.id)
+                .order("created_at", { ascending: false })
+                .limit(1)
+                .maybeSingle();
 
             // Only log error if it's not a "not found" error
-            if (lastMessageError && lastMessageError.code !== 'PGRST116') {
+            if (lastMessageError && lastMessageError.code !== "PGRST116") {
               console.error("Error fetching last message:", lastMessageError);
             }
 
@@ -270,7 +268,7 @@ function InboxPageContent() {
               last_message: lastMessageData || undefined,
               unread_count: count || 0,
             };
-          })
+          }),
         );
 
         setConversations(enrichedConversations);
@@ -278,7 +276,7 @@ function InboxPageContent() {
         // If conversation param exists, select it
         if (conversationParam) {
           const conv = enrichedConversations.find(
-            (c) => c.id === conversationParam
+            (c) => c.id === conversationParam,
           );
           if (conv) {
             setSelectedConversation(conv);
@@ -315,14 +313,14 @@ function InboxPageContent() {
               if (notification.related_project_id) {
                 router.push(`/projects/${notification.related_project_id}`);
               }
-            }
+            },
           );
         }
       },
       // On notification update
       (notification) => {
         setNotifications((prev) =>
-          prev.map((n) => (n.id === notification.id ? notification : n))
+          prev.map((n) => (n.id === notification.id ? notification : n)),
         );
         // Recalculate unread count
         setNotifications((prev) => {
@@ -332,8 +330,10 @@ function InboxPageContent() {
       },
       // On notification delete
       (notification) => {
-        setNotifications((prev) => prev.filter((n) => n.id !== notification.id));
-      }
+        setNotifications((prev) =>
+          prev.filter((n) => n.id !== notification.id),
+        );
+      },
     );
 
     const conversationChannel = subscribeToConversations(
@@ -353,21 +353,25 @@ function InboxPageContent() {
           .eq("user_id", otherUserId)
           .maybeSingle();
 
-        if (profileError && profileError.code !== 'PGRST116') {
+        if (profileError && profileError.code !== "PGRST116") {
           console.error("Error fetching profile in realtime:", profileError);
         }
 
-        const { data: lastMessageData, error: lastMessageError } = await supabase
-          .from("messages")
-          .select("content, created_at, sender_id")
-          .eq("conversation_id", conv.id)
-          .order("created_at", { ascending: false })
-          .limit(1)
-          .maybeSingle();
+        const { data: lastMessageData, error: lastMessageError } =
+          await supabase
+            .from("messages")
+            .select("content, created_at, sender_id")
+            .eq("conversation_id", conv.id)
+            .order("created_at", { ascending: false })
+            .limit(1)
+            .maybeSingle();
 
         // Only log error if it's not a "not found" error
-        if (lastMessageError && lastMessageError.code !== 'PGRST116') {
-          console.error("Error fetching last message in realtime:", lastMessageError);
+        if (lastMessageError && lastMessageError.code !== "PGRST116") {
+          console.error(
+            "Error fetching last message in realtime:",
+            lastMessageError,
+          );
         }
 
         const { count } = await supabase
@@ -392,12 +396,12 @@ function InboxPageContent() {
               .sort(
                 (a, b) =>
                   new Date(b.updated_at).getTime() -
-                  new Date(a.updated_at).getTime()
+                  new Date(a.updated_at).getTime(),
               );
           }
           return [enrichedConv, ...prev];
         });
-      }
+      },
     );
 
     return () => {
@@ -418,7 +422,10 @@ function InboxPageContent() {
 
       const supabase = createClient();
 
-      console.log("Fetching messages for conversation:", selectedConversation.id);
+      console.log(
+        "Fetching messages for conversation:",
+        selectedConversation.id,
+      );
 
       const { data: messagesData, error: messagesError } = await supabase
         .from("messages")
@@ -475,7 +482,7 @@ function InboxPageContent() {
       .eq("id", notificationId);
 
     setNotifications((prev) =>
-      prev.map((n) => (n.id === notificationId ? { ...n, read: true } : n))
+      prev.map((n) => (n.id === notificationId ? { ...n, read: true } : n)),
     );
     setUnreadNotifications((prev) => Math.max(0, prev - 1));
   };
@@ -556,12 +563,12 @@ function InboxPageContent() {
     // Create notification for other user (don't block on this - fire and forget)
     (async () => {
       const { error } = await supabase.from("notifications").insert({
-      user_id: otherUserId,
-      type: "new_message",
-      title: "New Message",
-      body: `${profile?.full_name || "Someone"}: ${newMessage.trim().slice(0, 50)}${newMessage.length > 50 ? "..." : ""}`,
-      related_user_id: currentUserId,
-    });
+        user_id: otherUserId,
+        type: "new_message",
+        title: "New Message",
+        body: `${profile?.full_name || "Someone"}: ${newMessage.trim().slice(0, 50)}${newMessage.length > 50 ? "..." : ""}`,
+        related_user_id: currentUserId,
+      });
       if (error) {
         console.error("Error creating notification:", error);
         // Don't block message sending if notification fails
@@ -602,7 +609,7 @@ function InboxPageContent() {
             "relative px-4 py-2 text-sm font-medium transition-colors",
             activeTab === "notifications"
               ? "text-foreground border-b-2 border-primary"
-              : "text-muted-foreground hover:text-foreground"
+              : "text-muted-foreground hover:text-foreground",
           )}
         >
           <div className="flex items-center gap-2">
@@ -621,7 +628,7 @@ function InboxPageContent() {
             "relative px-4 py-2 text-sm font-medium transition-colors",
             activeTab === "messages"
               ? "text-foreground border-b-2 border-primary"
-              : "text-muted-foreground hover:text-foreground"
+              : "text-muted-foreground hover:text-foreground",
           )}
         >
           <div className="flex items-center gap-2">
@@ -632,7 +639,7 @@ function InboxPageContent() {
               <Badge variant="destructive" className="h-5 min-w-5 px-1.5">
                 {conversations.reduce(
                   (acc, c) => acc + (c.unread_count || 0),
-                  0
+                  0,
                 )}
               </Badge>
             )}
@@ -670,7 +677,7 @@ function InboxPageContent() {
                   key={notification.id}
                   className={cn(
                     "group flex items-start gap-4 rounded-lg border border-border p-4 transition-colors hover:bg-muted/50",
-                    !notification.read && "bg-primary/5 border-primary/20"
+                    !notification.read && "bg-primary/5 border-primary/20",
                   )}
                 >
                   <div
@@ -680,7 +687,7 @@ function InboxPageContent() {
                         ? "bg-green-100 text-green-600 dark:bg-green-900/30"
                         : notification.type === "application_rejected"
                           ? "bg-red-100 text-red-600 dark:bg-red-900/30"
-                          : "bg-muted text-muted-foreground"
+                          : "bg-muted text-muted-foreground",
                     )}
                     onClick={() => handleNotificationClick(notification)}
                   >
@@ -704,7 +711,7 @@ function InboxPageContent() {
                       </span>
                     </div>
                   </div>
-                  <div 
+                  <div
                     className="flex items-center gap-1 opacity-0 group-hover:opacity-100 transition-opacity shrink-0"
                     onClick={(e) => e.stopPropagation()}
                   >
@@ -765,11 +772,13 @@ function InboxPageContent() {
                       "bg-muted border-primary/50",
                     conversation.unread_count &&
                       conversation.unread_count > 0 &&
-                      "bg-primary/5"
+                      "bg-primary/5",
                   )}
                 >
                   <OnlineStatusBadge
-                    isOnline={isUserOnline(conversation.other_user?.user_id || "")}
+                    isOnline={isUserOnline(
+                      conversation.other_user?.user_id || "",
+                    )}
                   >
                     <div className="flex h-10 w-10 items-center justify-center rounded-full bg-muted text-sm font-medium shrink-0">
                       {getInitials(conversation.other_user?.full_name || null)}
@@ -802,7 +811,10 @@ function InboxPageContent() {
                   </div>
                   {conversation.unread_count &&
                     conversation.unread_count > 0 && (
-                      <Badge variant="destructive" className="h-5 min-w-5 px-1.5">
+                      <Badge
+                        variant="destructive"
+                        className="h-5 min-w-5 px-1.5"
+                      >
                         {conversation.unread_count}
                       </Badge>
                     )}
@@ -829,12 +841,12 @@ function InboxPageContent() {
                       </Button>
                       <OnlineStatusBadge
                         isOnline={isUserOnline(
-                          selectedConversation.other_user?.user_id || ""
+                          selectedConversation.other_user?.user_id || "",
                         )}
                       >
                         <div className="flex h-10 w-10 items-center justify-center rounded-full bg-muted text-sm font-medium">
                           {getInitials(
-                            selectedConversation.other_user?.full_name || null
+                            selectedConversation.other_user?.full_name || null,
                           )}
                         </div>
                       </OnlineStatusBadge>
@@ -846,7 +858,7 @@ function InboxPageContent() {
                           </h4>
                           <OnlineStatus
                             isOnline={isUserOnline(
-                              selectedConversation.other_user?.user_id || ""
+                              selectedConversation.other_user?.user_id || "",
                             )}
                             showLabel
                             size="sm"
@@ -880,7 +892,7 @@ function InboxPageContent() {
                           "flex",
                           message.sender_id === currentUserId
                             ? "justify-end"
-                            : "justify-start"
+                            : "justify-start",
                         )}
                       >
                         <div
@@ -888,7 +900,7 @@ function InboxPageContent() {
                             "max-w-[70%] rounded-lg px-4 py-2",
                             message.sender_id === currentUserId
                               ? "bg-primary text-primary-foreground"
-                              : "bg-muted"
+                              : "bg-muted",
                           )}
                         >
                           <p className="text-sm whitespace-pre-wrap">
@@ -899,7 +911,7 @@ function InboxPageContent() {
                               "text-xs mt-1",
                               message.sender_id === currentUserId
                                 ? "text-primary-foreground/70"
-                                : "text-muted-foreground"
+                                : "text-muted-foreground",
                             )}
                           >
                             {formatDate(message.created_at)}

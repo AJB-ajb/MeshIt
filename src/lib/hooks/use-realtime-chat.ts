@@ -69,7 +69,7 @@ export function useRealtimeChat({
       setOnlineUsers([...new Set(online)]);
       setTypingUsers([...new Set(typing)]);
     },
-    [conversationId, currentUserId]
+    [conversationId, currentUserId],
   );
 
   // Subscribe to messages and presence
@@ -85,9 +85,9 @@ export function useRealtimeChat({
           onNewMessage?.(message);
         }
       },
-      (message) => {
+      (_message) => {
         // Handle message updates (e.g., read status)
-      }
+      },
     );
 
     // Create presence channel for this conversation
@@ -95,16 +95,16 @@ export function useRealtimeChat({
       `chat:${conversationId}`,
       currentUserId,
       handlePresenceSync,
-      (key, newPresences) => {
+      (_key, _newPresences) => {
         // User joined
-        setIsConnected(true);
+        queueMicrotask(() => setIsConnected(true));
       },
-      (key, leftPresences) => {
+      (_key, _leftPresences) => {
         // User left
-      }
+      },
     );
 
-    setIsConnected(true);
+    queueMicrotask(() => setIsConnected(true));
 
     return () => {
       if (messageChannelRef.current) {
@@ -136,7 +136,7 @@ export function useRealtimeChat({
         updateTypingStatus(
           presenceChannelRef.current,
           currentUserId,
-          conversationId
+          conversationId,
         );
 
         // Auto-clear typing after 3 seconds of inactivity
@@ -150,7 +150,7 @@ export function useRealtimeChat({
         updateTypingStatus(presenceChannelRef.current, currentUserId, null);
       }
     },
-    [conversationId, currentUserId]
+    [conversationId, currentUserId],
   );
 
   return {

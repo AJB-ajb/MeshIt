@@ -22,8 +22,8 @@ export type TypingUser = {
  */
 export function subscribeToMessages(
   conversationId: string,
-  onNewMessage: (message: any) => void,
-  onMessageUpdate?: (message: any) => void
+  onNewMessage: (message: unknown) => void,
+  onMessageUpdate?: (message: unknown) => void,
 ): RealtimeChannel {
   const supabase = createClient();
 
@@ -39,7 +39,7 @@ export function subscribeToMessages(
       },
       (payload) => {
         onNewMessage(payload.new);
-      }
+      },
     )
     .on(
       "postgres_changes",
@@ -51,13 +51,17 @@ export function subscribeToMessages(
       },
       (payload) => {
         onMessageUpdate?.(payload.new);
-      }
+      },
     )
     .subscribe((status) => {
       if (status === "SUBSCRIBED") {
-        console.log(`[Realtime] Subscribed to messages for conversation ${conversationId}`);
+        console.log(
+          `[Realtime] Subscribed to messages for conversation ${conversationId}`,
+        );
       } else if (status === "CHANNEL_ERROR") {
-        console.error(`[Realtime] Error subscribing to messages for conversation ${conversationId}`);
+        console.error(
+          `[Realtime] Error subscribing to messages for conversation ${conversationId}`,
+        );
       }
     });
 
@@ -69,9 +73,9 @@ export function subscribeToMessages(
  */
 export function subscribeToNotifications(
   userId: string,
-  onNewNotification: (notification: any) => void,
-  onNotificationUpdate?: (notification: any) => void,
-  onNotificationDelete?: (notification: any) => void
+  onNewNotification: (notification: unknown) => void,
+  onNotificationUpdate?: (notification: unknown) => void,
+  onNotificationDelete?: (notification: unknown) => void,
 ): RealtimeChannel {
   const supabase = createClient();
 
@@ -87,7 +91,7 @@ export function subscribeToNotifications(
       },
       (payload) => {
         onNewNotification(payload.new);
-      }
+      },
     )
     .on(
       "postgres_changes",
@@ -99,7 +103,7 @@ export function subscribeToNotifications(
       },
       (payload) => {
         onNotificationUpdate?.(payload.new);
-      }
+      },
     )
     .on(
       "postgres_changes",
@@ -111,13 +115,17 @@ export function subscribeToNotifications(
       },
       (payload) => {
         onNotificationDelete?.(payload.old);
-      }
+      },
     )
     .subscribe((status) => {
       if (status === "SUBSCRIBED") {
-        console.log(`[Realtime] Subscribed to notifications for user ${userId}`);
+        console.log(
+          `[Realtime] Subscribed to notifications for user ${userId}`,
+        );
       } else if (status === "CHANNEL_ERROR") {
-        console.error(`[Realtime] Error subscribing to notifications for user ${userId}`);
+        console.error(
+          `[Realtime] Error subscribing to notifications for user ${userId}`,
+        );
       }
     });
 
@@ -129,7 +137,7 @@ export function subscribeToNotifications(
  */
 export function subscribeToConversations(
   userId: string,
-  onConversationUpdate: (conversation: any) => void
+  onConversationUpdate: (conversation: unknown) => void,
 ): RealtimeChannel {
   const supabase = createClient();
 
@@ -143,18 +151,25 @@ export function subscribeToConversations(
         table: "conversations",
       },
       (payload) => {
-        const conv = payload.new as any;
+        const conv = payload.new as Record<string, unknown>;
         // Only process if user is a participant
-        if (conv && (conv.participant_1 === userId || conv.participant_2 === userId)) {
+        if (
+          conv &&
+          (conv.participant_1 === userId || conv.participant_2 === userId)
+        ) {
           onConversationUpdate(conv);
         }
-      }
+      },
     )
     .subscribe((status) => {
       if (status === "SUBSCRIBED") {
-        console.log(`[Realtime] Subscribed to conversations for user ${userId}`);
+        console.log(
+          `[Realtime] Subscribed to conversations for user ${userId}`,
+        );
       } else if (status === "CHANNEL_ERROR") {
-        console.error(`[Realtime] Error subscribing to conversations for user ${userId}`);
+        console.error(
+          `[Realtime] Error subscribing to conversations for user ${userId}`,
+        );
       }
     });
 
@@ -169,7 +184,7 @@ export function createPresenceChannel(
   userId: string,
   onPresenceSync: (state: RealtimePresenceState<PresenceState>) => void,
   onPresenceJoin?: (key: string, newPresence: PresenceState[]) => void,
-  onPresenceLeave?: (key: string, leftPresence: PresenceState[]) => void
+  onPresenceLeave?: (key: string, leftPresence: PresenceState[]) => void,
 ): RealtimeChannel {
   const supabase = createClient();
 
@@ -210,7 +225,7 @@ export function createPresenceChannel(
 export async function updateTypingStatus(
   channel: RealtimeChannel,
   userId: string,
-  conversationId: string | null
+  conversationId: string | null,
 ): Promise<void> {
   await channel.track({
     user_id: userId,
@@ -253,7 +268,7 @@ export async function requestNotificationPermission(): Promise<boolean> {
 export function showBrowserNotification(
   title: string,
   body: string,
-  onClick?: () => void
+  onClick?: () => void,
 ): void {
   if (!("Notification" in window) || Notification.permission !== "granted") {
     return;

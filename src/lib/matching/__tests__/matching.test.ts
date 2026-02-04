@@ -10,16 +10,26 @@ vi.mock("@/lib/environment", () => ({
 }));
 
 vi.mock("@/lib/ai/embeddings", () => ({
-  generateProfileEmbedding: vi.fn(() => { throw new Error("API key not configured"); }),
-  generateProjectEmbedding: vi.fn(() => { throw new Error("API key not configured"); }),
+  generateProfileEmbedding: vi.fn(() => {
+    throw new Error("API key not configured");
+  }),
+  generateProjectEmbedding: vi.fn(() => {
+    throw new Error("API key not configured");
+  }),
 }));
 
 import { createClient } from "@/lib/supabase/server";
-import { matchProfileToProjects, createMatchRecords } from "../profile-to-project";
-import { matchProjectToProfiles, createMatchRecordsForProject } from "../project-to-profile";
+import {
+  matchProfileToProjects,
+  createMatchRecords,
+} from "../profile-to-project";
+import {
+  matchProjectToProfiles,
+  createMatchRecordsForProject,
+} from "../project-to-profile";
 
 // Helper to create mock Supabase client
-function createMockSupabase(overrides: Record<string, any> = {}) {
+function createMockSupabase(overrides: Record<string, unknown> = {}) {
   const mockFrom = vi.fn();
   const mockRpc = vi.fn();
 
@@ -97,7 +107,7 @@ describe("matchProfileToProjects", () => {
       }),
     });
 
-    vi.mocked(createClient).mockResolvedValue(mockClient as any);
+    vi.mocked(createClient).mockResolvedValue(mockClient as unknown);
 
     const matches = await matchProfileToProjects("user-1");
 
@@ -126,10 +136,10 @@ describe("matchProfileToProjects", () => {
       }),
     });
 
-    vi.mocked(createClient).mockResolvedValue(mockClient as any);
+    vi.mocked(createClient).mockResolvedValue(mockClient as unknown);
 
     await expect(matchProfileToProjects("nonexistent")).rejects.toThrow(
-      "Profile not found"
+      "Profile not found",
     );
   });
 
@@ -147,10 +157,10 @@ describe("matchProfileToProjects", () => {
       }),
     });
 
-    vi.mocked(createClient).mockResolvedValue(mockClient as any);
+    vi.mocked(createClient).mockResolvedValue(mockClient as unknown);
 
     await expect(matchProfileToProjects("user-1")).rejects.toThrow(
-      "Could not generate profile embedding"
+      "Could not generate profile embedding",
     );
   });
 
@@ -174,7 +184,7 @@ describe("matchProfileToProjects", () => {
       error: null,
     });
 
-    vi.mocked(createClient).mockResolvedValue(mockClient as any);
+    vi.mocked(createClient).mockResolvedValue(mockClient as unknown);
 
     const matches = await matchProfileToProjects("user-1");
     expect(matches).toEqual([]);
@@ -200,13 +210,13 @@ describe("matchProfileToProjects", () => {
       error: null,
     });
 
-    vi.mocked(createClient).mockResolvedValue(mockClient as any);
+    vi.mocked(createClient).mockResolvedValue(mockClient as unknown);
 
     await matchProfileToProjects("user-1", 5);
 
     expect(mockRpc).toHaveBeenCalledWith(
       "match_projects_to_user",
-      expect.objectContaining({ match_limit: 5 })
+      expect.objectContaining({ match_limit: 5 }),
     );
   });
 });
@@ -222,7 +232,13 @@ describe("matchProjectToProfiles", () => {
 
     // Mock project fetch — the code chains .eq("id", ...).eq("is_test_data", ...).single()
     const mockSingle = vi.fn().mockResolvedValue({
-      data: { embedding: projectEmbedding, creator_id: "creator-1", title: "Test", description: "Test", required_skills: [] },
+      data: {
+        embedding: projectEmbedding,
+        creator_id: "creator-1",
+        title: "Test",
+        description: "Test",
+        required_skills: [],
+      },
       error: null,
     });
     const mockEqInner = vi.fn().mockReturnValue({ single: mockSingle });
@@ -270,7 +286,7 @@ describe("matchProjectToProfiles", () => {
       }),
     });
 
-    vi.mocked(createClient).mockResolvedValue(mockClient as any);
+    vi.mocked(createClient).mockResolvedValue(mockClient as unknown);
 
     const matches = await matchProjectToProfiles("proj-1");
 
@@ -301,10 +317,10 @@ describe("matchProjectToProfiles", () => {
       }),
     });
 
-    vi.mocked(createClient).mockResolvedValue(mockClient as any);
+    vi.mocked(createClient).mockResolvedValue(mockClient as unknown);
 
     await expect(matchProjectToProfiles("nonexistent")).rejects.toThrow(
-      "Project not found"
+      "Project not found",
     );
   });
 
@@ -312,7 +328,13 @@ describe("matchProjectToProfiles", () => {
     const { mockClient, mockFrom } = createMockSupabase();
 
     const mockSingle = vi.fn().mockResolvedValue({
-      data: { embedding: null, creator_id: "creator-1", title: "Test", description: "Test", required_skills: [] },
+      data: {
+        embedding: null,
+        creator_id: "creator-1",
+        title: "Test",
+        description: "Test",
+        required_skills: [],
+      },
       error: null,
     });
     mockFrom.mockReturnValue({
@@ -324,10 +346,10 @@ describe("matchProjectToProfiles", () => {
       }),
     });
 
-    vi.mocked(createClient).mockResolvedValue(mockClient as any);
+    vi.mocked(createClient).mockResolvedValue(mockClient as unknown);
 
     await expect(matchProjectToProfiles("proj-1")).rejects.toThrow(
-      "Could not generate project embedding"
+      "Could not generate project embedding",
     );
   });
 });
@@ -345,7 +367,7 @@ describe("createMatchRecords", () => {
       upsert: mockUpsert,
     });
 
-    vi.mocked(createClient).mockResolvedValue(mockClient as any);
+    vi.mocked(createClient).mockResolvedValue(mockClient as unknown);
 
     await createMatchRecords("user-1", [
       {
@@ -383,7 +405,7 @@ describe("createMatchRecords", () => {
       ],
       expect.objectContaining({
         onConflict: "project_id,user_id",
-      })
+      }),
     );
   });
 
@@ -395,7 +417,7 @@ describe("createMatchRecords", () => {
       upsert: mockUpsert,
     });
 
-    vi.mocked(createClient).mockResolvedValue(mockClient as any);
+    vi.mocked(createClient).mockResolvedValue(mockClient as unknown);
 
     await createMatchRecords("user-1", [
       {
@@ -434,7 +456,7 @@ describe("createMatchRecords", () => {
       upsert: mockUpsert,
     });
 
-    vi.mocked(createClient).mockResolvedValue(mockClient as any);
+    vi.mocked(createClient).mockResolvedValue(mockClient as unknown);
 
     await createMatchRecords("user-1", []);
 
@@ -455,7 +477,7 @@ describe("createMatchRecordsForProject", () => {
       upsert: mockUpsert,
     });
 
-    vi.mocked(createClient).mockResolvedValue(mockClient as any);
+    vi.mocked(createClient).mockResolvedValue(mockClient as unknown);
 
     await createMatchRecordsForProject("proj-1", [
       {
@@ -499,7 +521,7 @@ describe("createMatchRecordsForProject", () => {
       ],
       expect.objectContaining({
         onConflict: "project_id,user_id",
-      })
+      }),
     );
   });
 });

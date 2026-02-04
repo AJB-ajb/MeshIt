@@ -7,7 +7,7 @@
  */
 
 import { APIRequestContext } from "@playwright/test";
-import { supabaseAnon, supabaseAdmin } from "./supabase";
+import { supabaseAdmin } from "./supabase";
 import type { TestUser } from "../factories/user-factory";
 import type { TestProfile } from "../factories/profile-factory";
 import type { TestProject } from "../factories/project-factory";
@@ -18,7 +18,7 @@ import type { TestMatch } from "../factories/match-factory";
  */
 export async function seedUser(
   userData: TestUser,
-  options: { persona?: string } = {}
+  options: { persona?: string } = {},
 ): Promise<{ userId: string; user: TestUser }> {
   if (!supabaseAdmin) {
     throw new Error("SUPABASE_SERVICE_ROLE_KEY required for seedUser");
@@ -62,7 +62,7 @@ export async function seedProfile(profileData: TestProfile): Promise<void> {
  * Seed a project directly into the database
  */
 export async function seedProjectDirect(
-  projectData: Partial<TestProject> & { creator_id: string; title: string }
+  projectData: Partial<TestProject> & { creator_id: string; title: string },
 ): Promise<TestProject> {
   if (!supabaseAdmin) {
     throw new Error("SUPABASE_SERVICE_ROLE_KEY required for seedProjectDirect");
@@ -86,7 +86,7 @@ export async function seedProjectDirect(
  */
 export async function seedProject(
   request: APIRequestContext,
-  projectData: TestProject
+  projectData: TestProject,
 ): Promise<TestProject> {
   const response = await request.post("/api/projects", {
     data: projectData,
@@ -104,7 +104,7 @@ export async function seedProject(
  */
 export async function seedProjects(
   request: APIRequestContext,
-  projects: TestProject[]
+  projects: TestProject[],
 ): Promise<TestProject[]> {
   return Promise.all(projects.map((p) => seedProject(request, p)));
 }
@@ -116,7 +116,7 @@ export async function seedMatch(
   matchData: Partial<TestMatch> & {
     project_id: string;
     user_id: string;
-  }
+  },
 ): Promise<TestMatch> {
   if (!supabaseAdmin) {
     throw new Error("SUPABASE_SERVICE_ROLE_KEY required for seedMatch");

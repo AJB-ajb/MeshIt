@@ -41,10 +41,7 @@ export default function ProfilePage() {
     applySuggestion,
   } = useGithubSync(setForm, setIsEditing);
 
-  const location = useLocation(setForm, (val) => {
-    // success state is managed by useProfile, but we need to clear it on location changes
-    // This is handled via handleChange internally
-  });
+  const location = useLocation(setForm, (_val) => {});
 
   useEffect(() => {
     fetchProfile().then(({ hasGithubProvider }) => {
@@ -82,7 +79,12 @@ export default function ProfilePage() {
           </p>
         </div>
         {!isEditing && (
-          <Button data-testid="profile-edit-button" onClick={() => setIsEditing(true)}>Edit Profile</Button>
+          <Button
+            data-testid="profile-edit-button"
+            onClick={() => setIsEditing(true)}
+          >
+            Edit Profile
+          </Button>
         )}
       </div>
 

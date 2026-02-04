@@ -5,10 +5,7 @@
  */
 
 import { test as base, type Page } from "@playwright/test";
-import {
-  setupAuthenticatedUser,
-  cleanupTestUser,
-} from "../utils/auth-helpers";
+import { setupAuthenticatedUser, cleanupTestUser } from "../utils/auth-helpers";
 import type { TestUser } from "../utils/factories/user-factory";
 
 type AuthFixtures = {
@@ -35,7 +32,7 @@ export const test = base.extend<AuthFixtures>({
   ],
 
   developerPage: [
-    async ({ page, developerUser }, use) => {
+    async ({ page, developerUser: _developerUser }, use) => {
       // developerUser fixture already authenticated the page
       await use(page);
     },
@@ -54,7 +51,7 @@ export const test = base.extend<AuthFixtures>({
   ],
 
   ownerPage: [
-    async ({ page, ownerUser }, use) => {
+    async ({ page, ownerUser: _ownerUser }, use) => {
       // ownerUser fixture already authenticated the page
       await use(page);
     },
