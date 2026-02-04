@@ -82,7 +82,7 @@ venv/
 *.log
 logs/
 .env*.local
- .claude/
+.claude/
 .pnpm-store/
 
 # Serwist
