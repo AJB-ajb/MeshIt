@@ -2,24 +2,32 @@ import { NextRequest, NextResponse } from "next/server";
 
 import { updateSession } from "@/lib/supabase/middleware";
 
+const PROTECTED_ROUTES = [
+  "/dashboard",
+  "/profile",
+  "/projects",
+  "/matches",
+  "/messages",
+  "/onboarding",
+];
+const AUTH_ROUTES = ["/login", "/signup"];
+
 export async function proxy(request: NextRequest) {
   const { response, user } = await updateSession(request);
   const { pathname } = request.nextUrl;
 
-  const isLoginRoute = pathname.startsWith("/login");
-  const isDashboardRoute = pathname.startsWith("/dashboard");
-  const isOnboardingRoute = pathname.startsWith("/onboarding");
+  const isProtected = PROTECTED_ROUTES.some((route) =>
+    pathname.startsWith(route),
+  );
+  const isAuthRoute = AUTH_ROUTES.some((route) => pathname.startsWith(route));
 
-  console.log(`Middleware: ${pathname}, user: ${!!user}`);
-
-  if (!user && (isDashboardRoute || isOnboardingRoute)) {
+  if (isProtected && !user) {
     const redirectUrl = new URL("/login", request.url);
     redirectUrl.searchParams.set("next", pathname);
-    console.log(`Redirecting to ${redirectUrl.toString()}`);
     return NextResponse.redirect(redirectUrl);
   }
 
-  if (user && isLoginRoute) {
+  if (isAuthRoute && user) {
     return NextResponse.redirect(new URL("/dashboard", request.url));
   }
 
@@ -28,6 +36,6 @@ export async function proxy(request: NextRequest) {
 
 export const config = {
   matcher: [
-    "/((?!_next/static|_next/image|favicon.ico|.*\\.(?:svg|png|jpg|jpeg|gif|webp)$).*)",
+    "/((?!_next/static|_next/image|favicon.ico|api|callback|.*\\.(?:svg|png|jpg|jpeg|gif|webp)$).*)",
   ],
 };

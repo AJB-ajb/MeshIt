@@ -111,9 +111,7 @@ test.describe("Authentication Flow", () => {
       expect(page.url()).toContain("/login");
 
       // Verify login page is displayed
-      await expect(
-        page.locator("text=Sign in, text=Login").first(),
-      ).toBeVisible();
+      await expect(page.locator("text=Sign in").first()).toBeVisible();
     }
   });
 
