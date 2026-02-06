@@ -19,9 +19,9 @@ test.describe("Critical Path: Onboarding to Matching", () => {
 
     // STEP 1: Sign up
     await page.goto("/signup");
-    await page.fill('[name="email"]', user.email);
-    await page.fill('[name="password"]', user.password);
-    await page.fill('[name="confirm_password"]', user.password);
+    await page.fill("#email", user.email);
+    await page.fill("#password", user.password);
+    await page.fill("#confirmPassword", user.password);
     await page.click('[type="submit"]');
 
     // Should redirect to onboarding
@@ -110,9 +110,9 @@ test.describe("Critical Path: Onboarding to Matching", () => {
     const user = createUser({ email: `test-${Date.now()}@meshit.test` });
 
     await page.goto("/signup");
-    await page.fill('[name="email"]', user.email);
-    await page.fill('[name="password"]', user.password);
-    await page.fill('[name="confirm_password"]', user.password);
+    await page.fill("#email", user.email);
+    await page.fill("#password", user.password);
+    await page.fill("#confirmPassword", user.password);
     await page.click('[type="submit"]');
 
     await expect(page).toHaveURL("/onboarding");
@@ -132,9 +132,9 @@ test.describe("Critical Path: Onboarding to Matching", () => {
 
     // Complete onboarding with very specific skills
     await page.goto("/signup");
-    await page.fill('[name="email"]', user.email);
-    await page.fill('[name="password"]', user.password);
-    await page.fill('[name="confirm_password"]', user.password);
+    await page.fill("#email", user.email);
+    await page.fill("#password", user.password);
+    await page.fill("#confirmPassword", user.password);
     await page.click('[type="submit"]');
 
     await expect(page).toHaveURL("/onboarding");
