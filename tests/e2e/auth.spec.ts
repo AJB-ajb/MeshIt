@@ -174,7 +174,7 @@ test.describe("Authentication Flow", () => {
   test("API returns 401 when not authenticated", async ({ request }) => {
     // Test protected API endpoints
     const protectedEndpoints = [
-      { path: "/api/profile/save", method: "POST" },
+      { path: "/api/extract/profile", method: "POST" },
       { path: "/api/matches/for-me", method: "GET" },
       { path: "/api/github/sync", method: "POST" },
     ];
