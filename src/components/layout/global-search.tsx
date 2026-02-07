@@ -2,14 +2,7 @@
 
 import { useEffect, useState, useCallback, useRef } from "react";
 import { useRouter } from "next/navigation";
-import {
-  Search,
-  X,
-  FolderKanban,
-  User,
-  Loader2,
-  ArrowRight,
-} from "lucide-react";
+import { Search, X, FolderKanban, Loader2, ArrowRight } from "lucide-react";
 
 import { cn } from "@/lib/utils";
 import { Input } from "@/components/ui/input";
@@ -224,7 +217,7 @@ export function GlobalSearch() {
                   </div>
                   {results
                     .filter((r) => r.type === "project")
-                    .map((result, idx) => {
+                    .map((result) => {
                       const globalIdx = results.findIndex(
                         (r) => r.id === result.id && r.type === result.type,
                       );

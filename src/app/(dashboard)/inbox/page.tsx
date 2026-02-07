@@ -133,12 +133,7 @@ function InboxPageContent() {
     });
   }, []);
 
-  const {
-    typingUsers,
-    onlineUsers: _onlineUsers,
-    setIsTyping,
-    isConnected,
-  } = useRealtimeChat({
+  const { typingUsers, setIsTyping, isConnected } = useRealtimeChat({
     conversationId: selectedConversation?.id || null,
     currentUserId,
     onNewMessage: handleNewMessage,

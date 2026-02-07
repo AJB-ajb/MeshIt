@@ -3,37 +3,31 @@
  * Analyzes extracted GitHub data to infer skills, interests, and coding style
  */
 
-import OpenAI from 'openai';
-import type {
-  GitHubAnalysisInput,
-  GitHubAnalysisOutput,
-  CodeSnippet,
-} from './types';
+import OpenAI from "openai";
+import type { GitHubAnalysisInput, GitHubAnalysisOutput } from "./types";
 
 const OPENAI_API_KEY = process.env.OPENAI_API_KEY;
 
 // Initialize OpenAI client
-const openai = OPENAI_API_KEY
-  ? new OpenAI({ apiKey: OPENAI_API_KEY })
-  : null;
+const openai = OPENAI_API_KEY ? new OpenAI({ apiKey: OPENAI_API_KEY }) : null;
 
 /**
  * Analyze GitHub profile data using OpenAI
  */
 export async function analyzeGitHubProfile(
-  input: GitHubAnalysisInput
+  input: GitHubAnalysisInput,
 ): Promise<GitHubAnalysisOutput> {
   if (!openai) {
-    throw new Error('OPENAI_API_KEY environment variable is not set');
+    throw new Error("OPENAI_API_KEY environment variable is not set");
   }
 
   const prompt = buildAnalysisPrompt(input);
 
   const completion = await openai.chat.completions.create({
-    model: 'gpt-4o-mini',
+    model: "gpt-4o-mini",
     messages: [
       {
-        role: 'system',
+        role: "system",
         content: `You are an expert developer profile analyst. Your job is to analyze GitHub activity and infer:
 1. Technical skills beyond just programming languages
 2. Domain interests and areas of expertise
@@ -44,78 +38,78 @@ export async function analyzeGitHubProfile(
 Be specific and actionable. Focus on patterns that indicate real expertise.`,
       },
       {
-        role: 'user',
+        role: "user",
         content: prompt,
       },
     ],
     functions: [
       {
-        name: 'analyze_github_profile',
-        description: 'Analyze GitHub profile and return structured insights',
+        name: "analyze_github_profile",
+        description: "Analyze GitHub profile and return structured insights",
         parameters: {
-          type: 'object',
+          type: "object",
           properties: {
             inferredSkills: {
-              type: 'array',
-              items: { type: 'string' },
+              type: "array",
+              items: { type: "string" },
               description:
-                'List of technical skills inferred from code, commits, and repos. Include frameworks, tools, and practices beyond just languages.',
+                "List of technical skills inferred from code, commits, and repos. Include frameworks, tools, and practices beyond just languages.",
             },
             inferredInterests: {
-              type: 'array',
-              items: { type: 'string' },
+              type: "array",
+              items: { type: "string" },
               description:
                 'List of domain interests and areas of focus (e.g., "Machine Learning", "DevOps", "Mobile Apps", "API Design")',
             },
             codingStyle: {
-              type: 'string',
+              type: "string",
               description:
                 'Brief description of coding style observed (e.g., "Clean code advocate with focus on readability", "Move fast with experimental approaches", "Test-driven with comprehensive documentation")',
             },
             collaborationStyle: {
-              type: 'string',
-              enum: ['async', 'sync', 'hybrid'],
+              type: "string",
+              enum: ["async", "sync", "hybrid"],
               description:
-                'Inferred collaboration preference based on commit patterns and communication style in commits',
+                "Inferred collaboration preference based on commit patterns and communication style in commits",
             },
             experienceLevel: {
-              type: 'string',
-              enum: ['junior', 'intermediate', 'senior', 'lead'],
+              type: "string",
+              enum: ["junior", "intermediate", "senior", "lead"],
               description:
-                'Estimated experience level based on code complexity, project types, and patterns',
+                "Estimated experience level based on code complexity, project types, and patterns",
             },
             experienceSignals: {
-              type: 'array',
-              items: { type: 'string' },
+              type: "array",
+              items: { type: "string" },
               description:
                 'Specific observations that indicate experience level (e.g., "Uses advanced TypeScript patterns", "Maintains popular open source project", "Consistent architectural decisions")',
             },
             suggestedBio: {
-              type: 'string',
+              type: "string",
               description:
-                'A 2-3 sentence professional bio suggestion based on the profile analysis. Make it engaging and highlight key strengths.',
+                "A 2-3 sentence professional bio suggestion based on the profile analysis. Make it engaging and highlight key strengths.",
             },
           },
           required: [
-            'inferredSkills',
-            'inferredInterests',
-            'codingStyle',
-            'collaborationStyle',
-            'experienceLevel',
-            'experienceSignals',
-            'suggestedBio',
+            "inferredSkills",
+            "inferredInterests",
+            "codingStyle",
+            "collaborationStyle",
+            "experienceLevel",
+            "experienceSignals",
+            "suggestedBio",
           ],
         },
       },
     ],
-    function_call: { name: 'analyze_github_profile' },
+    function_call: { name: "analyze_github_profile" },
     temperature: 0.3,
   });
 
   const functionCall = completion.choices[0]?.message?.function_call;
 
-  if (!functionCall || functionCall.name !== 'analyze_github_profile') {
-    throw new Error('Failed to get structured analysis from OpenAI');
+  if (!functionCall || functionCall.name !== "analyze_github_profile") {
+    throw new Error("Failed to get structured analysis from OpenAI");
   }
 
   const result = JSON.parse(functionCall.arguments);
@@ -123,11 +117,11 @@ Be specific and actionable. Focus on patterns that indicate real expertise.`,
   return {
     inferredSkills: result.inferredSkills || [],
     inferredInterests: result.inferredInterests || [],
-    codingStyle: result.codingStyle || 'Unknown',
-    collaborationStyle: result.collaborationStyle || 'hybrid',
-    experienceLevel: result.experienceLevel || 'intermediate',
+    codingStyle: result.codingStyle || "Unknown",
+    collaborationStyle: result.collaborationStyle || "hybrid",
+    experienceLevel: result.experienceLevel || "intermediate",
     experienceSignals: result.experienceSignals || [],
-    suggestedBio: result.suggestedBio || '',
+    suggestedBio: result.suggestedBio || "",
   };
 }
 
@@ -138,80 +132,80 @@ function buildAnalysisPrompt(input: GitHubAnalysisInput): string {
   const parts: string[] = [];
 
   parts.push(`# GitHub Profile Analysis for @${input.username}`);
-  parts.push('');
+  parts.push("");
 
   // Basic stats
-  parts.push('## Overview');
+  parts.push("## Overview");
   parts.push(`- **Repositories analyzed:** ${input.repoCount}`);
   parts.push(`- **Total stars:** ${input.totalStars}`);
   parts.push(`- **Account age:** ${input.accountAge} years`);
-  parts.push('');
+  parts.push("");
 
   // Languages
   if (input.languages.length > 0) {
-    parts.push('## Programming Languages (by usage)');
-    parts.push(input.languages.join(', '));
-    parts.push('');
+    parts.push("## Programming Languages (by usage)");
+    parts.push(input.languages.join(", "));
+    parts.push("");
   }
 
   // Topics
   if (input.topics.length > 0) {
-    parts.push('## Repository Topics');
-    parts.push(input.topics.join(', '));
-    parts.push('');
+    parts.push("## Repository Topics");
+    parts.push(input.topics.join(", "));
+    parts.push("");
   }
 
   // Repo descriptions
   if (input.repoDescriptions.length > 0) {
-    parts.push('## Project Descriptions');
+    parts.push("## Project Descriptions");
     for (const desc of input.repoDescriptions) {
       parts.push(`- ${desc}`);
     }
-    parts.push('');
+    parts.push("");
   }
 
   // Commit messages
   if (input.recentCommits.length > 0) {
-    parts.push('## Recent Commit Messages');
+    parts.push("## Recent Commit Messages");
     for (const commit of input.recentCommits.slice(0, 20)) {
       parts.push(`- ${commit}`);
     }
-    parts.push('');
+    parts.push("");
   }
 
   // Code snippets
   if (input.codeSnippets.length > 0) {
-    parts.push('## Code Snippets from Recent Commits');
+    parts.push("## Code Snippets from Recent Commits");
     for (const snippet of input.codeSnippets.slice(0, 5)) {
       parts.push(`### ${snippet.filePath} (${snippet.language})`);
       parts.push(`Commit: "${snippet.commitMessage}"`);
-      parts.push('```');
+      parts.push("```");
       parts.push(snippet.content);
-      parts.push('```');
-      parts.push('');
+      parts.push("```");
+      parts.push("");
     }
   }
 
   // README snippets
   if (input.readmeSnippets.length > 0) {
-    parts.push('## README Excerpts');
+    parts.push("## README Excerpts");
     for (const readme of input.readmeSnippets.slice(0, 3)) {
       parts.push(readme.substring(0, 500));
-      parts.push('---');
+      parts.push("---");
     }
-    parts.push('');
+    parts.push("");
   }
 
-  parts.push('Based on the above data, analyze this developer\'s profile.');
+  parts.push("Based on the above data, analyze this developer's profile.");
 
-  return parts.join('\n');
+  return parts.join("\n");
 }
 
 /**
  * Quick analysis without code snippets (faster, cheaper)
  */
 export async function analyzeGitHubProfileQuick(
-  input: Omit<GitHubAnalysisInput, 'codeSnippets'>
+  input: Omit<GitHubAnalysisInput, "codeSnippets">,
 ): Promise<GitHubAnalysisOutput> {
   return analyzeGitHubProfile({
     ...input,
@@ -222,18 +216,16 @@ export async function analyzeGitHubProfileQuick(
 /**
  * Validate analysis output
  */
-export function validateAnalysisOutput(
-  output: GitHubAnalysisOutput
-): boolean {
+export function validateAnalysisOutput(output: GitHubAnalysisOutput): boolean {
   return (
     Array.isArray(output.inferredSkills) &&
     Array.isArray(output.inferredInterests) &&
-    typeof output.codingStyle === 'string' &&
-    ['async', 'sync', 'hybrid'].includes(output.collaborationStyle) &&
-    ['junior', 'intermediate', 'senior', 'lead'].includes(
-      output.experienceLevel
+    typeof output.codingStyle === "string" &&
+    ["async", "sync", "hybrid"].includes(output.collaborationStyle) &&
+    ["junior", "intermediate", "senior", "lead"].includes(
+      output.experienceLevel,
     ) &&
     Array.isArray(output.experienceSignals) &&
-    typeof output.suggestedBio === 'string'
+    typeof output.suggestedBio === "string"
   );
 }

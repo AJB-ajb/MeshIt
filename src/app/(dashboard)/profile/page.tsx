@@ -41,7 +41,7 @@ export default function ProfilePage() {
     applySuggestion,
   } = useGithubSync(setForm, setIsEditing);
 
-  const location = useLocation(setForm, (_val) => {});
+  const location = useLocation(setForm, () => {});
 
   useEffect(() => {
     fetchProfile().then(({ hasGithubProvider }) => {

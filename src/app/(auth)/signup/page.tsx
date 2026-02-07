@@ -1,7 +1,6 @@
 "use client";
 
 import { useState } from "react";
-import { useRouter } from "next/navigation";
 import Link from "next/link";
 
 import { Logo } from "@/components/layout/logo";
@@ -18,7 +17,6 @@ import {
 type OAuthProvider = "google" | "github" | "linkedin" | null;
 
 export default function SignUpPage() {
-  const _router = useRouter();
   const [isLoading, setIsLoading] = useState(false);
   const [loadingProvider, setLoadingProvider] = useState<OAuthProvider>(null);
   const [email, setEmail] = useState("");

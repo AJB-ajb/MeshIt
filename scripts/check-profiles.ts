@@ -13,10 +13,7 @@ if (!supabaseUrl || !supabaseServiceKey) {
 const supabase = createClient(supabaseUrl, supabaseServiceKey);
 
 async function checkProfiles() {
-  const { data, error: _error } = await supabase
-    .from("profiles")
-    .select("*")
-    .limit(10);
+  const { data } = await supabase.from("profiles").select("*").limit(10);
 
   console.log(JSON.stringify(data, null, 2));
 }

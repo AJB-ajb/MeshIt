@@ -1,6 +1,6 @@
 "use client";
 
-import { useEffect, useState, useCallback } from "react";
+import { useState, useCallback } from "react";
 import { useRouter } from "next/navigation";
 import { createClient } from "@/lib/supabase/client";
 import {
@@ -34,7 +34,7 @@ export function useProfile() {
       setForm((prev) => ({ ...prev, [field]: value }));
       setSuccess(false);
     },
-    []
+    [],
   );
 
   const fetchProfile = useCallback(async () => {
@@ -55,20 +55,20 @@ export function useProfile() {
       const identities = user.identities || [];
       setConnectedProviders({
         github: identities.some(
-          (id: { provider: string }) => id.provider === "github"
+          (id: { provider: string }) => id.provider === "github",
         ),
         google: identities.some(
-          (id: { provider: string }) => id.provider === "google"
+          (id: { provider: string }) => id.provider === "google",
         ),
         linkedin: identities.some(
-          (id: { provider: string }) => id.provider === "linkedin_oidc"
+          (id: { provider: string }) => id.provider === "linkedin_oidc",
         ),
       });
 
       const appProvider = user.app_metadata?.provider;
       const appProviders = user.app_metadata?.providers || [];
       const hasGithubIdentity = identities.some(
-        (identity: { provider: string }) => identity.provider === "github"
+        (identity: { provider: string }) => identity.provider === "github",
       );
       const hasGithubProvider =
         appProvider === "github" ||
@@ -210,7 +210,7 @@ export function useProfile() {
             Object.keys(hardFilters).length > 0 ? hardFilters : null,
           updated_at: new Date().toISOString(),
         },
-        { onConflict: "user_id" }
+        { onConflict: "user_id" },
       );
 
       setIsSaving(false);
@@ -223,7 +223,7 @@ export function useProfile() {
       setSuccess(true);
       setIsEditing(false);
     },
-    [form]
+    [form],
   );
 
   const handleLinkProvider = useCallback(
@@ -240,7 +240,7 @@ export function useProfile() {
         setError(`Failed to link ${provider}: ${error.message}`);
       }
     },
-    []
+    [],
   );
 
   return {

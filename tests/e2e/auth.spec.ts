@@ -214,7 +214,7 @@ test.describe("Authentication Flow", () => {
       try {
         localStorage.clear();
         sessionStorage.clear();
-      } catch (_e) {
+      } catch {
         // Ignore if storage access is denied
       }
     });
