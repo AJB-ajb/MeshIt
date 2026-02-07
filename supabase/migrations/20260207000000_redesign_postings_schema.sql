@@ -86,13 +86,17 @@ ALTER TABLE public.postings DROP CONSTRAINT IF EXISTS projects_status_check;
 ALTER TABLE public.postings ADD CONSTRAINT postings_status_check
   CHECK (status IN ('open', 'closed', 'filled', 'expired', 'paused'));
 
--- Drop old columns
+-- Drop old constraints that reference columns we're about to drop
+ALTER TABLE public.postings DROP CONSTRAINT IF EXISTS projects_experience_level_check;
+ALTER TABLE public.postings DROP CONSTRAINT IF EXISTS projects_timeline_check;
+
+-- Drop old columns (IF EXISTS for columns that may not be present on all environments)
 ALTER TABLE public.postings
-  DROP COLUMN team_size,
-  DROP COLUMN commitment_hours,
-  DROP COLUMN timeline,
-  DROP COLUMN experience_level,
-  DROP COLUMN hard_filters;
+  DROP COLUMN IF EXISTS team_size,
+  DROP COLUMN IF EXISTS commitment_hours,
+  DROP COLUMN IF EXISTS timeline,
+  DROP COLUMN IF EXISTS experience_level,
+  DROP COLUMN IF EXISTS hard_filters;
 
 -- Add new indexes
 CREATE INDEX postings_category_idx ON public.postings(category);
@@ -164,6 +168,15 @@ ALTER TABLE public.applications DROP CONSTRAINT IF EXISTS applications_project_i
 ALTER TABLE public.applications ADD CONSTRAINT applications_posting_id_fkey
   FOREIGN KEY (posting_id) REFERENCES public.postings(id) ON DELETE CASCADE;
 
+-- Update unique constraint
+ALTER TABLE public.applications DROP CONSTRAINT IF EXISTS applications_project_id_applicant_id_key;
+ALTER TABLE public.applications ADD CONSTRAINT applications_posting_id_applicant_id_key
+  UNIQUE (posting_id, applicant_id);
+
+-- Update index
+DROP INDEX IF EXISTS applications_project_id_idx;
+CREATE INDEX applications_posting_id_idx ON public.applications(posting_id);
+
 -- ============================================
 -- 4c. UPDATE conversations TABLE (if project_id column exists)
 -- ============================================
@@ -205,24 +218,39 @@ END $$;
 
 -- Add new columns
 ALTER TABLE public.profiles
-  ADD COLUMN skill_levels jsonb,
-  ADD COLUMN location_preference double precision
+  ADD COLUMN IF NOT EXISTS skill_levels jsonb,
+  ADD COLUMN IF NOT EXISTS location_preference double precision
     CHECK (location_preference IS NULL OR (location_preference >= 0 AND location_preference <= 1)),
-  ADD COLUMN availability_slots jsonb;
+  ADD COLUMN IF NOT EXISTS availability_slots jsonb,
+  ADD COLUMN IF NOT EXISTS languages text[] DEFAULT '{}',
+  ADD COLUMN IF NOT EXISTS location_lat double precision,
+  ADD COLUMN IF NOT EXISTS location_lng double precision;
 
 -- Migrate data: convert remote_preference (0-100) to location_preference (0-1)
-UPDATE public.profiles
-  SET location_preference = remote_preference / 100.0
-  WHERE remote_preference IS NOT NULL;
+DO $$
+BEGIN
+  IF EXISTS (
+    SELECT 1 FROM information_schema.columns
+    WHERE table_schema = 'public' AND table_name = 'profiles' AND column_name = 'remote_preference'
+  ) THEN
+    UPDATE public.profiles
+      SET location_preference = remote_preference / 100.0
+      WHERE remote_preference IS NOT NULL;
+  END IF;
+END $$;
 
--- Drop old columns
+-- Drop old constraints that reference columns we're about to drop
+ALTER TABLE public.profiles DROP CONSTRAINT IF EXISTS profiles_experience_level_check;
+ALTER TABLE public.profiles DROP CONSTRAINT IF EXISTS profiles_collaboration_style_check;
+
+-- Drop old columns (IF EXISTS for columns that may not be present on all environments)
 ALTER TABLE public.profiles
-  DROP COLUMN experience_level,
-  DROP COLUMN availability_hours,
-  DROP COLUMN collaboration_style,
-  DROP COLUMN project_preferences,
-  DROP COLUMN remote_preference,
-  DROP COLUMN hard_filters;
+  DROP COLUMN IF EXISTS experience_level,
+  DROP COLUMN IF EXISTS availability_hours,
+  DROP COLUMN IF EXISTS collaboration_style,
+  DROP COLUMN IF EXISTS project_preferences,
+  DROP COLUMN IF EXISTS remote_preference,
+  DROP COLUMN IF EXISTS hard_filters;
 
 -- Comments for new profile columns
 COMMENT ON COLUMN public.profiles.skill_levels IS 'JSON map of domain → skill level (0-10). Example: {"programming": 7, "design": 4}';
