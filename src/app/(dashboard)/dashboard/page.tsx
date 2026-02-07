@@ -666,11 +666,15 @@ export default async function DashboardPage() {
 
   if (user) {
     if (persona === "project_owner") {
-      stats = await fetchOwnerStats(supabase, user.id);
-      ownerProjectMetrics = await fetchOwnerProjectMetrics(supabase, user.id);
+      [stats, ownerProjectMetrics] = await Promise.all([
+        fetchOwnerStats(supabase, user.id),
+        fetchOwnerProjectMetrics(supabase, user.id),
+      ]);
     } else {
-      stats = await fetchDeveloperStats(supabase, user.id);
-      recommendedProjects = await fetchRecommendedProjects(supabase, user.id);
+      [stats, recommendedProjects] = await Promise.all([
+        fetchDeveloperStats(supabase, user.id),
+        fetchRecommendedProjects(supabase, user.id),
+      ]);
     }
   }
 
