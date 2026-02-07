@@ -1,6 +1,6 @@
 "use client";
 
-import { useEffect, useState } from "react";
+import { useEffect, useState, useCallback } from "react";
 import { useRouter, useParams } from "next/navigation";
 import Link from "next/link";
 import {
@@ -176,6 +176,97 @@ export default function ProjectDetailPage() {
   const [matchedProfiles, setMatchedProfiles] = useState<MatchedProfile[]>([]);
   const [isLoadingMatches, setIsLoadingMatches] = useState(false);
 
+  const computeMatchBreakdown = useCallback(async (
+    userId: string,
+    targetProjectId: string,
+  ) => {
+    setIsComputingMatch(true);
+    const supabase = createClient();
+
+    try {
+      const { data, error } = await supabase.rpc("compute_match_breakdown", {
+        profile_user_id: userId,
+        target_project_id: targetProjectId,
+      });
+
+      if (!error && data) {
+        setMatchBreakdown(data as ScoreBreakdown);
+      }
+    } catch (err) {
+      console.error("Failed to compute match breakdown:", err);
+    } finally {
+      setIsComputingMatch(false);
+    }
+  }, []);
+
+  const fetchMatchedProfiles = useCallback(async (targetProjectId: string, userId: string | null) => {
+    setIsLoadingMatches(true);
+    const supabase = createClient();
+
+    try {
+      // Fetch all profiles
+      const { data: allProfiles, error: profilesError } = await supabase
+        .from("profiles")
+        .select(
+          "user_id, full_name, headline, skills, experience_level, availability_hours",
+        );
+
+      if (profilesError || !allProfiles) {
+        console.error("Failed to fetch profiles:", profilesError);
+        return;
+      }
+
+      // Compute match breakdown for each profile
+      const matchedProfilesData: MatchedProfile[] = [];
+
+      for (const profile of allProfiles) {
+        // Skip if this is the project owner
+        if (profile.user_id === userId) continue;
+
+        try {
+          const { data: breakdown, error: breakdownError } = await supabase.rpc(
+            "compute_match_breakdown",
+            {
+              profile_user_id: profile.user_id,
+              target_project_id: targetProjectId,
+            },
+          );
+
+          if (!breakdownError && breakdown) {
+            const overallScore =
+              breakdown.semantic * 0.4 +
+              breakdown.skills_overlap * 0.3 +
+              breakdown.experience_match * 0.15 +
+              breakdown.commitment_match * 0.15;
+
+            matchedProfilesData.push({
+              profile_id: profile.user_id,
+              user_id: profile.user_id,
+              full_name: profile.full_name,
+              headline: profile.headline,
+              skills: profile.skills,
+              overall_score: overallScore,
+              breakdown: breakdown as ScoreBreakdown,
+            });
+          }
+        } catch (err) {
+          console.error(
+            `Failed to compute match for profile ${profile.user_id}:`,
+            err,
+          );
+        }
+      }
+
+      // Sort by overall score descending and take top 10
+      matchedProfilesData.sort((a, b) => b.overall_score - a.overall_score);
+      setMatchedProfiles(matchedProfilesData.slice(0, 10));
+    } catch (err) {
+      console.error("Failed to fetch matched profiles:", err);
+    } finally {
+      setIsLoadingMatches(false);
+    }
+  }, []);
+
   useEffect(() => {
     const fetchProject = async () => {
       setIsLoading(true);
@@ -297,105 +388,14 @@ export default function ProjectDetailPage() {
         }
 
         // Fetch matched profiles for owner
-        fetchMatchedProfiles(projectId);
+        fetchMatchedProfiles(projectId, user?.id || null);
       }
 
       setIsLoading(false);
     };
 
     fetchProject();
-  }, [projectId]);
-
-  const computeMatchBreakdown = async (
-    userId: string,
-    targetProjectId: string,
-  ) => {
-    setIsComputingMatch(true);
-    const supabase = createClient();
-
-    try {
-      const { data, error } = await supabase.rpc("compute_match_breakdown", {
-        profile_user_id: userId,
-        target_project_id: targetProjectId,
-      });
-
-      if (!error && data) {
-        setMatchBreakdown(data as ScoreBreakdown);
-      }
-    } catch (err) {
-      console.error("Failed to compute match breakdown:", err);
-    } finally {
-      setIsComputingMatch(false);
-    }
-  };
-
-  const fetchMatchedProfiles = async (targetProjectId: string) => {
-    setIsLoadingMatches(true);
-    const supabase = createClient();
-
-    try {
-      // Fetch all profiles
-      const { data: allProfiles, error: profilesError } = await supabase
-        .from("profiles")
-        .select(
-          "user_id, full_name, headline, skills, experience_level, availability_hours",
-        );
-
-      if (profilesError || !allProfiles) {
-        console.error("Failed to fetch profiles:", profilesError);
-        return;
-      }
-
-      // Compute match breakdown for each profile
-      const matchedProfilesData: MatchedProfile[] = [];
-
-      for (const profile of allProfiles) {
-        // Skip if this is the project owner
-        if (profile.user_id === currentUserId) continue;
-
-        try {
-          const { data: breakdown, error: breakdownError } = await supabase.rpc(
-            "compute_match_breakdown",
-            {
-              profile_user_id: profile.user_id,
-              target_project_id: targetProjectId,
-            },
-          );
-
-          if (!breakdownError && breakdown) {
-            const overallScore =
-              breakdown.semantic * 0.4 +
-              breakdown.skills_overlap * 0.3 +
-              breakdown.experience_match * 0.15 +
-              breakdown.commitment_match * 0.15;
-
-            matchedProfilesData.push({
-              profile_id: profile.user_id,
-              user_id: profile.user_id,
-              full_name: profile.full_name,
-              headline: profile.headline,
-              skills: profile.skills,
-              overall_score: overallScore,
-              breakdown: breakdown as ScoreBreakdown,
-            });
-          }
-        } catch (err) {
-          console.error(
-            `Failed to compute match for profile ${profile.user_id}:`,
-            err,
-          );
-        }
-      }
-
-      // Sort by overall score descending and take top 10
-      matchedProfilesData.sort((a, b) => b.overall_score - a.overall_score);
-      setMatchedProfiles(matchedProfilesData.slice(0, 10));
-    } catch (err) {
-      console.error("Failed to fetch matched profiles:", err);
-    } finally {
-      setIsLoadingMatches(false);
-    }
-  };
+  }, [projectId, computeMatchBreakdown, fetchMatchedProfiles]);
 
   const handleChange = (field: keyof ProjectFormState, value: string) => {
     setForm((prev) => ({ ...prev, [field]: value }));

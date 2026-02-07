@@ -6,7 +6,6 @@ import {
   Search,
   X,
   FolderKanban,
-  User,
   Loader2,
   ArrowRight,
 } from "lucide-react";
@@ -224,7 +223,7 @@ export function GlobalSearch() {
                   </div>
                   {results
                     .filter((r) => r.type === "project")
-                    .map((result, idx) => {
+                    .map((result, _idx) => {
                       const globalIdx = results.findIndex(
                         (r) => r.id === result.id && r.type === result.type,
                       );

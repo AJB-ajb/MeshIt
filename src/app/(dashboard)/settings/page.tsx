@@ -253,7 +253,7 @@ function SettingsContent() {
 
       setSuccess("GitHub profile synced successfully!");
       await fetchGithubSyncStatus();
-    } catch (err) {
+    } catch (_err) {
       setError("Failed to sync GitHub profile. Please try again.");
     } finally {
       setIsGithubSyncing(false);

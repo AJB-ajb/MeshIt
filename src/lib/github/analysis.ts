@@ -7,7 +7,6 @@ import OpenAI from 'openai';
 import type {
   GitHubAnalysisInput,
   GitHubAnalysisOutput,
-  CodeSnippet,
 } from './types';
 
 const OPENAI_API_KEY = process.env.OPENAI_API_KEY;

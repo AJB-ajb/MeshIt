@@ -25,7 +25,7 @@ import {
   getUserProfile,
 } from '@/lib/github';
 
-export async function POST(request: Request) {
+export async function POST(_request: Request) {
   try {
     const supabase = await createClient();
 
