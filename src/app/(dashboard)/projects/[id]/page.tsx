@@ -41,11 +41,12 @@ type Project = {
   id: string;
   title: string;
   description: string;
-  required_skills: string[];
-  team_size: number;
-  timeline: string;
-  commitment_hours: number;
-  experience_level: string;
+  skills: string[];
+  team_size_min: number;
+  team_size_max: number;
+  estimated_time: string;
+  category: string;
+  mode: string;
   status: string;
   created_at: string;
   expires_at: string;
@@ -85,32 +86,13 @@ type MatchedProfile = {
 type ProjectFormState = {
   title: string;
   description: string;
-  requiredSkills: string;
-  timeline: string;
-  commitmentHours: string;
-  teamSize: string;
-  experienceLevel: string;
+  skills: string;
+  estimatedTime: string;
+  teamSizeMin: string;
+  teamSizeMax: string;
+  category: string;
+  mode: string;
   status: string;
-  // Hard filters for applicants
-  filterMaxDistance: string;
-  filterMinHours: string;
-  filterMaxHours: string;
-  filterLanguages: string;
-};
-
-const formatTimeline = (timeline: string) => {
-  switch (timeline) {
-    case "weekend":
-      return "This weekend";
-    case "1_week":
-      return "1 week";
-    case "1_month":
-      return "1 month";
-    case "ongoing":
-      return "Ongoing";
-    default:
-      return timeline;
-  }
 };
 
 const formatDate = (dateString: string) => {
@@ -149,16 +131,13 @@ export default function ProjectDetailPage() {
   const [form, setForm] = useState<ProjectFormState>({
     title: "",
     description: "",
-    requiredSkills: "",
-    timeline: "1_month",
-    commitmentHours: "10",
-    teamSize: "3",
-    experienceLevel: "any",
+    skills: "",
+    estimatedTime: "",
+    teamSizeMin: "2",
+    teamSizeMax: "5",
+    category: "personal",
+    mode: "remote",
     status: "open",
-    filterMaxDistance: "",
-    filterMinHours: "",
-    filterMaxHours: "",
-    filterLanguages: "",
   });
 
   // Application state
@@ -187,7 +166,7 @@ export default function ProjectDetailPage() {
         const { data: allProfiles, error: profilesError } = await supabase
           .from("profiles")
           .select(
-            "user_id, full_name, headline, skills, experience_level, availability_hours",
+            "user_id, full_name, headline, skills, skill_levels, location_preference, availability_slots",
           );
 
         if (profilesError || !allProfiles) {
@@ -206,15 +185,15 @@ export default function ProjectDetailPage() {
             const { data: breakdown, error: breakdownError } =
               await supabase.rpc("compute_match_breakdown", {
                 profile_user_id: profile.user_id,
-                target_project_id: targetProjectId,
+                target_posting_id: targetProjectId,
               });
 
             if (!breakdownError && breakdown) {
               const overallScore =
-                breakdown.semantic * 0.4 +
-                breakdown.skills_overlap * 0.3 +
-                breakdown.experience_match * 0.15 +
-                breakdown.commitment_match * 0.15;
+                breakdown.semantic * 0.3 +
+                breakdown.availability * 0.3 +
+                breakdown.skill_level * 0.2 +
+                breakdown.location * 0.2;
 
               matchedProfilesData.push({
                 profile_id: profile.user_id,
@@ -258,9 +237,9 @@ export default function ProjectDetailPage() {
 
       setCurrentUserId(user?.id || null);
 
-      // Fetch project with creator profile
+      // Fetch posting with creator profile
       const { data, error } = await supabase
-        .from("projects")
+        .from("postings")
         .select(
           `
           *,
@@ -284,22 +263,16 @@ export default function ProjectDetailPage() {
       setProject(data);
       const ownerCheck = user?.id === data.creator_id;
       setIsOwner(ownerCheck);
-      const hardFilters = data.hard_filters || {};
       setForm({
         title: data.title,
         description: data.description,
-        requiredSkills: data.required_skills?.join(", ") || "",
-        timeline: data.timeline || "1_month",
-        commitmentHours: data.commitment_hours?.toString() || "10",
-        teamSize: data.team_size?.toString() || "3",
-        experienceLevel: data.experience_level || "any",
+        skills: data.skills?.join(", ") || "",
+        estimatedTime: data.estimated_time || "",
+        teamSizeMin: data.team_size_min?.toString() || "2",
+        teamSizeMax: data.team_size_max?.toString() || "5",
+        category: data.category || "personal",
+        mode: data.mode || "remote",
         status: data.status || "open",
-        filterMaxDistance: hardFilters.max_distance_km?.toString() || "",
-        filterMinHours: hardFilters.min_hours?.toString() || "",
-        filterMaxHours: hardFilters.max_hours?.toString() || "",
-        filterLanguages: Array.isArray(hardFilters.languages)
-          ? hardFilters.languages.join(", ")
-          : "",
       });
 
       // Check if user has already applied (for non-owners)
@@ -308,7 +281,7 @@ export default function ProjectDetailPage() {
           await supabase
             .from("applications")
             .select("*")
-            .eq("project_id", projectId)
+            .eq("posting_id", projectId)
             .eq("applicant_id", user.id)
             .maybeSingle();
 
@@ -342,7 +315,7 @@ export default function ProjectDetailPage() {
           await supabase
             .from("applications")
             .select("*")
-            .eq("project_id", projectId)
+            .eq("posting_id", projectId)
             .order("created_at", { ascending: false });
 
         if (applicationsError) {
@@ -386,7 +359,7 @@ export default function ProjectDetailPage() {
     try {
       const { data, error } = await supabase.rpc("compute_match_breakdown", {
         profile_user_id: userId,
-        target_project_id: targetProjectId,
+        target_posting_id: targetProjectId,
       });
 
       if (!error && data) {
@@ -415,38 +388,18 @@ export default function ProjectDetailPage() {
 
     const supabase = createClient();
 
-    // Build hard_filters object (only include set values)
-    const filterMaxDistance = Number(form.filterMaxDistance);
-    const filterMinHours = Number(form.filterMinHours);
-    const filterMaxHours = Number(form.filterMaxHours);
-    const filterLanguages = parseList(form.filterLanguages);
-
-    const hardFilters: Record<string, unknown> = {};
-    if (Number.isFinite(filterMaxDistance) && filterMaxDistance > 0) {
-      hardFilters.max_distance_km = filterMaxDistance;
-    }
-    if (Number.isFinite(filterMinHours) && filterMinHours > 0) {
-      hardFilters.min_hours = filterMinHours;
-    }
-    if (Number.isFinite(filterMaxHours) && filterMaxHours > 0) {
-      hardFilters.max_hours = filterMaxHours;
-    }
-    if (filterLanguages.length > 0) {
-      hardFilters.languages = filterLanguages;
-    }
-
     const { error: updateError } = await supabase
-      .from("projects")
+      .from("postings")
       .update({
         title: form.title.trim(),
         description: form.description.trim(),
-        required_skills: parseList(form.requiredSkills),
-        timeline: form.timeline,
-        commitment_hours: Number(form.commitmentHours),
-        team_size: Number(form.teamSize),
-        experience_level: form.experienceLevel,
+        skills: parseList(form.skills),
+        estimated_time: form.estimatedTime || null,
+        team_size_min: Number(form.teamSizeMin),
+        team_size_max: Number(form.teamSizeMax),
+        category: form.category,
+        mode: form.mode,
         status: form.status,
-        hard_filters: Object.keys(hardFilters).length > 0 ? hardFilters : null,
         updated_at: new Date().toISOString(),
       })
       .eq("id", projectId);
@@ -458,9 +411,9 @@ export default function ProjectDetailPage() {
       return;
     }
 
-    // Refresh project data
+    // Refresh posting data
     const { data } = await supabase
-      .from("projects")
+      .from("postings")
       .select(
         `
         *,
@@ -495,7 +448,7 @@ export default function ProjectDetailPage() {
     const supabase = createClient();
 
     const { error: deleteError } = await supabase
-      .from("projects")
+      .from("postings")
       .delete()
       .eq("id", projectId);
 
@@ -523,7 +476,7 @@ export default function ProjectDetailPage() {
     const { data: application, error: applyError } = await supabase
       .from("applications")
       .insert({
-        project_id: projectId,
+        posting_id: projectId,
         applicant_id: currentUserId,
         cover_message: coverMessage.trim() || null,
       })
@@ -552,7 +505,7 @@ export default function ProjectDetailPage() {
         type: "application_received",
         title: "New Application Received",
         body: `${applicantName} has applied to your project "${project.title}"`,
-        related_project_id: projectId,
+        related_posting_id: projectId,
         related_application_id: application.id,
         related_user_id: currentUserId,
       });
@@ -624,7 +577,7 @@ export default function ProjectDetailPage() {
           newStatus === "accepted"
             ? `Your application to "${project.title}" has been accepted!`
             : `Your application to "${project.title}" was not selected.`,
-        related_project_id: projectId,
+        related_posting_id: projectId,
         related_application_id: applicationId,
         related_user_id: project.creator_id,
       });
@@ -648,7 +601,7 @@ export default function ProjectDetailPage() {
     const { data: existingConv } = await supabase
       .from("conversations")
       .select("id")
-      .eq("project_id", projectId)
+      .eq("posting_id", projectId)
       .or(
         `and(participant_1.eq.${currentUserId},participant_2.eq.${applicantId}),and(participant_1.eq.${applicantId},participant_2.eq.${currentUserId})`,
       )
@@ -663,7 +616,7 @@ export default function ProjectDetailPage() {
     const { data: newConv, error: convError } = await supabase
       .from("conversations")
       .insert({
-        project_id: projectId,
+        posting_id: projectId,
         participant_1: currentUserId,
         participant_2: applicantId,
       })
@@ -687,7 +640,7 @@ export default function ProjectDetailPage() {
     const { data: existingConv } = await supabase
       .from("conversations")
       .select("id")
-      .eq("project_id", projectId)
+      .eq("posting_id", projectId)
       .or(
         `and(participant_1.eq.${currentUserId},participant_2.eq.${project.creator_id}),and(participant_1.eq.${project.creator_id},participant_2.eq.${currentUserId})`,
       )
@@ -702,7 +655,7 @@ export default function ProjectDetailPage() {
     const { data: newConv, error: convError } = await supabase
       .from("conversations")
       .insert({
-        project_id: projectId,
+        posting_id: projectId,
         participant_1: currentUserId,
         participant_2: project.creator_id,
       })
@@ -802,10 +755,10 @@ export default function ProjectDetailPage() {
               >
                 <Sparkles className="h-4 w-4" />
                 {formatScore(
-                  matchBreakdown.semantic * 0.4 +
-                    matchBreakdown.skills_overlap * 0.3 +
-                    matchBreakdown.experience_match * 0.15 +
-                    matchBreakdown.commitment_match * 0.15,
+                  matchBreakdown.semantic * 0.3 +
+                    matchBreakdown.availability * 0.3 +
+                    matchBreakdown.skill_level * 0.2 +
+                    matchBreakdown.location * 0.2,
                 )}{" "}
                 match
               </Badge>
@@ -957,24 +910,21 @@ export default function ProjectDetailPage() {
 
               {/* Skills */}
               <div className="space-y-2">
-                <h4 className="text-sm font-medium">Required Skills</h4>
+                <h4 className="text-sm font-medium">Skills</h4>
                 {isEditing ? (
                   <Input
-                    value={form.requiredSkills}
-                    onChange={(e) =>
-                      handleChange("requiredSkills", e.target.value)
-                    }
+                    value={form.skills}
+                    onChange={(e) => handleChange("skills", e.target.value)}
                     placeholder="React, TypeScript, Node.js (comma-separated)"
                   />
                 ) : (
                   <div className="flex flex-wrap gap-2">
-                    {project.required_skills?.map((skill) => (
+                    {project.skills?.map((skill) => (
                       <Badge key={skill} variant="secondary">
                         {skill}
                       </Badge>
                     ))}
-                    {(!project.required_skills ||
-                      project.required_skills.length === 0) && (
+                    {(!project.skills || project.skills.length === 0) && (
                       <span className="text-sm text-muted-foreground">
                         No specific skills listed
                       </span>
@@ -988,48 +938,79 @@ export default function ProjectDetailPage() {
                 <>
                   <div className="grid gap-4 sm:grid-cols-2">
                     <div className="space-y-2">
-                      <label className="text-sm font-medium">Timeline</label>
-                      <select
-                        value={form.timeline}
+                      <label className="text-sm font-medium">
+                        Estimated Time
+                      </label>
+                      <Input
+                        value={form.estimatedTime}
                         onChange={(e) =>
-                          handleChange("timeline", e.target.value)
+                          handleChange("estimatedTime", e.target.value)
+                        }
+                        placeholder="e.g., 2 weeks, 1 month"
+                      />
+                    </div>
+                    <div className="space-y-2">
+                      <label className="text-sm font-medium">Category</label>
+                      <select
+                        value={form.category}
+                        onChange={(e) =>
+                          handleChange("category", e.target.value)
                         }
                         className="flex h-10 w-full rounded-md border border-input bg-background px-3 py-2 text-sm"
                       >
-                        <option value="weekend">This weekend</option>
-                        <option value="1_week">1 week</option>
-                        <option value="1_month">1 month</option>
-                        <option value="ongoing">Ongoing</option>
+                        <option value="study">Study</option>
+                        <option value="hackathon">Hackathon</option>
+                        <option value="personal">Personal</option>
+                        <option value="professional">Professional</option>
+                        <option value="social">Social</option>
                       </select>
                     </div>
                     <div className="space-y-2">
-                      <label className="text-sm font-medium">Commitment</label>
+                      <label className="text-sm font-medium">
+                        Team Size Min
+                      </label>
                       <select
-                        value={form.commitmentHours}
+                        value={form.teamSizeMin}
                         onChange={(e) =>
-                          handleChange("commitmentHours", e.target.value)
+                          handleChange("teamSizeMin", e.target.value)
                         }
                         className="flex h-10 w-full rounded-md border border-input bg-background px-3 py-2 text-sm"
                       >
-                        <option value="5">5 hrs/week</option>
-                        <option value="10">10 hrs/week</option>
-                        <option value="15">15 hrs/week</option>
-                        <option value="20">20+ hrs/week</option>
+                        <option value="1">1</option>
+                        <option value="2">2</option>
+                        <option value="3">3</option>
+                        <option value="4">4</option>
+                        <option value="5">5</option>
                       </select>
                     </div>
                     <div className="space-y-2">
-                      <label className="text-sm font-medium">Team Size</label>
+                      <label className="text-sm font-medium">
+                        Team Size Max
+                      </label>
                       <select
-                        value={form.teamSize}
+                        value={form.teamSizeMax}
                         onChange={(e) =>
-                          handleChange("teamSize", e.target.value)
+                          handleChange("teamSizeMax", e.target.value)
                         }
                         className="flex h-10 w-full rounded-md border border-input bg-background px-3 py-2 text-sm"
                       >
-                        <option value="2">2 people</option>
-                        <option value="3">3 people</option>
-                        <option value="4">4 people</option>
-                        <option value="5">5 people</option>
+                        <option value="2">2</option>
+                        <option value="3">3</option>
+                        <option value="4">4</option>
+                        <option value="5">5</option>
+                        <option value="10">10</option>
+                      </select>
+                    </div>
+                    <div className="space-y-2">
+                      <label className="text-sm font-medium">Mode</label>
+                      <select
+                        value={form.mode}
+                        onChange={(e) => handleChange("mode", e.target.value)}
+                        className="flex h-10 w-full rounded-md border border-input bg-background px-3 py-2 text-sm"
+                      >
+                        <option value="remote">Remote</option>
+                        <option value="in_person">In Person</option>
+                        <option value="hybrid">Hybrid</option>
                       </select>
                     </div>
                     <div className="space-y-2">
@@ -1045,73 +1026,6 @@ export default function ProjectDetailPage() {
                       </select>
                     </div>
                   </div>
-
-                  {/* Applicant Filters */}
-                  <div className="border-t pt-4 mt-4">
-                    <h4 className="text-sm font-medium mb-3">
-                      Applicant Preferences
-                    </h4>
-                    <p className="text-xs text-muted-foreground mb-3">
-                      Applicants outside these preferences will rank lower in
-                      your matches.
-                    </p>
-                    <div className="grid gap-4 sm:grid-cols-2">
-                      <div className="space-y-2">
-                        <label className="text-sm font-medium">
-                          Max Distance (km)
-                        </label>
-                        <Input
-                          type="number"
-                          min="0"
-                          value={form.filterMaxDistance}
-                          onChange={(e) =>
-                            handleChange("filterMaxDistance", e.target.value)
-                          }
-                          placeholder="e.g., 500"
-                        />
-                      </div>
-                      <div className="space-y-2">
-                        <label className="text-sm font-medium">
-                          Required Languages
-                        </label>
-                        <Input
-                          value={form.filterLanguages}
-                          onChange={(e) =>
-                            handleChange("filterLanguages", e.target.value)
-                          }
-                          placeholder="e.g., en, de"
-                        />
-                      </div>
-                      <div className="space-y-2">
-                        <label className="text-sm font-medium">
-                          Min Availability (hrs/week)
-                        </label>
-                        <Input
-                          type="number"
-                          min="0"
-                          value={form.filterMinHours}
-                          onChange={(e) =>
-                            handleChange("filterMinHours", e.target.value)
-                          }
-                          placeholder="e.g., 5"
-                        />
-                      </div>
-                      <div className="space-y-2">
-                        <label className="text-sm font-medium">
-                          Max Availability (hrs/week)
-                        </label>
-                        <Input
-                          type="number"
-                          min="0"
-                          value={form.filterMaxHours}
-                          onChange={(e) =>
-                            handleChange("filterMaxHours", e.target.value)
-                          }
-                          placeholder="e.g., 20"
-                        />
-                      </div>
-                    </div>
-                  </div>
                 </>
               ) : (
                 <div className="grid gap-4 sm:grid-cols-3">
@@ -1120,24 +1034,26 @@ export default function ProjectDetailPage() {
                     <p className="mt-2 text-sm text-muted-foreground">
                       Team Size
                     </p>
-                    <p className="font-medium">{project.team_size} people</p>
+                    <p className="font-medium">
+                      {project.team_size_min}-{project.team_size_max} people
+                    </p>
                   </div>
                   <div className="rounded-lg border border-border p-4">
                     <Calendar className="h-5 w-5 text-muted-foreground" />
                     <p className="mt-2 text-sm text-muted-foreground">
-                      Timeline
+                      Estimated Time
                     </p>
                     <p className="font-medium">
-                      {formatTimeline(project.timeline)}
+                      {project.estimated_time || "Not specified"}
                     </p>
                   </div>
                   <div className="rounded-lg border border-border p-4">
                     <Clock className="h-5 w-5 text-muted-foreground" />
                     <p className="mt-2 text-sm text-muted-foreground">
-                      Commitment
+                      Category
                     </p>
-                    <p className="font-medium">
-                      {project.commitment_hours} hrs/week
+                    <p className="font-medium capitalize">
+                      {project.category || "Not specified"}
                     </p>
                   </div>
                 </div>
@@ -1384,27 +1300,14 @@ export default function ProjectDetailPage() {
                       </p>
                       <p className="text-2xl font-bold text-green-600">
                         {formatScore(
-                          matchBreakdown.semantic * 0.4 +
-                            matchBreakdown.skills_overlap * 0.3 +
-                            matchBreakdown.experience_match * 0.15 +
-                            matchBreakdown.commitment_match * 0.15,
+                          matchBreakdown.semantic * 0.3 +
+                            matchBreakdown.availability * 0.3 +
+                            matchBreakdown.skill_level * 0.2 +
+                            matchBreakdown.location * 0.2,
                         )}
                       </p>
                     </div>
-                    <MatchBreakdown
-                      breakdown={matchBreakdown}
-                      project={{
-                        required_skills: project.required_skills || [],
-                        experience_level: project.experience_level,
-                        commitment_hours: project.commitment_hours,
-                      }}
-                      profile={{
-                        skills: currentUserProfile.skills,
-                        experience_level: currentUserProfile.experience_level,
-                        availability_hours:
-                          currentUserProfile.availability_hours,
-                      }}
-                    />
+                    <MatchBreakdown breakdown={matchBreakdown} />
                   </>
                 ) : (
                   <p className="text-sm text-muted-foreground">
@@ -1497,16 +1400,6 @@ export default function ProjectDetailPage() {
                               <div className="mt-3 grid grid-cols-2 gap-2 text-xs">
                                 <div className="flex items-center justify-between">
                                   <span className="text-muted-foreground">
-                                    Skills Match:
-                                  </span>
-                                  <span className="font-medium">
-                                    {formatScore(
-                                      matchedProfile.breakdown.skills_overlap,
-                                    )}
-                                  </span>
-                                </div>
-                                <div className="flex items-center justify-between">
-                                  <span className="text-muted-foreground">
                                     Semantic:
                                   </span>
                                   <span className="font-medium">
@@ -1517,21 +1410,31 @@ export default function ProjectDetailPage() {
                                 </div>
                                 <div className="flex items-center justify-between">
                                   <span className="text-muted-foreground">
-                                    Experience:
+                                    Availability:
                                   </span>
                                   <span className="font-medium">
                                     {formatScore(
-                                      matchedProfile.breakdown.experience_match,
+                                      matchedProfile.breakdown.availability,
                                     )}
                                   </span>
                                 </div>
                                 <div className="flex items-center justify-between">
                                   <span className="text-muted-foreground">
-                                    Availability:
+                                    Skill Level:
                                   </span>
                                   <span className="font-medium">
                                     {formatScore(
-                                      matchedProfile.breakdown.commitment_match,
+                                      matchedProfile.breakdown.skill_level,
+                                    )}
+                                  </span>
+                                </div>
+                                <div className="flex items-center justify-between">
+                                  <span className="text-muted-foreground">
+                                    Location:
+                                  </span>
+                                  <span className="font-medium">
+                                    {formatScore(
+                                      matchedProfile.breakdown.location,
                                     )}
                                   </span>
                                 </div>

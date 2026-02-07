@@ -17,7 +17,7 @@ export const GET = withAuth(async (_req, { user, supabase, params }) => {
 
   // Verify user is the project creator
   const { data: project, error: projectError } = await supabase
-    .from("projects")
+    .from("postings")
     .select("creator_id")
     .eq("id", projectId)
     .eq("is_test_data", getTestDataValue())

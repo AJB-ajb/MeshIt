@@ -1,6 +1,6 @@
 "use client";
 
-import { Suspense, useCallback, useEffect, useState } from "react";
+import { Suspense, useState } from "react";
 import { useRouter, useSearchParams } from "next/navigation";
 import Link from "next/link";
 import {
@@ -35,131 +35,44 @@ import {
   AlertDialogHeader,
   AlertDialogTitle,
 } from "@/components/ui/alert-dialog";
-
-type Provider = "google" | "github" | "linkedin_oidc";
-
-type ConnectedProvider = {
-  provider: Provider;
-  connected: boolean;
-  isPrimary: boolean;
-};
+import { useSettings } from "@/lib/hooks/use-settings";
+import type { Provider } from "@/lib/hooks/use-settings";
 
 function SettingsContent() {
   const router = useRouter();
   const searchParams = useSearchParams();
-  const [isLoading, setIsLoading] = useState(true);
-  const [userEmail, setUserEmail] = useState<string | null>(null);
-  const [persona, setPersona] = useState<string | null>(null);
-  const [providers, setProviders] = useState<ConnectedProvider[]>([]);
+  const {
+    userEmail,
+    persona,
+    providers,
+    githubSyncStatus,
+    isLoading,
+    mutate,
+    mutateGithubSync,
+  } = useSettings();
+
   const [linkingProvider, setLinkingProvider] = useState<Provider | null>(null);
   const [unlinkingProvider, setUnlinkingProvider] = useState<Provider | null>(
     null,
   );
   const [showUnlinkDialog, setShowUnlinkDialog] = useState(false);
-  const [error, setError] = useState<string | null>(null);
-  const [success, setSuccess] = useState<string | null>(null);
-
-  // GitHub sync state
-  const [githubSyncStatus, setGithubSyncStatus] = useState<{
-    synced: boolean;
-    lastSyncedAt?: string;
-    syncStatus?: string;
-  } | null>(null);
+  const [error, setError] = useState<string | null>(() => {
+    const msg = searchParams.get("error");
+    if (msg) {
+      window.history.replaceState({}, "", "/settings");
+      return decodeURIComponent(msg);
+    }
+    return null;
+  });
+  const [success, setSuccess] = useState<string | null>(() => {
+    const msg = searchParams.get("success");
+    if (msg) {
+      window.history.replaceState({}, "", "/settings");
+      return decodeURIComponent(msg);
+    }
+    return null;
+  });
   const [isGithubSyncing, setIsGithubSyncing] = useState(false);
-
-  const fetchProviders = useCallback(async () => {
-    const supabase = createClient();
-    const {
-      data: { user },
-    } = await supabase.auth.getUser();
-
-    if (!user) return;
-
-    const identities = user.identities || [];
-    const primaryProvider = user.app_metadata?.provider;
-
-    const providerList: ConnectedProvider[] = [
-      {
-        provider: "google",
-        connected: identities.some(
-          (id: { provider: string }) => id.provider === "google",
-        ),
-        isPrimary: primaryProvider === "google",
-      },
-      {
-        provider: "github",
-        connected: identities.some(
-          (id: { provider: string }) => id.provider === "github",
-        ),
-        isPrimary: primaryProvider === "github",
-      },
-      {
-        provider: "linkedin_oidc",
-        connected: identities.some(
-          (id: { provider: string }) => id.provider === "linkedin_oidc",
-        ),
-        isPrimary: primaryProvider === "linkedin_oidc",
-      },
-    ];
-
-    setProviders(providerList);
-
-    // Fetch GitHub sync status if GitHub is connected
-    if (providerList.find((p) => p.provider === "github")?.connected) {
-      fetchGithubSyncStatus();
-    }
-  }, []);
-
-  const fetchGithubSyncStatus = async () => {
-    try {
-      const response = await fetch("/api/github/sync");
-      if (response.ok) {
-        const data = await response.json();
-        setGithubSyncStatus(data);
-      }
-    } catch {
-      console.error("Failed to fetch GitHub sync status");
-    }
-  };
-
-  useEffect(() => {
-    const supabase = createClient();
-
-    // Check for success/error messages from OAuth redirect
-    const successMessage = searchParams.get("success");
-    const errorMessage = searchParams.get("error");
-
-    if (successMessage) {
-      setSuccess(decodeURIComponent(successMessage));
-      // Clear URL params
-      window.history.replaceState({}, "", "/settings");
-    }
-
-    if (errorMessage) {
-      setError(decodeURIComponent(errorMessage));
-      // Clear URL params
-      window.history.replaceState({}, "", "/settings");
-    }
-
-    supabase.auth
-      .getUser()
-      .then(({ data: { user } }) => {
-        if (!user) {
-          router.replace("/login");
-          return;
-        }
-
-        setUserEmail(user.email ?? null);
-        setPersona(user.user_metadata?.persona ?? null);
-        fetchProviders();
-      })
-      .catch(() => {
-        router.replace("/login");
-      })
-      .finally(() => {
-        setIsLoading(false);
-      });
-  }, [router, searchParams, fetchProviders]);
 
   const handleLinkProvider = async (provider: Provider) => {
     setError(null);
@@ -180,7 +93,6 @@ function SettingsContent() {
       );
       setLinkingProvider(null);
     }
-    // Note: If successful, user will be redirected to OAuth flow
   };
 
   const handleUnlinkProvider = async () => {
@@ -209,7 +121,6 @@ function SettingsContent() {
       return;
     }
 
-    // Find the identity to unlink
     const identity = user.identities?.find(
       (id: { provider: string }) => id.provider === unlinkingProvider,
     );
@@ -229,7 +140,7 @@ function SettingsContent() {
       );
     } else {
       setSuccess(`${getProviderName(unlinkingProvider)} has been disconnected`);
-      await fetchProviders();
+      await mutate();
     }
 
     setShowUnlinkDialog(false);
@@ -252,7 +163,7 @@ function SettingsContent() {
       }
 
       setSuccess("GitHub profile synced successfully!");
-      await fetchGithubSyncStatus();
+      await mutateGithubSync();
     } catch {
       setError("Failed to sync GitHub profile. Please try again.");
     } finally {

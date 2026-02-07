@@ -60,7 +60,7 @@ function OnboardingContent() {
 
       // Check if user has projects
       const { data: projects } = await supabase
-        .from("projects")
+        .from("postings")
         .select("id")
         .eq("creator_id", user.id)
         .limit(1);

@@ -1,7 +1,6 @@
 "use client";
 
-import { useCallback, useEffect, useState } from "react";
-import { useRouter } from "next/navigation";
+import { useState } from "react";
 import Link from "next/link";
 import { Search, Filter, Check, MessageSquare, Loader2 } from "lucide-react";
 
@@ -9,7 +8,8 @@ import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { EmptyState } from "@/components/ui/empty-state";
-import type { MatchResponse, Project } from "@/lib/supabase/types";
+import { useMatches } from "@/lib/hooks/use-matches";
+import type { Project } from "@/lib/supabase/types";
 
 const statusColors = {
   pending: "bg-warning/10 text-warning",
@@ -45,47 +45,20 @@ function formatTimeAgo(dateString: string): string {
 }
 
 export default function MatchesPage() {
-  const router = useRouter();
-  const [matches, setMatches] = useState<MatchResponse[]>([]);
-  const [isLoading, setIsLoading] = useState(true);
-  const [error, setError] = useState<string | null>(null);
+  const {
+    matches,
+    apiError,
+    error: fetchError,
+    isLoading,
+    mutate,
+  } = useMatches();
   const [applyingMatchId, setApplyingMatchId] = useState<string | null>(null);
 
-  const fetchMatches = useCallback(async () => {
-    try {
-      setIsLoading(true);
-      setError(null);
-      const response = await fetch("/api/matches/for-me");
-
-      if (!response.ok) {
-        if (response.status === 401) {
-          router.replace("/login");
-          return;
-        }
-        const errorData = await response.json().catch(() => ({}));
-        throw new Error(errorData.error || "Failed to fetch matches");
-      }
-
-      const data = await response.json();
-
-      // Handle API-level errors (returned with 200 status)
-      if (data.error && (!data.matches || data.matches.length === 0)) {
-        setError(data.error);
-        setMatches([]);
-        return;
-      }
-
-      setMatches(data.matches || []);
-    } catch (err) {
-      setError(err instanceof Error ? err.message : "Failed to load matches");
-    } finally {
-      setIsLoading(false);
-    }
-  }, [router]);
-
-  useEffect(() => {
-    fetchMatches();
-  }, [fetchMatches]);
+  const error = fetchError
+    ? fetchError instanceof Error
+      ? fetchError.message
+      : "Failed to load matches"
+    : apiError;
 
   const handleApply = async (matchId: string) => {
     try {
@@ -98,8 +71,7 @@ export default function MatchesPage() {
         throw new Error("Failed to apply");
       }
 
-      // Refresh matches
-      await fetchMatches();
+      await mutate();
     } catch (err) {
       alert(err instanceof Error ? err.message : "Failed to apply");
     } finally {
@@ -192,7 +164,7 @@ export default function MatchesPage() {
       ) : (
         <div className="space-y-4">
           {matches.map((match) => {
-            const project = match.project as Project;
+            const project = match.posting as Project;
             const matchScore = Math.round(match.score * 100);
             const matchedAt = formatTimeAgo(match.created_at);
 
@@ -250,24 +222,23 @@ export default function MatchesPage() {
                   </p>
 
                   {/* Skills */}
-                  {project.required_skills &&
-                    project.required_skills.length > 0 && (
-                      <div className="flex flex-wrap gap-2">
-                        {project.required_skills.slice(0, 5).map((skill) => (
-                          <span
-                            key={skill}
-                            className="rounded-md border border-border bg-muted/50 px-2.5 py-0.5 text-xs font-medium"
-                          >
-                            {skill}
-                          </span>
-                        ))}
-                        {project.required_skills.length > 5 && (
-                          <span className="rounded-md border border-border bg-muted/50 px-2.5 py-0.5 text-xs font-medium">
-                            +{project.required_skills.length - 5}
-                          </span>
-                        )}
-                      </div>
-                    )}
+                  {project.skills && project.skills.length > 0 && (
+                    <div className="flex flex-wrap gap-2">
+                      {project.skills.slice(0, 5).map((skill) => (
+                        <span
+                          key={skill}
+                          className="rounded-md border border-border bg-muted/50 px-2.5 py-0.5 text-xs font-medium"
+                        >
+                          {skill}
+                        </span>
+                      ))}
+                      {project.skills.length > 5 && (
+                        <span className="rounded-md border border-border bg-muted/50 px-2.5 py-0.5 text-xs font-medium">
+                          +{project.skills.length - 5}
+                        </span>
+                      )}
+                    </div>
+                  )}
 
                   {/* Actions */}
                   <div className="flex gap-2">

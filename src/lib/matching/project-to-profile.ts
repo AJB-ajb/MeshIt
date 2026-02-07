@@ -1,6 +1,6 @@
 /**
  * Project-to-Profile Matching
- * Finds profiles that match a project using pgvector cosine similarity
+ * Finds profiles that match a posting using pgvector cosine similarity
  */
 
 import { createClient } from "@/lib/supabase/server";
@@ -16,10 +16,10 @@ export interface ProjectToProfileMatch {
 }
 
 /**
- * Finds profiles matching a project
- * Uses the match_users_to_project database function with pgvector similarity
+ * Finds profiles matching a posting
+ * Uses the match_users_to_posting database function with pgvector similarity
  *
- * @param projectId The project ID to find matches for
+ * @param projectId The posting ID to find matches for
  * @param limit Maximum number of matches to return (default: 10)
  * @returns Array of matching profiles with similarity scores
  */
@@ -29,16 +29,16 @@ export async function matchProjectToProfiles(
 ): Promise<ProjectToProfileMatch[]> {
   const supabase = await createClient();
 
-  // First, get the project and its embedding
+  // First, get the posting and its embedding
   const { data: project, error: projectError } = await supabase
-    .from("projects")
-    .select("embedding, creator_id, title, description, required_skills")
+    .from("postings")
+    .select("embedding, creator_id, title, description, skills")
     .eq("id", projectId)
     .eq("is_test_data", getTestDataValue())
     .single();
 
   if (projectError || !project) {
-    throw new Error(`Project not found: ${projectId}`);
+    throw new Error(`Posting not found: ${projectId}`);
   }
 
   // If no embedding exists, try to generate one
@@ -48,23 +48,23 @@ export async function matchProjectToProfiles(
       embedding = await generateProjectEmbedding(
         project.title,
         project.description,
-        project.required_skills,
+        project.skills,
       );
 
       // Save the generated embedding
-      await supabase.from("projects").update({ embedding }).eq("id", projectId);
+      await supabase.from("postings").update({ embedding }).eq("id", projectId);
     } catch (embeddingError) {
-      console.warn("Could not generate project embedding:", embeddingError);
+      console.warn("Could not generate posting embedding:", embeddingError);
       throw new Error(
-        "Could not generate project embedding. Please ensure the project has a title and description.",
+        "Could not generate posting embedding. Please ensure the posting has a title and description.",
       );
     }
   }
 
   // Call the database function to find matching profiles
-  const { data, error } = await supabase.rpc("match_users_to_project", {
-    project_embedding: embedding,
-    project_id_param: projectId,
+  const { data, error } = await supabase.rpc("match_users_to_posting", {
+    posting_embedding: embedding,
+    posting_id_param: projectId,
     match_limit: limit,
   });
 
@@ -81,7 +81,7 @@ export async function matchProjectToProfiles(
   const { data: existingMatches } = await supabase
     .from("matches")
     .select("id, user_id, similarity_score, status, score_breakdown")
-    .eq("project_id", projectId)
+    .eq("posting_id", projectId)
     .in("user_id", userIds);
 
   const matchMap = new Map(existingMatches?.map((m) => [m.user_id, m]) || []);
@@ -98,17 +98,14 @@ export async function matchProjectToProfiles(
         location: row.location || null,
         location_lat: row.location_lat || null,
         location_lng: row.location_lng || null,
-        experience_level: row.experience_level,
-        collaboration_style: row.collaboration_style,
-        remote_preference: row.remote_preference || null,
-        availability_hours: row.availability_hours,
         skills: row.skills || [],
+        skill_levels: row.skill_levels || null,
         interests: row.interests || null,
         languages: row.languages || null,
         portfolio_url: row.portfolio_url || null,
         github_url: row.github_url || null,
-        project_preferences: row.project_preferences || {},
-        hard_filters: row.hard_filters || null,
+        location_preference: row.location_preference ?? null,
+        availability_slots: row.availability_slots || null,
         embedding: null, // Don't return embedding in response
         is_test_data: row.is_test_data || false,
         created_at: row.created_at || "",
@@ -128,7 +125,7 @@ export async function matchProjectToProfiles(
           "compute_match_breakdown",
           {
             profile_user_id: row.user_id,
-            target_project_id: projectId,
+            target_posting_id: projectId,
           },
         );
 
@@ -162,7 +159,7 @@ export async function createMatchRecordsForProject(
   const matchInserts = matches
     .filter((m) => !m.matchId) // Only create new matches
     .map((m) => ({
-      project_id: projectId,
+      posting_id: projectId,
       user_id: m.profile.user_id,
       similarity_score: m.score,
       score_breakdown: m.scoreBreakdown,
@@ -171,7 +168,7 @@ export async function createMatchRecordsForProject(
 
   if (matchInserts.length > 0) {
     const { error } = await supabase.from("matches").upsert(matchInserts, {
-      onConflict: "project_id,user_id",
+      onConflict: "posting_id,user_id",
       ignoreDuplicates: false,
     });
 

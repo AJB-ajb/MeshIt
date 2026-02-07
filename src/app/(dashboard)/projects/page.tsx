@@ -1,8 +1,17 @@
 "use client";
 
-import { useEffect, useState } from "react";
+import { useState } from "react";
 import Link from "next/link";
-import { Plus, Search, Filter, Users, Calendar, Clock, Loader2, Sparkles } from "lucide-react";
+import {
+  Plus,
+  Search,
+  Filter,
+  Users,
+  Calendar,
+  Clock,
+  Loader2,
+  Sparkles,
+} from "lucide-react";
 
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
@@ -14,54 +23,15 @@ import {
   CardHeader,
   CardTitle,
 } from "@/components/ui/card";
-import { createClient } from "@/lib/supabase/client";
 import { formatScore } from "@/lib/matching/scoring";
-import type { ScoreBreakdown } from "@/lib/supabase/types";
 import { getInitials } from "@/lib/format";
-
-type Project = {
-  id: string;
-  title: string;
-  description: string;
-  required_skills: string[];
-  team_size: number;
-  timeline: string;
-  commitment_hours: number;
-  status: string;
-  created_at: string;
-  creator_id: string;
-  profiles?: {
-    full_name: string | null;
-    user_id: string;
-  };
-};
-
-type ProjectWithScore = Project & {
-  compatibility_score?: number;
-  score_breakdown?: ScoreBreakdown;
-};
-
-type TabId = "discover" | "my-projects";
+import { useProjects } from "@/lib/hooks/use-projects";
+import type { Posting, TabId } from "@/lib/hooks/use-projects";
 
 const tabs: { id: TabId; label: string }[] = [
   { id: "discover", label: "Discover" },
-  { id: "my-projects", label: "My Projects" },
+  { id: "my-postings", label: "My Projects" },
 ];
-
-const formatTimeline = (timeline: string) => {
-  switch (timeline) {
-    case "weekend":
-      return "This weekend";
-    case "1_week":
-      return "1 week";
-    case "1_month":
-      return "1 month";
-    case "ongoing":
-      return "Ongoing";
-    default:
-      return timeline;
-  }
-};
 
 const formatDate = (dateString: string) => {
   const date = new Date(dateString);
@@ -78,134 +48,17 @@ const formatDate = (dateString: string) => {
 
 export default function ProjectsPage() {
   const [activeTab, setActiveTab] = useState<TabId>("discover");
-  const [projects, setProjects] = useState<ProjectWithScore[]>([]);
-  const [isLoading, setIsLoading] = useState(true);
-  const [userId, setUserId] = useState<string | null>(null);
   const [searchQuery, setSearchQuery] = useState("");
-  const [isLoadingScores, setIsLoadingScores] = useState(false);
+  const { postings, userId, isLoading } = useProjects(activeTab);
 
-  useEffect(() => {
-    const fetchProjects = async () => {
-      setIsLoading(true);
-      const supabase = createClient();
-
-      // Get current user
-      const {
-        data: { user },
-      } = await supabase.auth.getUser();
-      setUserId(user?.id ?? null);
-
-      let query = supabase
-        .from("projects")
-        .select(
-          `
-          *,
-          profiles:creator_id (
-            full_name,
-            user_id
-          )
-        `
-        )
-        .order("created_at", { ascending: false });
-
-      if (activeTab === "my-projects" && user) {
-        query = query.eq("creator_id", user.id);
-      } else {
-        // For discover, show open projects not created by current user
-        query = query.eq("status", "open");
-        if (user) {
-          query = query.neq("creator_id", user.id);
-        }
-      }
-
-      const { data, error } = await query;
-
-      if (error) {
-        console.error("Error fetching projects:", error);
-        setIsLoading(false);
-      } else {
-        const projectsData = data || [];
-        setProjects(projectsData);
-        setIsLoading(false);
-
-        // Fetch compatibility scores for discover tab if user is logged in
-        if (activeTab === "discover" && user) {
-          fetchCompatibilityScores(user.id, projectsData);
-        }
-      }
-    };
-
-    fetchProjects();
-  }, [activeTab]);
-
-  const fetchCompatibilityScores = async (currentUserId: string, projectsList: Project[]) => {
-    if (projectsList.length === 0) return;
-    
-    setIsLoadingScores(true);
-    const supabase = createClient();
-
-    try {
-      // Fetch user's profile to check if it's complete
-      const { data: profile } = await supabase
-        .from("profiles")
-        .select("*")
-        .eq("user_id", currentUserId)
-        .single();
-
-      if (!profile) {
-        setIsLoadingScores(false);
-        return;
-      }
-
-      // Compute compatibility score for each project
-      const projectsWithScores = await Promise.all(
-        projectsList.map(async (project) => {
-          try {
-            const { data: breakdown, error } = await supabase.rpc(
-              "compute_match_breakdown",
-              {
-                profile_user_id: currentUserId,
-                target_project_id: project.id,
-              }
-            );
-
-            if (!error && breakdown) {
-              const overallScore =
-                breakdown.semantic * 0.4 +
-                breakdown.skills_overlap * 0.3 +
-                breakdown.experience_match * 0.15 +
-                breakdown.commitment_match * 0.15;
-
-              return {
-                ...project,
-                compatibility_score: overallScore,
-                score_breakdown: breakdown as ScoreBreakdown,
-              };
-            }
-          } catch (err) {
-            console.error(`Failed to compute score for project ${project.id}:`, err);
-          }
-
-          return project;
-        })
-      );
-
-      setProjects(projectsWithScores);
-    } catch (err) {
-      console.error("Failed to fetch compatibility scores:", err);
-    } finally {
-      setIsLoadingScores(false);
-    }
-  };
-
-  const filteredProjects = projects.filter((project) => {
+  const filteredProjects = postings.filter((project: Posting) => {
     if (!searchQuery) return true;
     const query = searchQuery.toLowerCase();
     return (
       project.title.toLowerCase().includes(query) ||
       project.description.toLowerCase().includes(query) ||
-      project.required_skills.some((skill) =>
-        skill.toLowerCase().includes(query)
+      project.skills.some((skill: string) =>
+        skill.toLowerCase().includes(query),
       )
     );
   });
@@ -275,11 +128,11 @@ export default function ProjectsPage() {
         <Card>
           <CardContent className="flex min-h-[200px] flex-col items-center justify-center py-12">
             <p className="text-muted-foreground">
-              {activeTab === "my-projects"
+              {activeTab === "my-postings"
                 ? "You haven't created any projects yet."
                 : "No projects found."}
             </p>
-            {activeTab === "my-projects" && (
+            {activeTab === "my-postings" && (
               <Button asChild className="mt-4">
                 <Link href="/projects/new">
                   <Plus className="h-4 w-4" />
@@ -294,8 +147,7 @@ export default function ProjectsPage() {
         <div className="grid gap-6">
           {filteredProjects.map((project) => {
             const isOwner = userId === project.creator_id;
-            const creatorName =
-              project.profiles?.full_name || "Unknown";
+            const creatorName = project.profiles?.full_name || "Unknown";
 
             return (
               <Card key={project.id} className="overflow-hidden">
@@ -323,21 +175,16 @@ export default function ProjectsPage() {
                           </Badge>
                         )}
                         {/* Compatibility Score Badge */}
-                        {!isOwner && project.compatibility_score !== undefined && (
-                          <Badge 
-                            variant="default" 
-                            className="bg-green-500 hover:bg-green-600 flex items-center gap-1"
-                          >
-                            <Sparkles className="h-3 w-3" />
-                            {formatScore(project.compatibility_score)} match
-                          </Badge>
-                        )}
-                        {!isOwner && isLoadingScores && project.compatibility_score === undefined && (
-                          <Badge variant="outline" className="flex items-center gap-1">
-                            <Loader2 className="h-3 w-3 animate-spin" />
-                            Computing...
-                          </Badge>
-                        )}
+                        {!isOwner &&
+                          project.compatibility_score !== undefined && (
+                            <Badge
+                              variant="default"
+                              className="bg-green-500 hover:bg-green-600 flex items-center gap-1"
+                            >
+                              <Sparkles className="h-3 w-3" />
+                              {formatScore(project.compatibility_score)} match
+                            </Badge>
+                          )}
                       </div>
                     </div>
                     <div className="flex gap-2 shrink-0">
@@ -366,36 +213,52 @@ export default function ProjectsPage() {
                       </p>
                       <div className="grid grid-cols-2 sm:grid-cols-4 gap-2 text-xs">
                         <div className="flex flex-col">
-                          <span className="text-muted-foreground">Skills</span>
-                          <span className="font-medium text-foreground">{formatScore(project.score_breakdown.skills_overlap)}</span>
+                          <span className="text-muted-foreground">
+                            Semantic
+                          </span>
+                          <span className="font-medium text-foreground">
+                            {formatScore(project.score_breakdown.semantic)}
+                          </span>
                         </div>
                         <div className="flex flex-col">
-                          <span className="text-muted-foreground">Semantic</span>
-                          <span className="font-medium text-foreground">{formatScore(project.score_breakdown.semantic)}</span>
+                          <span className="text-muted-foreground">
+                            Availability
+                          </span>
+                          <span className="font-medium text-foreground">
+                            {formatScore(project.score_breakdown.availability)}
+                          </span>
                         </div>
                         <div className="flex flex-col">
-                          <span className="text-muted-foreground">Experience</span>
-                          <span className="font-medium text-foreground">{formatScore(project.score_breakdown.experience_match)}</span>
+                          <span className="text-muted-foreground">
+                            Skill Level
+                          </span>
+                          <span className="font-medium text-foreground">
+                            {formatScore(project.score_breakdown.skill_level)}
+                          </span>
                         </div>
                         <div className="flex flex-col">
-                          <span className="text-muted-foreground">Availability</span>
-                          <span className="font-medium text-foreground">{formatScore(project.score_breakdown.commitment_match)}</span>
+                          <span className="text-muted-foreground">
+                            Location
+                          </span>
+                          <span className="font-medium text-foreground">
+                            {formatScore(project.score_breakdown.location)}
+                          </span>
                         </div>
                       </div>
                     </div>
                   )}
 
                   {/* Skills */}
-                  {project.required_skills.length > 0 && (
+                  {project.skills.length > 0 && (
                     <div className="flex flex-wrap gap-2">
-                      {project.required_skills.slice(0, 5).map((skill) => (
+                      {project.skills.slice(0, 5).map((skill: string) => (
                         <Badge key={skill} variant="secondary">
                           {skill}
                         </Badge>
                       ))}
-                      {project.required_skills.length > 5 && (
+                      {project.skills.length > 5 && (
                         <Badge variant="outline">
-                          +{project.required_skills.length - 5}
+                          +{project.skills.length - 5}
                         </Badge>
                       )}
                     </div>
@@ -405,16 +268,20 @@ export default function ProjectsPage() {
                   <div className="flex flex-wrap items-center gap-4 text-sm text-muted-foreground">
                     <span className="flex items-center gap-1.5">
                       <Users className="h-4 w-4" />
-                      {project.team_size} people
+                      {project.team_size_min}-{project.team_size_max} people
                     </span>
-                    <span className="flex items-center gap-1.5">
-                      <Calendar className="h-4 w-4" />
-                      {formatTimeline(project.timeline)}
-                    </span>
-                    <span className="flex items-center gap-1.5">
-                      <Clock className="h-4 w-4" />
-                      {project.commitment_hours} hrs/week
-                    </span>
+                    {project.estimated_time && (
+                      <span className="flex items-center gap-1.5">
+                        <Calendar className="h-4 w-4" />
+                        {project.estimated_time}
+                      </span>
+                    )}
+                    {project.category && (
+                      <span className="flex items-center gap-1.5">
+                        <Clock className="h-4 w-4" />
+                        {project.category}
+                      </span>
+                    )}
                   </div>
 
                   {/* Creator */}
