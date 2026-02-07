@@ -55,9 +55,9 @@ async function RecentActivityList({
   }> = [];
 
   if (persona === "project_owner") {
-    // Get user's project IDs
+    // Get user's posting IDs
     const { data: userProjects } = await supabase
-      .from("projects")
+      .from("postings")
       .select("id")
       .eq("creator_id", userId)
       .eq("is_test_data", getTestDataValue());
@@ -73,7 +73,7 @@ async function RecentActivityList({
           id,
           created_at,
           status,
-          projects:project_id (
+          postings:posting_id (
             id,
             title
           ),
@@ -83,7 +83,7 @@ async function RecentActivityList({
           )
         `,
         )
-        .in("project_id", projectIds)
+        .in("posting_id", projectIds)
         .order("created_at", { ascending: false })
         .limit(3);
 
@@ -91,13 +91,13 @@ async function RecentActivityList({
         recentApplications.forEach((app: unknown) => {
           const a = app as Record<string, unknown>;
           const profiles = a.profiles as Record<string, unknown> | null;
-          const projects = a.projects as Record<string, unknown> | null;
+          const postings = a.postings as Record<string, unknown> | null;
           activities.push({
             type: "application",
             title: `New application from ${profiles?.full_name || "Someone"}`,
-            description: `Applied to "${projects?.title || "Project"}"`,
+            description: `Applied to "${postings?.title || "Project"}"`,
             time: formatTimeAgo(a.created_at as string),
-            href: `/projects/${projects?.id}`,
+            href: `/projects/${postings?.id}`,
           });
         });
       }
@@ -110,7 +110,7 @@ async function RecentActivityList({
           id,
           created_at,
           status,
-          projects:project_id (
+          postings:posting_id (
             id,
             title
           ),
@@ -120,7 +120,7 @@ async function RecentActivityList({
           )
         `,
         )
-        .in("project_id", projectIds)
+        .in("posting_id", projectIds)
         .order("created_at", { ascending: false })
         .limit(3);
 
@@ -128,11 +128,11 @@ async function RecentActivityList({
         recentMatches.forEach((match: unknown) => {
           const m = match as Record<string, unknown>;
           const profiles = m.profiles as Record<string, unknown> | null;
-          const projects = m.projects as Record<string, unknown> | null;
+          const postings = m.postings as Record<string, unknown> | null;
           activities.push({
             type: "match",
             title: `New match: ${profiles?.full_name || "Developer"}`,
-            description: `Matched with "${projects?.title || "Project"}"`,
+            description: `Matched with "${postings?.title || "Project"}"`,
             time: formatTimeAgo(m.created_at as string),
             href: `/matches`,
           });
@@ -148,7 +148,7 @@ async function RecentActivityList({
         id,
         created_at,
         status,
-        projects:project_id (
+        postings:posting_id (
           id,
           title
         )
@@ -161,13 +161,13 @@ async function RecentActivityList({
     if (recentApplications) {
       recentApplications.forEach((app: unknown) => {
         const a = app as Record<string, unknown>;
-        const projects = a.projects as Record<string, unknown> | null;
+        const postings = a.postings as Record<string, unknown> | null;
         activities.push({
           type: "application",
-          title: `Application to "${projects?.title || "Project"}"`,
+          title: `Application to "${postings?.title || "Project"}"`,
           description: `Status: ${a.status}`,
           time: formatTimeAgo(a.created_at as string),
-          href: `/projects/${projects?.id}`,
+          href: `/projects/${postings?.id}`,
         });
       });
     }
@@ -181,7 +181,7 @@ async function RecentActivityList({
         created_at,
         status,
         similarity_score,
-        projects:project_id (
+        postings:posting_id (
           id,
           title
         )
@@ -194,10 +194,10 @@ async function RecentActivityList({
     if (recentMatches) {
       recentMatches.forEach((match: unknown) => {
         const m = match as Record<string, unknown>;
-        const projects = m.projects as Record<string, unknown> | null;
+        const postings = m.postings as Record<string, unknown> | null;
         activities.push({
           type: "match",
-          title: `New match: "${projects?.title || "Project"}"`,
+          title: `New match: "${postings?.title || "Project"}"`,
           description: `Match score: ${Math.round(((m.similarity_score as number) || 0) * 100)}%`,
           time: formatTimeAgo(m.created_at as string),
           href: `/matches`,
@@ -323,14 +323,14 @@ async function fetchOwnerStats(
   userId: string,
 ): Promise<StatItem[]> {
   const { count: liveProjectsCount } = await supabase
-    .from("projects")
+    .from("postings")
     .select("*", { count: "exact", head: true })
     .eq("creator_id", userId)
     .eq("status", "open")
     .eq("is_test_data", getTestDataValue());
 
   const { data: userProjects } = await supabase
-    .from("projects")
+    .from("postings")
     .select("id")
     .eq("creator_id", userId)
     .eq("is_test_data", getTestDataValue());
@@ -342,7 +342,7 @@ async function fetchOwnerStats(
       ? await supabase
           .from("applications")
           .select("*", { count: "exact", head: true })
-          .in("project_id", projectIds)
+          .in("posting_id", projectIds)
           .eq("status", "pending")
       : { count: 0 };
 
@@ -351,7 +351,7 @@ async function fetchOwnerStats(
       ? await supabase
           .from("matches")
           .select("*", { count: "exact", head: true })
-          .in("project_id", projectIds)
+          .in("posting_id", projectIds)
           .eq("status", "pending")
       : { count: 0 };
 
@@ -384,7 +384,7 @@ async function fetchOwnerStats(
       ? await supabase
           .from("matches")
           .select("similarity_score")
-          .in("project_id", projectIds)
+          .in("posting_id", projectIds)
       : { data: null };
 
   const avgMatchQuality =
@@ -434,7 +434,7 @@ async function fetchDeveloperStats(
 ): Promise<StatItem[]> {
   const { data: acceptedMatches } = await supabase
     .from("matches")
-    .select("project_id")
+    .select("posting_id")
     .eq("user_id", userId)
     .eq("status", "accepted");
 
@@ -514,14 +514,15 @@ async function fetchRecommendedProjects(
     .from("matches")
     .select(
       `
-      projects:project_id (
+      postings:posting_id (
         id,
         title,
         description,
-        required_skills,
-        team_size,
-        timeline,
-        commitment_hours,
+        skills,
+        team_size_min,
+        team_size_max,
+        estimated_time,
+        category,
         created_at,
         profiles:creator_id (
           full_name,
@@ -538,42 +539,27 @@ async function fetchRecommendedProjects(
 
   if (!topMatches) return [];
 
-  const formatTimeline = (timeline: string) => {
-    switch (timeline) {
-      case "weekend":
-        return "This weekend";
-      case "1_week":
-        return "1 week";
-      case "1_month":
-        return "1 month";
-      case "ongoing":
-        return "Ongoing";
-      default:
-        return timeline;
-    }
-  };
-
   return topMatches
     .map((match: unknown) => {
       const m = match as Record<string, unknown>;
-      const project = m.projects as Record<string, unknown> | null;
-      if (!project) return null;
+      const posting = m.postings as Record<string, unknown> | null;
+      if (!posting) return null;
 
-      const profiles = project.profiles as Record<string, unknown> | null;
+      const profiles = posting.profiles as Record<string, unknown> | null;
       return {
-        id: project.id,
-        title: project.title,
-        description: project.description,
-        skills: (project.required_skills as string[]) || [],
-        teamSize: `${project.team_size} people`,
-        timeline: formatTimeline(project.timeline as string),
-        commitment: `${(project.commitment_hours as number) || 0} hrs/week`,
+        id: posting.id,
+        title: posting.title,
+        description: posting.description,
+        skills: (posting.skills as string[]) || [],
+        teamSize: `${posting.team_size_min}-${posting.team_size_max} people`,
+        estimatedTime: (posting.estimated_time as string) || "",
+        category: (posting.category as string) || "",
         matchScore: Math.round((m.similarity_score as number) * 100),
         creator: {
           name: (profiles?.full_name as string) || "Unknown",
           initials: getInitials((profiles?.full_name as string) || null),
         },
-        createdAt: formatDate(project.created_at as string),
+        createdAt: formatDate(posting.created_at as string),
       };
     })
     .filter(Boolean) as RecommendedProject[];
@@ -584,7 +570,7 @@ async function fetchOwnerProjectMetrics(
   userId: string,
 ): Promise<ProjectMetric[]> {
   const { data: userProjects } = await supabase
-    .from("projects")
+    .from("postings")
     .select("id, title, status")
     .eq("creator_id", userId)
     .eq("status", "open")
@@ -599,13 +585,13 @@ async function fetchOwnerProjectMetrics(
     projectIds.length > 0
       ? await supabase
           .from("matches")
-          .select("project_id, status")
-          .in("project_id", projectIds)
+          .select("posting_id, status")
+          .in("posting_id", projectIds)
       : { data: null };
 
   return userProjects.map((project) => {
     const projectMatches =
-      matchesData?.filter((m) => m.project_id === project.id) || [];
+      matchesData?.filter((m) => m.posting_id === project.id) || [];
     const applicants = projectMatches.filter(
       (m) => m.status === "pending",
     ).length;

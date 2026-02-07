@@ -69,7 +69,7 @@ export async function seedProjectDirect(
   }
 
   const { data, error } = await supabaseAdmin
-    .from("projects")
+    .from("postings")
     .insert(projectData)
     .select()
     .single();
@@ -114,7 +114,7 @@ export async function seedProjects(
  */
 export async function seedMatch(
   matchData: Partial<TestMatch> & {
-    project_id: string;
+    posting_id: string;
     user_id: string;
   },
 ): Promise<TestMatch> {

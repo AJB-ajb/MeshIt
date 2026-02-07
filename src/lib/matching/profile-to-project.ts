@@ -1,26 +1,26 @@
 /**
  * Profile-to-Project Matching
- * Finds projects that match a user's profile using pgvector cosine similarity
+ * Finds postings that match a user's profile using pgvector cosine similarity
  */
 
 import { createClient } from "@/lib/supabase/server";
-import type { Project, ScoreBreakdown } from "@/lib/supabase/types";
+import type { Posting, ScoreBreakdown } from "@/lib/supabase/types";
 import { generateProfileEmbedding } from "@/lib/ai/embeddings";
 
 export interface ProfileToProjectMatch {
-  project: Project;
+  project: Posting;
   score: number; // 0-1 similarity score
   scoreBreakdown: ScoreBreakdown | null;
   matchId?: string; // If match record already exists
 }
 
 /**
- * Finds projects matching a user's profile
- * Uses the match_projects_to_user database function with pgvector similarity
+ * Finds postings matching a user's profile
+ * Uses the match_postings_to_user database function with pgvector similarity
  *
  * @param userId The user ID to find matches for
  * @param limit Maximum number of matches to return (default: 10)
- * @returns Array of matching projects with similarity scores
+ * @returns Array of matching postings with similarity scores
  */
 export async function matchProfileToProjects(
   userId: string,
@@ -66,8 +66,8 @@ export async function matchProfileToProjects(
     }
   }
 
-  // Call the database function to find matching projects
-  const { data, error } = await supabase.rpc("match_projects_to_user", {
+  // Call the database function to find matching postings
+  const { data, error } = await supabase.rpc("match_postings_to_user", {
     user_embedding: embedding,
     user_id_param: userId,
     match_limit: limit,
@@ -82,33 +82,38 @@ export async function matchProfileToProjects(
   }
 
   // Check for existing match records
-  const projectIds = data.map((row: { project_id: string }) => row.project_id);
+  const postingIds = data.map((row: { project_id: string }) => row.project_id);
   const { data: existingMatches } = await supabase
     .from("matches")
-    .select("id, project_id, similarity_score, status, score_breakdown")
+    .select("id, posting_id, similarity_score, status, score_breakdown")
     .eq("user_id", userId)
-    .in("project_id", projectIds);
+    .in("posting_id", postingIds);
 
   const matchMap = new Map(
-    existingMatches?.map((m) => [m.project_id, m]) || [],
+    existingMatches?.map((m) => [m.posting_id, m]) || [],
   );
 
   // Transform results into match objects and compute breakdowns
   const matches: ProfileToProjectMatch[] = await Promise.all(
     // eslint-disable-next-line @typescript-eslint/no-explicit-any
     data.map(async (row: any) => {
-      const project: Project = {
-        id: row.project_id,
+      const posting: Posting = {
+        id: row.project_id, // RPC still returns this column name
         creator_id: row.creator_id,
         title: row.title,
         description: row.description,
-        required_skills: row.required_skills || [],
-        team_size: row.team_size,
-        experience_level: row.experience_level,
-        commitment_hours: row.commitment_hours,
-        timeline: row.timeline,
-        hard_filters: row.hard_filters || null,
-        embedding: null, // Don't return embedding in response
+        skills: row.skills || [],
+        team_size_min: row.team_size_min || 1,
+        team_size_max: row.team_size_max || 1,
+        category: row.category || null,
+        context_identifier: row.context_identifier || null,
+        tags: row.tags || [],
+        mode: row.mode || "open",
+        location_preference: row.location_preference ?? null,
+        natural_language_criteria: row.natural_language_criteria || null,
+        estimated_time: row.estimated_time || null,
+        skill_level_min: row.skill_level_min ?? null,
+        embedding: null,
         status: "open",
         is_test_data: row.is_test_data || false,
         created_at: row.created_at,
@@ -129,7 +134,7 @@ export async function matchProfileToProjects(
           "compute_match_breakdown",
           {
             profile_user_id: userId,
-            target_project_id: row.project_id,
+            target_posting_id: row.project_id,
           },
         );
 
@@ -139,7 +144,7 @@ export async function matchProfileToProjects(
       }
 
       return {
-        project,
+        project: posting,
         score: row.similarity,
         scoreBreakdown,
         matchId: existingMatch?.id,
@@ -166,7 +171,7 @@ export async function createMatchRecords(
     .filter((m) => !m.matchId) // Only create new matches
     .map((m) => ({
       user_id: userId,
-      project_id: m.project.id,
+      posting_id: m.project.id,
       similarity_score: m.score,
       score_breakdown: m.scoreBreakdown,
       status: "pending" as const,
@@ -174,7 +179,7 @@ export async function createMatchRecords(
 
   if (matchInserts.length > 0) {
     const { error } = await supabase.from("matches").upsert(matchInserts, {
-      onConflict: "project_id,user_id",
+      onConflict: "posting_id,user_id",
       ignoreDuplicates: false,
     });
 

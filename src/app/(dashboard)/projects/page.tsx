@@ -26,27 +26,12 @@ import {
 import { formatScore } from "@/lib/matching/scoring";
 import { getInitials } from "@/lib/format";
 import { useProjects } from "@/lib/hooks/use-projects";
-import type { TabId } from "@/lib/hooks/use-projects";
+import type { Posting, TabId } from "@/lib/hooks/use-projects";
 
 const tabs: { id: TabId; label: string }[] = [
   { id: "discover", label: "Discover" },
-  { id: "my-projects", label: "My Projects" },
+  { id: "my-postings", label: "My Projects" },
 ];
-
-const formatTimeline = (timeline: string) => {
-  switch (timeline) {
-    case "weekend":
-      return "This weekend";
-    case "1_week":
-      return "1 week";
-    case "1_month":
-      return "1 month";
-    case "ongoing":
-      return "Ongoing";
-    default:
-      return timeline;
-  }
-};
 
 const formatDate = (dateString: string) => {
   const date = new Date(dateString);
@@ -64,15 +49,15 @@ const formatDate = (dateString: string) => {
 export default function ProjectsPage() {
   const [activeTab, setActiveTab] = useState<TabId>("discover");
   const [searchQuery, setSearchQuery] = useState("");
-  const { projects, userId, isLoading } = useProjects(activeTab);
+  const { postings, userId, isLoading } = useProjects(activeTab);
 
-  const filteredProjects = projects.filter((project) => {
+  const filteredProjects = postings.filter((project: Posting) => {
     if (!searchQuery) return true;
     const query = searchQuery.toLowerCase();
     return (
       project.title.toLowerCase().includes(query) ||
       project.description.toLowerCase().includes(query) ||
-      project.required_skills.some((skill) =>
+      project.skills.some((skill: string) =>
         skill.toLowerCase().includes(query),
       )
     );
@@ -143,11 +128,11 @@ export default function ProjectsPage() {
         <Card>
           <CardContent className="flex min-h-[200px] flex-col items-center justify-center py-12">
             <p className="text-muted-foreground">
-              {activeTab === "my-projects"
+              {activeTab === "my-postings"
                 ? "You haven't created any projects yet."
                 : "No projects found."}
             </p>
-            {activeTab === "my-projects" && (
+            {activeTab === "my-postings" && (
               <Button asChild className="mt-4">
                 <Link href="/projects/new">
                   <Plus className="h-4 w-4" />
@@ -228,14 +213,6 @@ export default function ProjectsPage() {
                       </p>
                       <div className="grid grid-cols-2 sm:grid-cols-4 gap-2 text-xs">
                         <div className="flex flex-col">
-                          <span className="text-muted-foreground">Skills</span>
-                          <span className="font-medium text-foreground">
-                            {formatScore(
-                              project.score_breakdown.skills_overlap,
-                            )}
-                          </span>
-                        </div>
-                        <div className="flex flex-col">
                           <span className="text-muted-foreground">
                             Semantic
                           </span>
@@ -245,22 +222,26 @@ export default function ProjectsPage() {
                         </div>
                         <div className="flex flex-col">
                           <span className="text-muted-foreground">
-                            Experience
+                            Availability
                           </span>
                           <span className="font-medium text-foreground">
-                            {formatScore(
-                              project.score_breakdown.experience_match,
-                            )}
+                            {formatScore(project.score_breakdown.availability)}
                           </span>
                         </div>
                         <div className="flex flex-col">
                           <span className="text-muted-foreground">
-                            Availability
+                            Skill Level
                           </span>
                           <span className="font-medium text-foreground">
-                            {formatScore(
-                              project.score_breakdown.commitment_match,
-                            )}
+                            {formatScore(project.score_breakdown.skill_level)}
+                          </span>
+                        </div>
+                        <div className="flex flex-col">
+                          <span className="text-muted-foreground">
+                            Location
+                          </span>
+                          <span className="font-medium text-foreground">
+                            {formatScore(project.score_breakdown.location)}
                           </span>
                         </div>
                       </div>
@@ -268,16 +249,16 @@ export default function ProjectsPage() {
                   )}
 
                   {/* Skills */}
-                  {project.required_skills.length > 0 && (
+                  {project.skills.length > 0 && (
                     <div className="flex flex-wrap gap-2">
-                      {project.required_skills.slice(0, 5).map((skill) => (
+                      {project.skills.slice(0, 5).map((skill: string) => (
                         <Badge key={skill} variant="secondary">
                           {skill}
                         </Badge>
                       ))}
-                      {project.required_skills.length > 5 && (
+                      {project.skills.length > 5 && (
                         <Badge variant="outline">
-                          +{project.required_skills.length - 5}
+                          +{project.skills.length - 5}
                         </Badge>
                       )}
                     </div>
@@ -287,16 +268,20 @@ export default function ProjectsPage() {
                   <div className="flex flex-wrap items-center gap-4 text-sm text-muted-foreground">
                     <span className="flex items-center gap-1.5">
                       <Users className="h-4 w-4" />
-                      {project.team_size} people
+                      {project.team_size_min}-{project.team_size_max} people
                     </span>
-                    <span className="flex items-center gap-1.5">
-                      <Calendar className="h-4 w-4" />
-                      {formatTimeline(project.timeline)}
-                    </span>
-                    <span className="flex items-center gap-1.5">
-                      <Clock className="h-4 w-4" />
-                      {project.commitment_hours} hrs/week
-                    </span>
+                    {project.estimated_time && (
+                      <span className="flex items-center gap-1.5">
+                        <Calendar className="h-4 w-4" />
+                        {project.estimated_time}
+                      </span>
+                    )}
+                    {project.category && (
+                      <span className="flex items-center gap-1.5">
+                        <Clock className="h-4 w-4" />
+                        {project.category}
+                      </span>
+                    )}
                   </div>
 
                   {/* Creator */}

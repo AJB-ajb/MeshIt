@@ -7,35 +7,34 @@ const GOOGLE_AI_API_KEY = process.env.GOOGLE_AI_API_KEY;
 
 if (!GOOGLE_AI_API_KEY) {
   console.warn(
-    "GOOGLE_AI_API_KEY not set. Match explanation generation will fail."
+    "GOOGLE_AI_API_KEY not set. Match explanation generation will fail.",
   );
 }
 
 export interface ProfileData {
   skills: string[];
-  experience_level: string | null;
-  availability_hours: number | null;
+  skill_levels: Record<string, number> | null;
+  location_preference: number | null;
   interests: string[] | null;
-  collaboration_style: string | null;
   bio: string | null;
 }
 
 export interface ProjectData {
   title: string;
   description: string;
-  required_skills: string[];
-  commitment_hours: number | null;
-  timeline: string | null;
+  skills: string[];
+  category: string | null;
+  estimated_time: string | null;
 }
 
 /**
  * Generates a match explanation using Gemini Flash
- * Creates a 2-3 sentence explanation of why the profile and project are a good match
+ * Creates a 2-3 sentence explanation of why the profile and posting are a good match
  */
 export async function generateMatchExplanation(
   profile: ProfileData,
   project: ProjectData,
-  score: number
+  score: number,
 ): Promise<string> {
   if (!GOOGLE_AI_API_KEY) {
     throw new Error("GOOGLE_AI_API_KEY environment variable is not set");
@@ -44,22 +43,27 @@ export async function generateMatchExplanation(
   const scorePercent = Math.round(score * 100);
 
   // Build the prompt
-  const prompt = `Given this user profile and project, explain in 2-3 sentences why they are a good match. Focus on specific skill overlaps and relevant experience. Be concise and friendly.
+  const prompt = `Given this user profile and posting, explain in 2-3 sentences why they are a good match. Focus on specific skill overlaps and relevant experience. Be concise and friendly.
 
 User Profile:
 - Skills: ${profile.skills.join(", ") || "Not specified"}
-- Experience: ${profile.experience_level || "Not specified"}
-- Availability: ${profile.availability_hours ? `${profile.availability_hours} hrs/week` : "Not specified"}
+- Skill Levels: ${
+    profile.skill_levels
+      ? Object.entries(profile.skill_levels)
+          .map(([k, v]) => `${k}: ${v}`)
+          .join(", ")
+      : "Not specified"
+  }
+- Location Preference: ${profile.location_preference ?? "Not specified"}
 - Interests: ${profile.interests?.join(", ") || "Not specified"}
-- Collaboration style: ${profile.collaboration_style || "Not specified"}
 - Bio: ${profile.bio || "Not provided"}
 
-Project:
+Posting:
 - Title: ${project.title}
 - Description: ${project.description}
-- Required Skills: ${project.required_skills.join(", ") || "Not specified"}
-- Commitment: ${project.commitment_hours ? `${project.commitment_hours} hrs/week` : "Not specified"}
-- Timeline: ${project.timeline || "Not specified"}
+- Skills: ${project.skills.join(", ") || "Not specified"}
+- Category: ${project.category || "Not specified"}
+- Estimated Time: ${project.estimated_time || "Not specified"}
 
 Match Score: ${scorePercent}%
 
@@ -90,19 +94,18 @@ Explanation:`;
             maxOutputTokens: 200,
           },
         }),
-      }
+      },
     );
 
     if (!response.ok) {
       const error = await response.json().catch(() => ({}));
       throw new Error(
-        `Gemini API error: ${response.status} ${response.statusText}. ${JSON.stringify(error)}`
+        `Gemini API error: ${response.status} ${response.statusText}. ${JSON.stringify(error)}`,
       );
     }
 
     const data = await response.json();
-    const explanation =
-      data.candidates?.[0]?.content?.parts?.[0]?.text?.trim();
+    const explanation = data.candidates?.[0]?.content?.parts?.[0]?.text?.trim();
 
     if (!explanation) {
       throw new Error("Invalid explanation response from Gemini API");
@@ -126,15 +129,15 @@ export async function generateMatchExplanations(
     profile: ProfileData;
     project: ProjectData;
     score: number;
-  }>
+  }>,
 ): Promise<string[]> {
   const promises = matches.map((match) =>
     generateMatchExplanation(match.profile, match.project, match.score).catch(
       (error) => {
         console.error("Failed to generate explanation:", error);
         return null; // Return null on error, caller can handle
-      }
-    )
+      },
+    ),
   );
 
   const results = await Promise.all(promises);

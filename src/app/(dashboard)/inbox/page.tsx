@@ -152,8 +152,8 @@ function InboxPageContent() {
             notification.title,
             notification.body || "",
             () => {
-              if (notification.related_project_id) {
-                router.push(`/projects/${notification.related_project_id}`);
+              if (notification.related_posting_id) {
+                router.push(`/projects/${notification.related_posting_id}`);
               }
             },
           );
@@ -205,8 +205,8 @@ function InboxPageContent() {
 
   const handleNotificationClick = (notification: (typeof notifications)[0]) => {
     handleMarkAsRead(notification.id);
-    if (notification.related_project_id) {
-      router.push(`/projects/${notification.related_project_id}`);
+    if (notification.related_posting_id) {
+      router.push(`/projects/${notification.related_posting_id}`);
     }
   };
 
@@ -482,9 +482,9 @@ function InboxPageContent() {
                         </span>
                       )}
                     </div>
-                    {conversation.project && (
+                    {conversation.posting && (
                       <p className="text-xs text-primary truncate">
-                        Re: {conversation.project.title}
+                        Re: {conversation.posting.title}
                       </p>
                     )}
                     {conversation.last_message && (
@@ -551,12 +551,12 @@ function InboxPageContent() {
                             size="sm"
                           />
                         </div>
-                        {selectedConversation.project && (
+                        {selectedConversation.posting && (
                           <Link
-                            href={`/projects/${selectedConversation.project_id}`}
+                            href={`/projects/${selectedConversation.posting_id}`}
                             className="text-xs text-primary hover:underline"
                           >
-                            Re: {selectedConversation.project.title}
+                            Re: {selectedConversation.posting.title}
                           </Link>
                         )}
                       </div>

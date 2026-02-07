@@ -1,9 +1,6 @@
 import Link from "next/link";
 import { Button } from "@/components/ui/button";
-import {
-  Card,
-  CardContent,
-} from "@/components/ui/card";
+import { Card, CardContent } from "@/components/ui/card";
 import { ProjectCard } from "@/components/project/project-card";
 
 export type RecommendedProject = {
@@ -12,8 +9,8 @@ export type RecommendedProject = {
   description: string;
   skills: string[];
   teamSize: string;
-  timeline: string;
-  commitment: string;
+  estimatedTime: string;
+  category: string;
   matchScore: number;
   creator: { name: string; initials: string };
   createdAt: string;

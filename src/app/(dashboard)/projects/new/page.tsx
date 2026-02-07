@@ -3,7 +3,14 @@
 import { useState } from "react";
 import { useRouter } from "next/navigation";
 import Link from "next/link";
-import { ArrowLeft, Mic, Loader2, Sparkles, FileText, CheckCircle } from "lucide-react";
+import {
+  ArrowLeft,
+  Mic,
+  Loader2,
+  Sparkles,
+  FileText,
+  CheckCircle,
+} from "lucide-react";
 
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
@@ -22,21 +29,23 @@ type InputMode = "form" | "ai";
 type ProjectFormState = {
   title: string;
   description: string;
-  requiredSkills: string;
-  timeline: string;
-  commitmentHours: string;
-  teamSize: string;
-  experienceLevel: string;
+  skills: string;
+  estimatedTime: string;
+  teamSizeMin: string;
+  teamSizeMax: string;
+  category: string;
+  mode: string;
 };
 
 const defaultFormState: ProjectFormState = {
   title: "",
   description: "",
-  requiredSkills: "",
-  timeline: "1_month",
-  commitmentHours: "10",
-  teamSize: "3",
-  experienceLevel: "any",
+  skills: "",
+  estimatedTime: "",
+  teamSizeMin: "2",
+  teamSizeMax: "5",
+  category: "personal",
+  mode: "remote",
 };
 
 const parseList = (value: string) =>
@@ -88,13 +97,14 @@ export default function NewProjectPage() {
       setForm({
         title: project.title || form.title,
         description: project.description || form.description,
-        requiredSkills: Array.isArray(project.required_skills)
-          ? project.required_skills.join(", ")
-          : form.requiredSkills,
-        timeline: project.timeline || form.timeline,
-        commitmentHours: project.commitment_hours?.toString() || form.commitmentHours,
-        teamSize: project.team_size?.toString() || form.teamSize,
-        experienceLevel: project.experience_level || form.experienceLevel,
+        skills: Array.isArray(project.skills)
+          ? project.skills.join(", ")
+          : form.skills,
+        estimatedTime: project.estimated_time || form.estimatedTime,
+        teamSizeMin: project.team_size_min?.toString() || form.teamSizeMin,
+        teamSizeMax: project.team_size_max?.toString() || form.teamSizeMax,
+        category: project.category || form.category,
+        mode: project.mode || form.mode,
       });
 
       setExtractionSuccess(true);
@@ -104,7 +114,9 @@ export default function NewProjectPage() {
         setExtractionSuccess(false);
       }, 1500);
     } catch (err) {
-      setError(err instanceof Error ? err.message : "Failed to extract project");
+      setError(
+        err instanceof Error ? err.message : "Failed to extract project",
+      );
     } finally {
       setIsExtracting(false);
     }
@@ -145,7 +157,7 @@ export default function NewProjectPage() {
       .eq("user_id", user.id)
       .single();
 
-    if (profileCheckError && profileCheckError.code !== 'PGRST116') {
+    if (profileCheckError && profileCheckError.code !== "PGRST116") {
       // PGRST116 is "not found" which is expected if profile doesn't exist
       setIsSaving(false);
       console.error("Profile check error:", profileCheckError);
@@ -157,48 +169,37 @@ export default function NewProjectPage() {
       // Create a minimal profile if it doesn't exist
       const { error: profileError } = await supabase.from("profiles").insert({
         user_id: user.id,
-        full_name: user.user_metadata?.full_name || user.email?.split("@")[0] || "User",
+        full_name:
+          user.user_metadata?.full_name || user.email?.split("@")[0] || "User",
         is_test_data: getTestDataValue(),
       });
 
       if (profileError) {
         setIsSaving(false);
         console.error("Profile creation error:", profileError);
-        setError(`Failed to create user profile: ${profileError.message || "Please try again."}`);
+        setError(
+          `Failed to create user profile: ${profileError.message || "Please try again."}`,
+        );
         return;
       }
     }
 
-    // Calculate expires_at based on timeline
+    // 90-day default expiry
     const now = new Date();
-    let expiresAt: Date;
-    switch (form.timeline) {
-      case "weekend":
-        expiresAt = new Date(now.getTime() + 7 * 24 * 60 * 60 * 1000); // 1 week
-        break;
-      case "1_week":
-        expiresAt = new Date(now.getTime() + 14 * 24 * 60 * 60 * 1000); // 2 weeks
-        break;
-      case "1_month":
-        expiresAt = new Date(now.getTime() + 45 * 24 * 60 * 60 * 1000); // 45 days
-        break;
-      case "ongoing":
-      default:
-        expiresAt = new Date(now.getTime() + 90 * 24 * 60 * 60 * 1000); // 90 days
-        break;
-    }
+    const expiresAt = new Date(now.getTime() + 90 * 24 * 60 * 60 * 1000);
 
     const { data: project, error: insertError } = await supabase
-      .from("projects")
+      .from("postings")
       .insert({
         creator_id: user.id,
         title: form.title.trim(),
         description: form.description.trim(),
-        required_skills: parseList(form.requiredSkills),
-        timeline: form.timeline,
-        commitment_hours: Number(form.commitmentHours),
-        team_size: Number(form.teamSize),
-        experience_level: form.experienceLevel,
+        skills: parseList(form.skills),
+        estimated_time: form.estimatedTime || null,
+        team_size_min: Number(form.teamSizeMin),
+        team_size_max: Number(form.teamSizeMax),
+        category: form.category,
+        mode: form.mode,
         status: "open",
         expires_at: expiresAt.toISOString(),
         is_test_data: getTestDataValue(),
@@ -210,23 +211,24 @@ export default function NewProjectPage() {
 
     if (insertError) {
       console.error("Insert error:", insertError);
-      
+
       // Provide more specific error messages
       let errorMessage = "Failed to create project. Please try again.";
-      
-      if (insertError.code === '23503') {
+
+      if (insertError.code === "23503") {
         // Foreign key violation - profile doesn't exist
-        errorMessage = "Your profile is missing. Please complete your profile first.";
-      } else if (insertError.code === '23505') {
+        errorMessage =
+          "Your profile is missing. Please complete your profile first.";
+      } else if (insertError.code === "23505") {
         // Unique violation
         errorMessage = "A project with this information already exists.";
-      } else if (insertError.code === '23514') {
+      } else if (insertError.code === "23514") {
         // Check constraint violation
         errorMessage = `Invalid project data: ${insertError.message}`;
       } else if (insertError.message) {
         errorMessage = `Failed to create project: ${insertError.message}`;
       }
-      
+
       setError(errorMessage);
       return;
     }
@@ -297,8 +299,9 @@ export default function NewProjectPage() {
               AI Project Extraction
             </CardTitle>
             <CardDescription>
-              Paste your project description from Slack, Discord, a GitHub README, or any text. 
-              Our AI will automatically extract project details.
+              Paste your project description from Slack, Discord, a GitHub
+              README, or any text. Our AI will automatically extract project
+              details.
             </CardDescription>
           </CardHeader>
           <CardContent className="space-y-4">
@@ -353,7 +356,8 @@ DM if interested!`}
               </Button>
             </div>
             <p className="text-xs text-muted-foreground">
-              After extraction, youll be able to review and edit the extracted information before creating your project.
+              After extraction, youll be able to review and edit the extracted
+              information before creating your project.
             </p>
           </CardContent>
         </Card>
@@ -361,174 +365,207 @@ DM if interested!`}
 
       {/* Form */}
       {inputMode === "form" && (
-      <form onSubmit={handleSubmit}>
-        <Card>
-          <CardHeader>
-            <CardTitle>Project Details</CardTitle>
-            <CardDescription>
-              Tell us about your project in plain language. You can paste from
-              Slack, Discord, or describe it yourself.
-            </CardDescription>
-          </CardHeader>
-          <CardContent className="space-y-6">
-            {/* Title */}
-            <div className="space-y-2">
-              <label htmlFor="title" className="text-sm font-medium">
-                Project Title <span className="text-destructive">*</span>
-              </label>
-              <Input
-                id="title"
-                value={form.title}
-                onChange={(e) => handleChange("title", e.target.value)}
-                placeholder="e.g., AI Recipe Generator"
-                className="text-lg"
-              />
-            </div>
+        <form onSubmit={handleSubmit}>
+          <Card>
+            <CardHeader>
+              <CardTitle>Project Details</CardTitle>
+              <CardDescription>
+                Tell us about your project in plain language. You can paste from
+                Slack, Discord, or describe it yourself.
+              </CardDescription>
+            </CardHeader>
+            <CardContent className="space-y-6">
+              {/* Title */}
+              <div className="space-y-2">
+                <label htmlFor="title" className="text-sm font-medium">
+                  Project Title <span className="text-destructive">*</span>
+                </label>
+                <Input
+                  id="title"
+                  value={form.title}
+                  onChange={(e) => handleChange("title", e.target.value)}
+                  placeholder="e.g., AI Recipe Generator"
+                  className="text-lg"
+                />
+              </div>
 
-            {/* Description */}
-            <div className="space-y-2">
-              <label htmlFor="description" className="text-sm font-medium">
-                Description <span className="text-destructive">*</span>
-              </label>
-              <div className="relative">
-                <textarea
-                  id="description"
-                  rows={6}
-                  value={form.description}
-                  onChange={(e) => handleChange("description", e.target.value)}
-                  className="flex w-full rounded-md border border-input bg-background px-3 py-2 text-sm ring-offset-background placeholder:text-muted-foreground focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring focus-visible:ring-offset-2 disabled:cursor-not-allowed disabled:opacity-50"
-                  placeholder="Describe your project and what kind of collaborators you're looking for...
+              {/* Description */}
+              <div className="space-y-2">
+                <label htmlFor="description" className="text-sm font-medium">
+                  Description <span className="text-destructive">*</span>
+                </label>
+                <div className="relative">
+                  <textarea
+                    id="description"
+                    rows={6}
+                    value={form.description}
+                    onChange={(e) =>
+                      handleChange("description", e.target.value)
+                    }
+                    className="flex w-full rounded-md border border-input bg-background px-3 py-2 text-sm ring-offset-background placeholder:text-muted-foreground focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring focus-visible:ring-offset-2 disabled:cursor-not-allowed disabled:opacity-50"
+                    placeholder="Describe your project and what kind of collaborators you're looking for...
 
 Example: Building a Minecraft-style collaborative IDE, need 2-3 people with WebGL or game dev experience, hackathon this weekend."
+                  />
+                  <Button
+                    type="button"
+                    variant="ghost"
+                    size="icon"
+                    className="absolute bottom-2 right-2"
+                    title="Use voice input"
+                  >
+                    <Mic className="h-4 w-4" />
+                  </Button>
+                </div>
+                <p className="text-xs text-muted-foreground">
+                  Our AI will extract skills, team size, and timeline from your
+                  description.
+                </p>
+              </div>
+
+              {/* Skills */}
+              <div className="space-y-2">
+                <label htmlFor="skills" className="text-sm font-medium">
+                  Skills (comma-separated)
+                </label>
+                <Input
+                  id="skills"
+                  value={form.skills}
+                  onChange={(e) => handleChange("skills", e.target.value)}
+                  placeholder="e.g., React, TypeScript, Node.js, AI/ML"
                 />
+              </div>
+
+              {/* Estimated Time and Category */}
+              <div className="grid gap-4 sm:grid-cols-2">
+                <div className="space-y-2">
+                  <label
+                    htmlFor="estimated-time"
+                    className="text-sm font-medium"
+                  >
+                    Estimated Time
+                  </label>
+                  <Input
+                    id="estimated-time"
+                    value={form.estimatedTime}
+                    onChange={(e) =>
+                      handleChange("estimatedTime", e.target.value)
+                    }
+                    placeholder="e.g., 2 weeks, 1 month"
+                  />
+                </div>
+                <div className="space-y-2">
+                  <label htmlFor="category" className="text-sm font-medium">
+                    Category
+                  </label>
+                  <select
+                    id="category"
+                    value={form.category}
+                    onChange={(e) => handleChange("category", e.target.value)}
+                    className="flex h-10 w-full rounded-md border border-input bg-background px-3 py-2 text-sm ring-offset-background focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring focus-visible:ring-offset-2"
+                  >
+                    <option value="study">Study</option>
+                    <option value="hackathon">Hackathon</option>
+                    <option value="personal">Personal</option>
+                    <option value="professional">Professional</option>
+                    <option value="social">Social</option>
+                  </select>
+                </div>
+              </div>
+
+              {/* Team size and Mode */}
+              <div className="grid gap-4 sm:grid-cols-3">
+                <div className="space-y-2">
+                  <label
+                    htmlFor="team-size-min"
+                    className="text-sm font-medium"
+                  >
+                    Team Size Min
+                  </label>
+                  <select
+                    id="team-size-min"
+                    value={form.teamSizeMin}
+                    onChange={(e) =>
+                      handleChange("teamSizeMin", e.target.value)
+                    }
+                    className="flex h-10 w-full rounded-md border border-input bg-background px-3 py-2 text-sm ring-offset-background focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring focus-visible:ring-offset-2"
+                  >
+                    <option value="1">1</option>
+                    <option value="2">2</option>
+                    <option value="3">3</option>
+                    <option value="4">4</option>
+                    <option value="5">5</option>
+                  </select>
+                </div>
+                <div className="space-y-2">
+                  <label
+                    htmlFor="team-size-max"
+                    className="text-sm font-medium"
+                  >
+                    Team Size Max
+                  </label>
+                  <select
+                    id="team-size-max"
+                    value={form.teamSizeMax}
+                    onChange={(e) =>
+                      handleChange("teamSizeMax", e.target.value)
+                    }
+                    className="flex h-10 w-full rounded-md border border-input bg-background px-3 py-2 text-sm ring-offset-background focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring focus-visible:ring-offset-2"
+                  >
+                    <option value="2">2</option>
+                    <option value="3">3</option>
+                    <option value="4">4</option>
+                    <option value="5">5</option>
+                    <option value="10">10</option>
+                  </select>
+                </div>
+                <div className="space-y-2">
+                  <label htmlFor="mode" className="text-sm font-medium">
+                    Mode
+                  </label>
+                  <select
+                    id="mode"
+                    value={form.mode}
+                    onChange={(e) => handleChange("mode", e.target.value)}
+                    className="flex h-10 w-full rounded-md border border-input bg-background px-3 py-2 text-sm ring-offset-background focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring focus-visible:ring-offset-2"
+                  >
+                    <option value="remote">Remote</option>
+                    <option value="in_person">In Person</option>
+                    <option value="hybrid">Hybrid</option>
+                  </select>
+                </div>
+              </div>
+
+              {/* Submit */}
+              <div className="flex gap-4 pt-4">
                 <Button
-                  type="button"
-                  variant="ghost"
-                  size="icon"
-                  className="absolute bottom-2 right-2"
-                  title="Use voice input"
+                  type="submit"
+                  className="flex-1"
+                  disabled={isSaving || isExtracting}
                 >
-                  <Mic className="h-4 w-4" />
+                  {isSaving ? (
+                    <>
+                      <Loader2 className="h-4 w-4 animate-spin" />
+                      Creating...
+                    </>
+                  ) : (
+                    "Create Project"
+                  )}
+                </Button>
+                <Button type="button" variant="outline" asChild>
+                  <Link href="/projects">Cancel</Link>
                 </Button>
               </div>
-              <p className="text-xs text-muted-foreground">
-                Our AI will extract skills, team size, and timeline from your
-                description.
-              </p>
-            </div>
-
-            {/* Required Skills */}
-            <div className="space-y-2">
-              <label htmlFor="requiredSkills" className="text-sm font-medium">
-                Required Skills (comma-separated)
-              </label>
-              <Input
-                id="requiredSkills"
-                value={form.requiredSkills}
-                onChange={(e) => handleChange("requiredSkills", e.target.value)}
-                placeholder="e.g., React, TypeScript, Node.js, AI/ML"
-              />
-            </div>
-
-            {/* Timeline and Commitment */}
-            <div className="grid gap-4 sm:grid-cols-2">
-              <div className="space-y-2">
-                <label htmlFor="timeline" className="text-sm font-medium">
-                  Timeline
-                </label>
-                <select
-                  id="timeline"
-                  value={form.timeline}
-                  onChange={(e) => handleChange("timeline", e.target.value)}
-                  className="flex h-10 w-full rounded-md border border-input bg-background px-3 py-2 text-sm ring-offset-background focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring focus-visible:ring-offset-2"
-                >
-                  <option value="weekend">This weekend</option>
-                  <option value="1_week">1 week</option>
-                  <option value="1_month">1 month</option>
-                  <option value="ongoing">Ongoing</option>
-                </select>
-              </div>
-              <div className="space-y-2">
-                <label htmlFor="commitment" className="text-sm font-medium">
-                  Time Commitment
-                </label>
-                <select
-                  id="commitment"
-                  value={form.commitmentHours}
-                  onChange={(e) => handleChange("commitmentHours", e.target.value)}
-                  className="flex h-10 w-full rounded-md border border-input bg-background px-3 py-2 text-sm ring-offset-background focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring focus-visible:ring-offset-2"
-                >
-                  <option value="5">5 hrs/week</option>
-                  <option value="10">10 hrs/week</option>
-                  <option value="15">15 hrs/week</option>
-                  <option value="20">20+ hrs/week</option>
-                </select>
-              </div>
-            </div>
-
-            {/* Team size and Experience */}
-            <div className="grid gap-4 sm:grid-cols-2">
-              <div className="space-y-2">
-                <label htmlFor="team-size" className="text-sm font-medium">
-                  Team Size
-                </label>
-                <select
-                  id="team-size"
-                  value={form.teamSize}
-                  onChange={(e) => handleChange("teamSize", e.target.value)}
-                  className="flex h-10 w-full rounded-md border border-input bg-background px-3 py-2 text-sm ring-offset-background focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring focus-visible:ring-offset-2"
-                >
-                  <option value="2">2 people</option>
-                  <option value="3">3 people</option>
-                  <option value="4">4 people</option>
-                  <option value="5">5 people</option>
-                </select>
-              </div>
-              <div className="space-y-2">
-                <label htmlFor="experience-level" className="text-sm font-medium">
-                  Experience Level Needed
-                </label>
-                <select
-                  id="experience-level"
-                  value={form.experienceLevel}
-                  onChange={(e) => handleChange("experienceLevel", e.target.value)}
-                  className="flex h-10 w-full rounded-md border border-input bg-background px-3 py-2 text-sm ring-offset-background focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring focus-visible:ring-offset-2"
-                >
-                  <option value="any">Any level</option>
-                  <option value="beginner">Beginner</option>
-                  <option value="intermediate">Intermediate</option>
-                  <option value="advanced">Advanced</option>
-                </select>
-              </div>
-            </div>
-
-            {/* Submit */}
-            <div className="flex gap-4 pt-4">
-              <Button type="submit" className="flex-1" disabled={isSaving || isExtracting}>
-                {isSaving ? (
-                  <>
-                    <Loader2 className="h-4 w-4 animate-spin" />
-                    Creating...
-                  </>
-                ) : (
-                  "Create Project"
-                )}
-              </Button>
-              <Button type="button" variant="outline" asChild>
-                <Link href="/projects">Cancel</Link>
-              </Button>
-            </div>
-          </CardContent>
-        </Card>
-      </form>
+            </CardContent>
+          </Card>
+        </form>
       )}
 
       {/* Info */}
       <p className="text-center text-sm text-muted-foreground">
-        {inputMode === "ai" 
+        {inputMode === "ai"
           ? "Paste your project description and let AI extract the details automatically."
-          : "After creating your project, our AI will immediately start finding matching collaborators based on your description."
-        }
+          : "After creating your project, our AI will immediately start finding matching collaborators based on your description."}
       </p>
     </div>
   );

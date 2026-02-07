@@ -3,14 +3,27 @@ import { createClient } from "@/lib/supabase/client";
 import { formatScore } from "@/lib/matching/scoring";
 import type { ScoreBreakdown } from "@/lib/supabase/types";
 
-type Project = {
+type Posting = {
   id: string;
   title: string;
   description: string;
-  required_skills: string[];
-  team_size: number;
-  timeline: string;
-  commitment_hours: number;
+  skills: string[];
+  team_size_min: number;
+  team_size_max: number;
+  category:
+    | "study"
+    | "hackathon"
+    | "personal"
+    | "professional"
+    | "social"
+    | null;
+  tags: string[];
+  mode: "open" | "friend_ask";
+  location_preference: number | null;
+  estimated_time: string | null;
+  skill_level_min: number | null;
+  context_identifier: string | null;
+  natural_language_criteria: string | null;
   status: string;
   created_at: string;
   creator_id: string;
@@ -20,20 +33,26 @@ type Project = {
   };
 };
 
-type ProjectWithScore = Project & {
+/** @deprecated Use Posting */
+type Project = Posting;
+
+type PostingWithScore = Posting & {
   compatibility_score?: number;
   score_breakdown?: ScoreBreakdown;
 };
 
-type TabId = "discover" | "my-projects";
+/** @deprecated Use PostingWithScore */
+type ProjectWithScore = PostingWithScore;
 
-type ProjectsResult = {
-  projects: ProjectWithScore[];
+type TabId = "discover" | "my-postings";
+
+type PostingsResult = {
+  postings: PostingWithScore[];
   userId: string | null;
   isLoadingScores: boolean;
 };
 
-async function fetchProjects(key: string): Promise<ProjectsResult> {
+async function fetchPostings(key: string): Promise<PostingsResult> {
   const tab = key.split("/")[1] as TabId;
   const supabase = createClient();
 
@@ -42,7 +61,7 @@ async function fetchProjects(key: string): Promise<ProjectsResult> {
   } = await supabase.auth.getUser();
 
   let query = supabase
-    .from("projects")
+    .from("postings")
     .select(
       `
       *,
@@ -54,7 +73,7 @@ async function fetchProjects(key: string): Promise<ProjectsResult> {
     )
     .order("created_at", { ascending: false });
 
-  if (tab === "my-projects" && user) {
+  if (tab === "my-postings" && user) {
     query = query.eq("creator_id", user.id);
   } else {
     query = query.eq("status", "open");
@@ -69,7 +88,7 @@ async function fetchProjects(key: string): Promise<ProjectsResult> {
     throw error;
   }
 
-  const projects = (data || []) as ProjectWithScore[];
+  const postings = (data || []) as PostingWithScore[];
 
   // Compute compatibility scores for discover tab
   if (tab === "discover" && user) {
@@ -81,61 +100,64 @@ async function fetchProjects(key: string): Promise<ProjectsResult> {
 
     if (profile) {
       const scored = await Promise.all(
-        projects.map(async (project) => {
+        postings.map(async (posting) => {
           try {
             const { data: breakdown, error: rpcError } = await supabase.rpc(
               "compute_match_breakdown",
               {
                 profile_user_id: user.id,
-                target_project_id: project.id,
+                target_posting_id: posting.id,
               },
             );
 
             if (!rpcError && breakdown) {
               const overallScore =
-                breakdown.semantic * 0.4 +
-                breakdown.skills_overlap * 0.3 +
-                breakdown.experience_match * 0.15 +
-                breakdown.commitment_match * 0.15;
+                breakdown.semantic * 0.3 +
+                breakdown.availability * 0.3 +
+                breakdown.skill_level * 0.2 +
+                breakdown.location * 0.2;
 
               return {
-                ...project,
+                ...posting,
                 compatibility_score: overallScore,
                 score_breakdown: breakdown as ScoreBreakdown,
               };
             }
           } catch (err) {
             console.error(
-              `Failed to compute score for project ${project.id}:`,
+              `Failed to compute score for posting ${posting.id}:`,
               err,
             );
           }
-          return project;
+          return posting;
         }),
       );
       return {
-        projects: scored,
+        postings: scored,
         userId: user?.id ?? null,
         isLoadingScores: false,
       };
     }
   }
 
-  return { projects, userId: user?.id ?? null, isLoadingScores: false };
+  return { postings, userId: user?.id ?? null, isLoadingScores: false };
 }
 
-export function useProjects(tab: TabId) {
-  const { data, error, isLoading } = useSWR(`projects/${tab}`, fetchProjects, {
+export function usePostings(tab: TabId) {
+  const { data, error, isLoading } = useSWR(`postings/${tab}`, fetchPostings, {
     keepPreviousData: true,
   });
 
   return {
-    projects: data?.projects ?? [],
+    postings: data?.postings ?? [],
     userId: data?.userId ?? null,
     error,
     isLoading,
   };
 }
 
+/** @deprecated Use usePostings */
+export const useProjects = usePostings;
+
 export { formatScore };
-export type { Project, ProjectWithScore, TabId };
+export type { Posting, PostingWithScore, Project, ProjectWithScore, TabId };

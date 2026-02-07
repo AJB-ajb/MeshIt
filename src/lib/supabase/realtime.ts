@@ -33,7 +33,7 @@ export type Notification = {
   title: string;
   body: string | null;
   read: boolean;
-  related_project_id: string | null;
+  related_posting_id: string | null;
   related_application_id: string | null;
   related_user_id: string | null;
   created_at: string;

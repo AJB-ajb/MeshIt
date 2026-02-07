@@ -15,37 +15,46 @@ const projectSchema = {
     },
     description: {
       type: "string",
-      description: "A clear project description explaining what the project is about and what's being built",
+      description:
+        "A clear project description explaining what the project is about and what's being built",
     },
-    required_skills: {
+    skills: {
       type: "array",
       items: { type: "string" },
-      description: "List of required technical skills, programming languages, frameworks, and tools needed",
+      description:
+        "List of required technical skills, programming languages, frameworks, and tools needed",
     },
-    timeline: {
+    category: {
       type: "string",
-      enum: ["weekend", "1_week", "1_month", "ongoing"],
-      description: "Project timeline based on mentioned deadlines or duration",
+      enum: ["study", "hackathon", "personal", "professional", "social"],
+      description: "Category of the posting",
     },
-    commitment_hours: {
+    estimated_time: {
+      type: "string",
+      description:
+        "Estimated time to complete (e.g., '2 weeks', '3 months', 'ongoing')",
+    },
+    team_size_min: {
       type: "number",
-      enum: [5, 10, 15, 20],
-      description: "Expected hours per week commitment",
+      minimum: 1,
+      description: "Minimum number of people needed for the team",
     },
-    team_size: {
+    team_size_max: {
       type: "number",
-      minimum: 2,
-      maximum: 10,
-      description: "Number of people needed for the team",
+      minimum: 1,
+      description: "Maximum number of people needed for the team",
     },
-    experience_level: {
-      type: "string",
-      enum: ["any", "beginner", "intermediate", "advanced"],
-      description: "Required experience level for collaborators",
+    skill_level_min: {
+      type: "number",
+      minimum: 1,
+      maximum: 5,
+      description: "Minimum skill level required (1=beginner, 5=expert)",
     },
-    project_type: {
-      type: "string",
-      description: "Type of project (e.g., hackathon, SaaS, open source, MVP, side project)",
+    tags: {
+      type: "array",
+      items: { type: "string" },
+      description:
+        "Tags or keywords describing the posting (e.g., 'hackathon', 'open-source', 'MVP')",
     },
     goals: {
       type: "array",
@@ -53,7 +62,7 @@ const projectSchema = {
       description: "Key goals or milestones for the project",
     },
   },
-  required: ["title", "description", "required_skills"],
+  required: ["title", "description", "skills"],
 };
 
 /**
@@ -65,7 +74,7 @@ export async function POST(request: Request) {
     if (!OPENAI_API_KEY) {
       return NextResponse.json(
         { error: "OpenAI API key not configured" },
-        { status: 503 }
+        { status: 503 },
       );
     }
 
@@ -85,8 +94,10 @@ export async function POST(request: Request) {
 
     if (!text || typeof text !== "string" || text.trim().length < 10) {
       return NextResponse.json(
-        { error: "Please provide more text to extract project information from" },
-        { status: 400 }
+        {
+          error: "Please provide more text to extract project information from",
+        },
+        { status: 400 },
       );
     }
 
@@ -110,9 +121,9 @@ Extract as much relevant information as possible from the provided text, which c
 - A hackathon project pitch
 - Any text describing a project that needs collaborators
 
-Be thorough in extracting required skills - look for programming languages, frameworks, tools, and technologies.
-If a timeline mentions "this weekend", use "weekend". If it mentions days/week, use "1_week". For longer projects, use "1_month" or "ongoing".
-Infer team size from context if not explicitly stated.
+Be thorough in extracting skills - look for programming languages, frameworks, tools, and technologies.
+Categorize the posting as study, hackathon, personal, professional, or social based on context.
+Infer team size range from context if not explicitly stated.
 Create a clear, concise title if one isn't provided.
 Return only the extracted data, do not make up information that cannot be inferred.`,
           },
@@ -138,7 +149,7 @@ Return only the extracted data, do not make up information that cannot be inferr
       console.error("OpenAI API error:", errorData);
       return NextResponse.json(
         { error: "Failed to process text. Please try again." },
-        { status: 500 }
+        { status: 500 },
       );
     }
 
@@ -148,7 +159,7 @@ Return only the extracted data, do not make up information that cannot be inferr
     if (!functionCall || functionCall.name !== "extract_project") {
       return NextResponse.json(
         { error: "Failed to extract project information" },
-        { status: 500 }
+        { status: 500 },
       );
     }
 
@@ -161,8 +172,11 @@ Return only the extracted data, do not make up information that cannot be inferr
   } catch (error) {
     console.error("Project extraction error:", error);
     return NextResponse.json(
-      { error: error instanceof Error ? error.message : "Failed to extract project" },
-      { status: 500 }
+      {
+        error:
+          error instanceof Error ? error.message : "Failed to extract project",
+      },
+      { status: 500 },
     );
   }
 }

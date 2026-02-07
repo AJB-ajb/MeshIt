@@ -13,7 +13,7 @@ vi.mock("@/lib/ai/embeddings", () => ({
   generateProfileEmbedding: vi.fn(() => {
     throw new Error("API key not configured");
   }),
-  generateProjectEmbedding: vi.fn(() => {
+  generatePostingEmbedding: vi.fn(() => {
     throw new Error("API key not configured");
   }),
 }));
@@ -67,15 +67,21 @@ describe("matchProfileToProjects", () => {
     mockRpc.mockResolvedValue({
       data: [
         {
-          project_id: "proj-1",
+          posting_id: "post-1",
           similarity: 0.85,
           title: "AI Project",
           description: "Build an AI app",
-          required_skills: ["TypeScript"],
-          team_size: 3,
-          experience_level: "intermediate",
-          commitment_hours: 10,
-          timeline: "1_month",
+          skills: ["TypeScript"],
+          team_size_min: 2,
+          team_size_max: 5,
+          category: "professional",
+          tags: ["ai", "web"],
+          mode: "open",
+          location_preference: 0.5,
+          estimated_time: "1_month",
+          skill_level_min: "intermediate",
+          context_identifier: null,
+          natural_language_criteria: null,
           creator_id: "user-2",
           created_at: "2024-01-01",
           expires_at: "2024-02-01",
@@ -113,7 +119,7 @@ describe("matchProfileToProjects", () => {
 
     const matches = await matchProfileToProjects("user-1");
 
-    expect(mockRpc).toHaveBeenCalledWith("match_projects_to_user", {
+    expect(mockRpc).toHaveBeenCalledWith("match_postings_to_user", {
       user_embedding: userEmbedding,
       user_id_param: "user-1",
       match_limit: 10,
@@ -225,7 +231,7 @@ describe("matchProfileToProjects", () => {
     await matchProfileToProjects("user-1", 5);
 
     expect(mockRpc).toHaveBeenCalledWith(
-      "match_projects_to_user",
+      "match_postings_to_user",
       expect.objectContaining({ match_limit: 5 }),
     );
   });
@@ -236,18 +242,18 @@ describe("matchProjectToProfiles", () => {
     vi.clearAllMocks();
   });
 
-  it("fetches project embedding and calls RPC function", async () => {
-    const projectEmbedding = new Array(1536).fill(0.2);
+  it("fetches posting embedding and calls RPC function", async () => {
+    const postingEmbedding = new Array(1536).fill(0.2);
     const { mockClient, mockFrom, mockRpc } = createMockSupabase();
 
-    // Mock project fetch — the code chains .eq("id", ...).eq("is_test_data", ...).single()
+    // Mock posting fetch — the code chains .eq("id", ...).eq("is_test_data", ...).single()
     const mockSingle = vi.fn().mockResolvedValue({
       data: {
-        embedding: projectEmbedding,
+        embedding: postingEmbedding,
         creator_id: "creator-1",
         title: "Test",
         description: "Test",
-        required_skills: [],
+        skills: [],
       },
       error: null,
     });
@@ -261,7 +267,7 @@ describe("matchProjectToProfiles", () => {
       }),
     });
 
-    // Mock RPC calls: first for match_users_to_project, then for compute_match_breakdown
+    // Mock RPC calls: first for match_users_to_posting, then for compute_match_breakdown
     mockRpc
       .mockResolvedValueOnce({
         data: [
@@ -272,9 +278,9 @@ describe("matchProjectToProfiles", () => {
             headline: "Developer",
             bio: "I build things",
             skills: ["TypeScript", "React"],
-            experience_level: "senior",
-            availability_hours: 20,
-            collaboration_style: "async",
+            skill_levels: { TypeScript: "senior", React: "intermediate" },
+            location_preference: "remote",
+            availability_slots: [{ day: "monday", hours: 4 }],
           },
         ],
         error: null,
@@ -300,11 +306,11 @@ describe("matchProjectToProfiles", () => {
       mockClient as unknown as Awaited<ReturnType<typeof createClient>>,
     );
 
-    const matches = await matchProjectToProfiles("proj-1");
+    const matches = await matchProjectToProfiles("post-1");
 
-    expect(mockRpc).toHaveBeenCalledWith("match_users_to_project", {
-      project_embedding: projectEmbedding,
-      project_id_param: "proj-1",
+    expect(mockRpc).toHaveBeenCalledWith("match_users_to_posting", {
+      posting_embedding: postingEmbedding,
+      posting_id_param: "post-1",
       match_limit: 10,
     });
 
@@ -313,7 +319,7 @@ describe("matchProjectToProfiles", () => {
     expect(matches[0].profile.full_name).toBe("John Doe");
   });
 
-  it("throws error when project not found", async () => {
+  it("throws error when posting not found", async () => {
     const { mockClient, mockFrom } = createMockSupabase();
 
     const mockSingle = vi.fn().mockResolvedValue({
@@ -334,11 +340,11 @@ describe("matchProjectToProfiles", () => {
     );
 
     await expect(matchProjectToProfiles("nonexistent")).rejects.toThrow(
-      "Project not found",
+      "Posting not found",
     );
   });
 
-  it("throws error when project has no embedding", async () => {
+  it("throws error when posting has no embedding", async () => {
     const { mockClient, mockFrom } = createMockSupabase();
 
     const mockSingle = vi.fn().mockResolvedValue({
@@ -347,7 +353,7 @@ describe("matchProjectToProfiles", () => {
         creator_id: "creator-1",
         title: "Test",
         description: "Test",
-        required_skills: [],
+        skills: [],
       },
       error: null,
     });
@@ -364,8 +370,8 @@ describe("matchProjectToProfiles", () => {
       mockClient as unknown as Awaited<ReturnType<typeof createClient>>,
     );
 
-    await expect(matchProjectToProfiles("proj-1")).rejects.toThrow(
-      "Could not generate project embedding",
+    await expect(matchProjectToProfiles("post-1")).rejects.toThrow(
+      "Could not generate posting embedding",
     );
   });
 });
@@ -390,16 +396,21 @@ describe("createMatchRecords", () => {
     await createMatchRecords("user-1", [
       {
         project: {
-          id: "proj-1",
+          id: "post-1",
           creator_id: "creator-1",
           title: "Test",
           description: "Test",
-          required_skills: [],
-          team_size: 3,
-          experience_level: null,
-          commitment_hours: null,
-          timeline: null,
-          hard_filters: null,
+          skills: [],
+          team_size_min: 2,
+          team_size_max: 5,
+          category: "professional",
+          tags: [],
+          mode: "open",
+          location_preference: 0.5,
+          estimated_time: null,
+          skill_level_min: null,
+          context_identifier: null,
+          natural_language_criteria: null,
           embedding: null,
           status: "open",
           is_test_data: false,
@@ -416,14 +427,14 @@ describe("createMatchRecords", () => {
       [
         {
           user_id: "user-1",
-          project_id: "proj-1",
+          posting_id: "post-1",
           similarity_score: 0.85,
           score_breakdown: null,
           status: "pending",
         },
       ],
       expect.objectContaining({
-        onConflict: "project_id,user_id",
+        onConflict: "posting_id,user_id",
       }),
     );
   });
@@ -443,16 +454,21 @@ describe("createMatchRecords", () => {
     await createMatchRecords("user-1", [
       {
         project: {
-          id: "proj-1",
+          id: "post-1",
           creator_id: "creator-1",
           title: "Test",
           description: "Test",
-          required_skills: [],
-          team_size: 3,
-          experience_level: null,
-          commitment_hours: null,
-          timeline: null,
-          hard_filters: null,
+          skills: [],
+          team_size_min: 2,
+          team_size_max: 5,
+          category: "professional",
+          tags: [],
+          mode: "open",
+          location_preference: 0.5,
+          estimated_time: null,
+          skill_level_min: null,
+          context_identifier: null,
+          natural_language_criteria: null,
           embedding: null,
           status: "open",
           is_test_data: false,
@@ -493,7 +509,7 @@ describe("createMatchRecordsForProject", () => {
     vi.clearAllMocks();
   });
 
-  it("creates match records for project matches", async () => {
+  it("creates match records for posting matches", async () => {
     const { mockClient, mockFrom } = createMockSupabase();
 
     const mockUpsert = vi.fn().mockResolvedValue({ error: null });
@@ -505,7 +521,7 @@ describe("createMatchRecordsForProject", () => {
       mockClient as unknown as Awaited<ReturnType<typeof createClient>>,
     );
 
-    await createMatchRecordsForProject("proj-1", [
+    await createMatchRecordsForProject("post-1", [
       {
         profile: {
           user_id: "user-1",
@@ -515,17 +531,14 @@ describe("createMatchRecordsForProject", () => {
           location: null,
           location_lat: null,
           location_lng: null,
-          experience_level: null,
-          collaboration_style: null,
-          remote_preference: null,
-          availability_hours: null,
+          skill_levels: {},
+          location_preference: null,
+          availability_slots: [],
           skills: [],
           interests: null,
           languages: null,
           portfolio_url: null,
           github_url: null,
-          project_preferences: {},
-          hard_filters: null,
           embedding: null,
           is_test_data: false,
           created_at: "",
@@ -539,7 +552,7 @@ describe("createMatchRecordsForProject", () => {
     expect(mockUpsert).toHaveBeenCalledWith(
       [
         {
-          project_id: "proj-1",
+          posting_id: "post-1",
           user_id: "user-1",
           similarity_score: 0.9,
           score_breakdown: null,
@@ -547,7 +560,7 @@ describe("createMatchRecordsForProject", () => {
         },
       ],
       expect.objectContaining({
-        onConflict: "project_id,user_id",
+        onConflict: "posting_id,user_id",
       }),
     );
   });

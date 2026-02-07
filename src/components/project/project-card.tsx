@@ -19,8 +19,8 @@ export interface ProjectCardProps {
   description: string;
   skills: string[];
   teamSize: string;
-  timeline: string;
-  commitment: string;
+  estimatedTime: string;
+  category: string;
   matchScore?: number;
   creator: {
     name: string;
@@ -38,8 +38,8 @@ export function ProjectCard({
   description,
   skills,
   teamSize,
-  timeline,
-  commitment,
+  estimatedTime,
+  category,
   matchScore,
   creator,
   createdAt,
@@ -47,7 +47,12 @@ export function ProjectCard({
   onApply,
 }: ProjectCardProps) {
   return (
-    <Card className={cn("overflow-hidden transition-all hover:shadow-lg", className)}>
+    <Card
+      className={cn(
+        "overflow-hidden transition-all hover:shadow-lg",
+        className,
+      )}
+    >
       <CardHeader className="pb-4">
         <div className="flex items-start justify-between gap-4">
           <div className="space-y-1">
@@ -65,9 +70,7 @@ export function ProjectCard({
                 <ArrowRight className="h-4 w-4" />
               </Link>
             </Button>
-            {onApply && (
-              <Button onClick={onApply}>Apply</Button>
-            )}
+            {onApply && <Button onClick={onApply}>Apply</Button>}
           </div>
         </div>
       </CardHeader>
@@ -96,11 +99,11 @@ export function ProjectCard({
           </span>
           <span className="flex items-center gap-1.5">
             <Calendar className="h-4 w-4" />
-            {timeline}
+            {estimatedTime}
           </span>
           <span className="flex items-center gap-1.5">
             <Clock className="h-4 w-4" />
-            {commitment}
+            {category}
           </span>
         </div>
 

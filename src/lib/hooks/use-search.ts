@@ -3,7 +3,7 @@ import { createClient } from "@/lib/supabase/client";
 
 type SearchResult = {
   id: string;
-  type: "project" | "profile";
+  type: "posting" | "profile";
   title: string;
   subtitle: string;
   skills: string[];
@@ -17,10 +17,10 @@ async function fetchSearchResults(key: string): Promise<SearchResult[]> {
   const supabase = createClient();
   const searchTerm = `%${query.toLowerCase()}%`;
 
-  const [{ data: projects }, { data: profiles }] = await Promise.all([
+  const [{ data: postings }, { data: profiles }] = await Promise.all([
     supabase
-      .from("projects")
-      .select("id, title, description, required_skills, status")
+      .from("postings")
+      .select("id, title, description, skills, status")
       .or(`title.ilike.${searchTerm},description.ilike.${searchTerm}`)
       .limit(5),
     supabase
@@ -30,14 +30,14 @@ async function fetchSearchResults(key: string): Promise<SearchResult[]> {
       .limit(5),
   ]);
 
-  const projectResults: SearchResult[] = (projects || []).map((p) => ({
+  const postingResults: SearchResult[] = (postings || []).map((p) => ({
     id: p.id,
-    type: "project",
+    type: "posting",
     title: p.title,
     subtitle:
       p.description?.slice(0, 80) + (p.description?.length > 80 ? "..." : "") ||
       "",
-    skills: p.required_skills || [],
+    skills: p.skills || [],
     status: p.status,
   }));
 
@@ -49,7 +49,7 @@ async function fetchSearchResults(key: string): Promise<SearchResult[]> {
     skills: p.skills || [],
   }));
 
-  return [...projectResults, ...profileResults];
+  return [...postingResults, ...profileResults];
 }
 
 export function useSearch(query: string) {

@@ -9,13 +9,13 @@ import type {
 type Notification = RealtimeNotification;
 
 type Conversation = RealtimeConversation & {
-  project_id: string | null;
+  posting_id: string | null;
   other_user?: {
     full_name: string | null;
     headline: string | null;
     user_id: string;
   };
-  project?: {
+  posting?: {
     title: string;
   };
   last_message?: {
@@ -77,7 +77,7 @@ async function fetchInboxData(): Promise<InboxData> {
 
       const [
         { data: profile },
-        projectResult,
+        postingResult,
         { data: lastMessageData },
         { count },
       ] = await Promise.all([
@@ -86,11 +86,11 @@ async function fetchInboxData(): Promise<InboxData> {
           .select("full_name, headline, user_id")
           .eq("user_id", otherUserId)
           .maybeSingle(),
-        conv.project_id
+        conv.posting_id
           ? supabase
-              .from("projects")
+              .from("postings")
               .select("title")
-              .eq("id", conv.project_id)
+              .eq("id", conv.posting_id)
               .eq("is_test_data", getTestDataValue())
               .maybeSingle()
           : Promise.resolve({ data: null }),
@@ -112,7 +112,7 @@ async function fetchInboxData(): Promise<InboxData> {
       return {
         ...conv,
         other_user: profile || undefined,
-        project: projectResult.data || undefined,
+        posting: postingResult.data || undefined,
         last_message: lastMessageData || undefined,
         unread_count: count || 0,
       };

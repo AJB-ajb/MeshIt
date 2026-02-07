@@ -164,7 +164,7 @@ export default function MatchesPage() {
       ) : (
         <div className="space-y-4">
           {matches.map((match) => {
-            const project = match.project as Project;
+            const project = match.posting as Project;
             const matchScore = Math.round(match.score * 100);
             const matchedAt = formatTimeAgo(match.created_at);
 
@@ -222,24 +222,23 @@ export default function MatchesPage() {
                   </p>
 
                   {/* Skills */}
-                  {project.required_skills &&
-                    project.required_skills.length > 0 && (
-                      <div className="flex flex-wrap gap-2">
-                        {project.required_skills.slice(0, 5).map((skill) => (
-                          <span
-                            key={skill}
-                            className="rounded-md border border-border bg-muted/50 px-2.5 py-0.5 text-xs font-medium"
-                          >
-                            {skill}
-                          </span>
-                        ))}
-                        {project.required_skills.length > 5 && (
-                          <span className="rounded-md border border-border bg-muted/50 px-2.5 py-0.5 text-xs font-medium">
-                            +{project.required_skills.length - 5}
-                          </span>
-                        )}
-                      </div>
-                    )}
+                  {project.skills && project.skills.length > 0 && (
+                    <div className="flex flex-wrap gap-2">
+                      {project.skills.slice(0, 5).map((skill) => (
+                        <span
+                          key={skill}
+                          className="rounded-md border border-border bg-muted/50 px-2.5 py-0.5 text-xs font-medium"
+                        >
+                          {skill}
+                        </span>
+                      ))}
+                      {project.skills.length > 5 && (
+                        <span className="rounded-md border border-border bg-muted/50 px-2.5 py-0.5 text-xs font-medium">
+                          +{project.skills.length - 5}
+                        </span>
+                      )}
+                    </div>
+                  )}
 
                   {/* Actions */}
                   <div className="flex gap-2">

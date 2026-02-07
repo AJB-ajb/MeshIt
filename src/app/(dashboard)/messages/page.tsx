@@ -64,7 +64,7 @@ export default async function MessagesPage() {
   if (user) {
     // Get projects the user created
     const { data: createdProjects } = await supabase
-      .from("projects")
+      .from("postings")
       .select("id, title, creator_id")
       .eq("creator_id", user.id)
       .eq("is_test_data", getTestDataValue());
@@ -72,7 +72,7 @@ export default async function MessagesPage() {
     // Get projects where user has accepted matches
     const { data: acceptedMatches } = await supabase
       .from("matches")
-      .select("project_id")
+      .select("posting_id")
       .eq("user_id", user.id)
       .eq("status", "accepted");
 
@@ -81,7 +81,7 @@ export default async function MessagesPage() {
       createdProjects.forEach((p) => projectIds.add(p.id));
     }
     if (acceptedMatches) {
-      acceptedMatches.forEach((m) => projectIds.add(m.project_id));
+      acceptedMatches.forEach((m) => projectIds.add(m.posting_id));
     }
 
     if (projectIds.size > 0) {
@@ -93,7 +93,7 @@ export default async function MessagesPage() {
         .select(
           `
           id,
-          project_id,
+          posting_id,
           sender_id,
           content,
           created_at,
@@ -101,7 +101,7 @@ export default async function MessagesPage() {
             full_name,
             user_id
           ),
-          projects:project_id (
+          postings:posting_id (
             id,
             title,
             creator_id,
@@ -112,7 +112,7 @@ export default async function MessagesPage() {
           )
         `,
         )
-        .in("project_id", projectIdsArray)
+        .in("posting_id", projectIdsArray)
         .order("created_at", { ascending: false });
 
       if (messagesData) {
@@ -136,12 +136,12 @@ export default async function MessagesPage() {
         >();
 
         for (const msg of messagesData) {
-          const projectId = msg.project_id;
+          const projectId = msg.posting_id;
           const senderId = msg.sender_id;
           const senderName =
             ((msg.profiles as unknown as Record<string, unknown>)
               ?.full_name as string) || "Unknown";
-          const project = msg.projects as unknown as Record<
+          const project = msg.postings as unknown as Record<
             string,
             unknown
           > | null;

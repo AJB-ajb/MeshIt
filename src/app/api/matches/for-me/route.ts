@@ -1,5 +1,8 @@
 import { NextResponse } from "next/server";
-import { matchProfileToProjects, createMatchRecords } from "@/lib/matching/profile-to-project";
+import {
+  matchProfileToProjects,
+  createMatchRecords,
+} from "@/lib/matching/profile-to-project";
 import type { MatchResponse } from "@/lib/supabase/types";
 import { withAuth } from "@/lib/api/with-auth";
 
@@ -21,7 +24,7 @@ export const GET = withAuth(async (_req, { user, supabase }) => {
         error: "Profile not found. Please complete your profile first.",
         matches: [],
       },
-      { status: 200 }
+      { status: 200 },
     );
   }
 
@@ -37,7 +40,7 @@ export const GET = withAuth(async (_req, { user, supabase }) => {
           "Please add a bio, skills, or headline to your profile to find matches.",
         matches: [],
       },
-      { status: 200 }
+      { status: 200 },
     );
   }
 
@@ -52,7 +55,7 @@ export const GET = withAuth(async (_req, { user, supabase }) => {
   // Transform to API response format
   const response: MatchResponse[] = matches.map((match) => ({
     id: match.matchId || "",
-    project: match.project,
+    posting: match.project,
     score: match.score,
     explanation: null,
     score_breakdown: match.scoreBreakdown,

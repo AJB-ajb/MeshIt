@@ -137,7 +137,6 @@ export async function POST() {
         languagesFound: githubProfileData.primaryLanguages,
         skillsInferred: githubProfileData.inferredSkills,
         interestsInferred: githubProfileData.inferredInterests,
-        experienceLevel: githubProfileData.experienceLevel,
         codingStyle: githubProfileData.codingStyle,
         activityLevel: githubProfileData.activityLevel,
       },
@@ -145,7 +144,6 @@ export async function POST() {
         suggestedBio: suggestions.suggestedBio,
         suggestedSkills: suggestions.suggestedSkills,
         suggestedInterests: suggestions.suggestedInterests,
-        experienceUpgrade: suggestions.experienceUpgrade,
       },
       profileUpdated: true,
     });
@@ -226,7 +224,6 @@ export async function GET() {
         topics: githubProfile.topics,
         inferredSkills: githubProfile.inferredSkills,
         inferredInterests: githubProfile.inferredInterests,
-        experienceLevel: githubProfile.experienceLevel,
         experienceSignals: githubProfile.experienceSignals,
         codingStyle: githubProfile.codingStyle,
         collaborationStyle: githubProfile.collaborationStyle,
