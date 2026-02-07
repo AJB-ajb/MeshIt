@@ -1,6 +1,6 @@
 "use client";
 
-import { useEffect, useState } from "react";
+import { useState } from "react";
 import Link from "next/link";
 import { Plus, Search, Filter, Users, Calendar, Clock, Loader2, Sparkles } from "lucide-react";
 
@@ -14,34 +14,10 @@ import {
   CardHeader,
   CardTitle,
 } from "@/components/ui/card";
-import { createClient } from "@/lib/supabase/client";
 import { formatScore } from "@/lib/matching/scoring";
-import type { ScoreBreakdown } from "@/lib/supabase/types";
 import { getInitials } from "@/lib/format";
-
-type Project = {
-  id: string;
-  title: string;
-  description: string;
-  required_skills: string[];
-  team_size: number;
-  timeline: string;
-  commitment_hours: number;
-  status: string;
-  created_at: string;
-  creator_id: string;
-  profiles?: {
-    full_name: string | null;
-    user_id: string;
-  };
-};
-
-type ProjectWithScore = Project & {
-  compatibility_score?: number;
-  score_breakdown?: ScoreBreakdown;
-};
-
-type TabId = "discover" | "my-projects";
+import { useProjects } from "@/lib/hooks/use-projects";
+import type { TabId } from "@/lib/hooks/use-projects";
 
 const tabs: { id: TabId; label: string }[] = [
   { id: "discover", label: "Discover" },
@@ -78,125 +54,8 @@ const formatDate = (dateString: string) => {
 
 export default function ProjectsPage() {
   const [activeTab, setActiveTab] = useState<TabId>("discover");
-  const [projects, setProjects] = useState<ProjectWithScore[]>([]);
-  const [isLoading, setIsLoading] = useState(true);
-  const [userId, setUserId] = useState<string | null>(null);
   const [searchQuery, setSearchQuery] = useState("");
-  const [isLoadingScores, setIsLoadingScores] = useState(false);
-
-  useEffect(() => {
-    const fetchProjects = async () => {
-      setIsLoading(true);
-      const supabase = createClient();
-
-      // Get current user
-      const {
-        data: { user },
-      } = await supabase.auth.getUser();
-      setUserId(user?.id ?? null);
-
-      let query = supabase
-        .from("projects")
-        .select(
-          `
-          *,
-          profiles:creator_id (
-            full_name,
-            user_id
-          )
-        `
-        )
-        .order("created_at", { ascending: false });
-
-      if (activeTab === "my-projects" && user) {
-        query = query.eq("creator_id", user.id);
-      } else {
-        // For discover, show open projects not created by current user
-        query = query.eq("status", "open");
-        if (user) {
-          query = query.neq("creator_id", user.id);
-        }
-      }
-
-      const { data, error } = await query;
-
-      if (error) {
-        console.error("Error fetching projects:", error);
-        setIsLoading(false);
-      } else {
-        const projectsData = data || [];
-        setProjects(projectsData);
-        setIsLoading(false);
-
-        // Fetch compatibility scores for discover tab if user is logged in
-        if (activeTab === "discover" && user) {
-          fetchCompatibilityScores(user.id, projectsData);
-        }
-      }
-    };
-
-    fetchProjects();
-  }, [activeTab]);
-
-  const fetchCompatibilityScores = async (currentUserId: string, projectsList: Project[]) => {
-    if (projectsList.length === 0) return;
-    
-    setIsLoadingScores(true);
-    const supabase = createClient();
-
-    try {
-      // Fetch user's profile to check if it's complete
-      const { data: profile } = await supabase
-        .from("profiles")
-        .select("*")
-        .eq("user_id", currentUserId)
-        .single();
-
-      if (!profile) {
-        setIsLoadingScores(false);
-        return;
-      }
-
-      // Compute compatibility score for each project
-      const projectsWithScores = await Promise.all(
-        projectsList.map(async (project) => {
-          try {
-            const { data: breakdown, error } = await supabase.rpc(
-              "compute_match_breakdown",
-              {
-                profile_user_id: currentUserId,
-                target_project_id: project.id,
-              }
-            );
-
-            if (!error && breakdown) {
-              const overallScore =
-                breakdown.semantic * 0.4 +
-                breakdown.skills_overlap * 0.3 +
-                breakdown.experience_match * 0.15 +
-                breakdown.commitment_match * 0.15;
-
-              return {
-                ...project,
-                compatibility_score: overallScore,
-                score_breakdown: breakdown as ScoreBreakdown,
-              };
-            }
-          } catch (err) {
-            console.error(`Failed to compute score for project ${project.id}:`, err);
-          }
-
-          return project;
-        })
-      );
-
-      setProjects(projectsWithScores);
-    } catch (err) {
-      console.error("Failed to fetch compatibility scores:", err);
-    } finally {
-      setIsLoadingScores(false);
-    }
-  };
+  const { projects, userId, isLoading } = useProjects(activeTab);
 
   const filteredProjects = projects.filter((project) => {
     if (!searchQuery) return true;
@@ -324,18 +183,12 @@ export default function ProjectsPage() {
                         )}
                         {/* Compatibility Score Badge */}
                         {!isOwner && project.compatibility_score !== undefined && (
-                          <Badge 
-                            variant="default" 
+                          <Badge
+                            variant="default"
                             className="bg-green-500 hover:bg-green-600 flex items-center gap-1"
                           >
                             <Sparkles className="h-3 w-3" />
                             {formatScore(project.compatibility_score)} match
-                          </Badge>
-                        )}
-                        {!isOwner && isLoadingScores && project.compatibility_score === undefined && (
-                          <Badge variant="outline" className="flex items-center gap-1">
-                            <Loader2 className="h-3 w-3 animate-spin" />
-                            Computing...
                           </Badge>
                         )}
                       </div>

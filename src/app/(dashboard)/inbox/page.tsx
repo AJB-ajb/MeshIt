@@ -27,7 +27,6 @@ import { cn } from "@/lib/utils";
 import { createClient } from "@/lib/supabase/client";
 import { useRealtimeChat } from "@/lib/hooks/use-realtime-chat";
 import { usePresenceContext } from "@/components/providers/presence-provider";
-import { getTestDataValue } from "@/lib/environment";
 import { getInitials } from "@/lib/format";
 import {
   subscribeToNotifications,
@@ -35,38 +34,9 @@ import {
   unsubscribeChannel,
   requestNotificationPermission,
   showBrowserNotification,
-  type Notification as RealtimeNotification,
-  type Conversation as RealtimeConversation,
 } from "@/lib/supabase/realtime";
-
-type Notification = RealtimeNotification;
-
-type Conversation = RealtimeConversation & {
-  project_id: string | null;
-  other_user?: {
-    full_name: string | null;
-    headline: string | null;
-    user_id: string;
-  };
-  project?: {
-    title: string;
-  };
-  last_message?: {
-    content: string;
-    created_at: string;
-    sender_id: string;
-  };
-  unread_count?: number;
-};
-
-type Message = {
-  id: string;
-  conversation_id: string;
-  sender_id: string;
-  content: string;
-  read: boolean;
-  created_at: string;
-};
+import { useInboxData, useConversationMessages } from "@/lib/hooks/use-inbox";
+import type { Conversation, Message } from "@/lib/hooks/use-inbox";
 
 type Tab = "notifications" | "messages";
 
@@ -105,29 +75,53 @@ function InboxPageContent() {
   const conversationParam = searchParams.get("conversation");
   const { isUserOnline } = usePresenceContext();
 
+  // SWR hooks for data fetching
+  const {
+    notifications,
+    conversations,
+    currentUserId,
+    isLoading,
+    mutate: mutateInbox,
+  } = useInboxData();
+
   const [activeTab, setActiveTab] = useState<Tab>(
     conversationParam ? "messages" : "notifications",
   );
-  const [isLoading, setIsLoading] = useState(true);
-  const [currentUserId, setCurrentUserId] = useState<string | null>(null);
-
-  // Notifications state
-  const [notifications, setNotifications] = useState<Notification[]>([]);
-  const [unreadNotifications, setUnreadNotifications] = useState(0);
-
-  // Conversations state
-  const [conversations, setConversations] = useState<Conversation[]>([]);
   const [selectedConversation, setSelectedConversation] =
     useState<Conversation | null>(null);
-  const [messages, setMessages] = useState<Message[]>([]);
+  const [localMessages, setLocalMessages] = useState<Message[]>([]);
   const [newMessage, setNewMessage] = useState("");
   const [isSendingMessage, setIsSendingMessage] = useState(false);
   const messagesEndRef = useRef<HTMLDivElement>(null);
 
+  // SWR hook for messages
+  const {
+    messages: fetchedMessages,
+    mutate: mutateMessages,
+  } = useConversationMessages(
+    selectedConversation?.id ?? null,
+    currentUserId,
+  );
+
+  // Sync fetched messages to local state (allows optimistic updates from realtime)
+  useEffect(() => {
+    setLocalMessages(fetchedMessages);
+  }, [fetchedMessages]);
+
+  // Select conversation from URL param once data loads
+  useEffect(() => {
+    if (conversationParam && conversations.length > 0 && !selectedConversation) {
+      const conv = conversations.find((c) => c.id === conversationParam);
+      if (conv) {
+        setSelectedConversation(conv);
+        setActiveTab("messages");
+      }
+    }
+  }, [conversationParam, conversations, selectedConversation]);
+
   // Real-time chat hook
   const handleNewMessage = useCallback((message: Message) => {
-    setMessages((prev) => {
-      // Avoid duplicates
+    setLocalMessages((prev) => {
       if (prev.some((m) => m.id === message.id)) return prev;
       return [...prev, message];
     });
@@ -144,155 +138,22 @@ function InboxPageContent() {
     onNewMessage: handleNewMessage,
   });
 
-  // Get the other user's name for typing indicator
   const otherUserName =
     selectedConversation?.other_user?.full_name || "Someone";
 
-  // Fetch data
-  useEffect(() => {
-    const fetchData = async () => {
-      setIsLoading(true);
-      const supabase = createClient();
+  const unreadNotifications = notifications.filter((n) => !n.read).length;
 
-      const {
-        data: { user },
-      } = await supabase.auth.getUser();
-
-      if (!user) {
-        router.replace("/login");
-        return;
-      }
-
-      setCurrentUserId(user.id);
-
-      // Fetch notifications
-      const { data: notificationsData } = await supabase
-        .from("notifications")
-        .select("*")
-        .eq("user_id", user.id)
-        .order("created_at", { ascending: false });
-
-      if (notificationsData) {
-        setNotifications(notificationsData);
-        setUnreadNotifications(notificationsData.filter((n) => !n.read).length);
-      }
-
-      // Fetch conversations
-      const { data: conversationsData, error: conversationsError } =
-        await supabase
-          .from("conversations")
-          .select("*")
-          .or(`participant_1.eq.${user.id},participant_2.eq.${user.id}`)
-          .order("updated_at", { ascending: false });
-
-      if (conversationsError) {
-        console.error("Error fetching conversations:", conversationsError);
-      }
-
-      if (conversationsData) {
-        // Enrich conversations with other user info and last message
-        const enrichedConversations = await Promise.all(
-          conversationsData.map(async (conv) => {
-            const otherUserId =
-              conv.participant_1 === user.id
-                ? conv.participant_2
-                : conv.participant_1;
-
-            // Get other user's profile
-            const { data: profile, error: profileError } = await supabase
-              .from("profiles")
-              .select("full_name, headline, user_id")
-              .eq("user_id", otherUserId)
-              .maybeSingle();
-
-            if (profileError && profileError.code !== "PGRST116") {
-              console.error("Error fetching profile:", profileError);
-            }
-
-            // Get project title if exists
-            let project = null;
-            if (conv.project_id) {
-              const { data: projectData, error: projectError } = await supabase
-                .from("projects")
-                .select("title")
-                .eq("id", conv.project_id)
-                .eq("is_test_data", getTestDataValue())
-                .maybeSingle();
-
-              if (projectError && projectError.code !== "PGRST116") {
-                console.error("Error fetching project:", projectError);
-              }
-              project = projectData;
-            }
-
-            // Get last message
-            const { data: lastMessageData, error: lastMessageError } =
-              await supabase
-                .from("messages")
-                .select("content, created_at, sender_id")
-                .eq("conversation_id", conv.id)
-                .order("created_at", { ascending: false })
-                .limit(1)
-                .maybeSingle();
-
-            // Only log error if it's not a "not found" error
-            if (lastMessageError && lastMessageError.code !== "PGRST116") {
-              console.error("Error fetching last message:", lastMessageError);
-            }
-
-            // Get unread count
-            const { count } = await supabase
-              .from("messages")
-              .select("*", { count: "exact", head: true })
-              .eq("conversation_id", conv.id)
-              .eq("read", false)
-              .neq("sender_id", user.id);
-
-            return {
-              ...conv,
-              other_user: profile || undefined,
-              project: project || undefined,
-              last_message: lastMessageData || undefined,
-              unread_count: count || 0,
-            };
-          }),
-        );
-
-        setConversations(enrichedConversations);
-
-        // If conversation param exists, select it
-        if (conversationParam) {
-          const conv = enrichedConversations.find(
-            (c) => c.id === conversationParam,
-          );
-          if (conv) {
-            setSelectedConversation(conv);
-            setActiveTab("messages");
-          }
-        }
-      }
-
-      setIsLoading(false);
-
-      // Request browser notification permission
-      requestNotificationPermission();
-    };
-
-    fetchData();
-  }, [router, conversationParam]);
-
-  // Real-time notifications subscription
+  // Real-time subscriptions — revalidate SWR cache on changes
   useEffect(() => {
     if (!currentUserId) return;
 
+    requestNotificationPermission();
+
     const notificationChannel = subscribeToNotifications(
       currentUserId,
-      // On new notification
       (notification) => {
-        setNotifications((prev) => [notification, ...prev]);
+        mutateInbox();
         if (!notification.read) {
-          setUnreadNotifications((prev) => prev + 1);
-          // Show browser notification
           showBrowserNotification(
             notification.title,
             notification.body || "",
@@ -304,206 +165,53 @@ function InboxPageContent() {
           );
         }
       },
-      // On notification update
-      (notification) => {
-        setNotifications((prev) =>
-          prev.map((n) => (n.id === notification.id ? notification : n)),
-        );
-        // Recalculate unread count
-        setNotifications((prev) => {
-          setUnreadNotifications(prev.filter((n) => !n.read).length);
-          return prev;
-        });
-      },
-      // On notification delete
-      (notification) => {
-        setNotifications((prev) =>
-          prev.filter((n) => n.id !== notification.id),
-        );
-      },
+      () => mutateInbox(),
+      () => mutateInbox(),
     );
 
     const conversationChannel = subscribeToConversations(
       currentUserId,
-      // On conversation update
-      async (conv) => {
-        // Refresh conversation data
-        const supabase = createClient();
-        const otherUserId =
-          conv.participant_1 === currentUserId
-            ? conv.participant_2
-            : conv.participant_1;
-
-        const { data: profile, error: profileError } = await supabase
-          .from("profiles")
-          .select("full_name, headline, user_id")
-          .eq("user_id", otherUserId)
-          .maybeSingle();
-
-        if (profileError && profileError.code !== "PGRST116") {
-          console.error("Error fetching profile in realtime:", profileError);
-        }
-
-        const { data: lastMessageData, error: lastMessageError } =
-          await supabase
-            .from("messages")
-            .select("content, created_at, sender_id")
-            .eq("conversation_id", conv.id)
-            .order("created_at", { ascending: false })
-            .limit(1)
-            .maybeSingle();
-
-        // Only log error if it's not a "not found" error
-        if (lastMessageError && lastMessageError.code !== "PGRST116") {
-          console.error(
-            "Error fetching last message in realtime:",
-            lastMessageError,
-          );
-        }
-
-        const { count } = await supabase
-          .from("messages")
-          .select("*", { count: "exact", head: true })
-          .eq("conversation_id", conv.id)
-          .eq("read", false)
-          .neq("sender_id", currentUserId);
-
-        const enrichedConv: Conversation = {
-          ...conv,
-          project_id: null,
-          other_user: profile || undefined,
-          last_message: lastMessageData || undefined,
-          unread_count: count || 0,
-        };
-
-        setConversations((prev) => {
-          const exists = prev.find((c) => c.id === conv.id);
-          if (exists) {
-            return prev
-              .map((c) => (c.id === conv.id ? enrichedConv : c))
-              .sort(
-                (a, b) =>
-                  new Date(b.updated_at).getTime() -
-                  new Date(a.updated_at).getTime(),
-              );
-          }
-          return [enrichedConv, ...prev];
-        });
-      },
+      () => mutateInbox(),
     );
 
     return () => {
       unsubscribeChannel(notificationChannel);
       unsubscribeChannel(conversationChannel);
     };
-  }, [currentUserId, router]);
-
-  // Fetch messages when conversation is selected
-  useEffect(() => {
-    if (!selectedConversation) return;
-
-    const fetchMessages = async () => {
-      if (!selectedConversation?.id || !currentUserId) {
-        console.warn("Cannot fetch messages: missing conversation or user ID");
-        return;
-      }
-
-      const supabase = createClient();
-
-      console.log(
-        "Fetching messages for conversation:",
-        selectedConversation.id,
-      );
-
-      const { data: messagesData, error: messagesError } = await supabase
-        .from("messages")
-        .select("*")
-        .eq("conversation_id", selectedConversation.id)
-        .order("created_at", { ascending: true });
-
-      if (messagesError) {
-        console.error("Error fetching messages:", messagesError);
-        console.error("Error details:", {
-          code: messagesError.code,
-          message: messagesError.message,
-          details: messagesError.details,
-          hint: messagesError.hint,
-        });
-        setMessages([]);
-        return;
-      }
-
-      console.log("Fetched messages:", messagesData?.length || 0, messagesData);
-
-      if (messagesData) {
-        setMessages(messagesData);
-
-        // Mark messages as read
-        const { error: updateError } = await supabase
-          .from("messages")
-          .update({ read: true })
-          .eq("conversation_id", selectedConversation.id)
-          .neq("sender_id", currentUserId);
-
-        if (updateError) {
-          console.error("Error marking messages as read:", updateError);
-        }
-      } else {
-        setMessages([]);
-      }
-    };
-
-    fetchMessages();
-  }, [selectedConversation, currentUserId]);
+  }, [currentUserId, mutateInbox, router]);
 
   // Scroll to bottom when messages change
   useEffect(() => {
     messagesEndRef.current?.scrollIntoView({ behavior: "smooth" });
-  }, [messages]);
+  }, [localMessages]);
 
   const handleMarkAsRead = async (notificationId: string) => {
     const supabase = createClient();
-
     await supabase
       .from("notifications")
       .update({ read: true })
       .eq("id", notificationId);
-
-    setNotifications((prev) =>
-      prev.map((n) => (n.id === notificationId ? { ...n, read: true } : n)),
-    );
-    setUnreadNotifications((prev) => Math.max(0, prev - 1));
+    mutateInbox();
   };
 
   const handleMarkAllAsRead = async () => {
     const supabase = createClient();
-
     await supabase
       .from("notifications")
       .update({ read: true })
       .eq("user_id", currentUserId)
       .eq("read", false);
-
-    setNotifications((prev) => prev.map((n) => ({ ...n, read: true })));
-    setUnreadNotifications(0);
+    mutateInbox();
   };
 
   const handleDeleteNotification = async (notificationId: string) => {
     const supabase = createClient();
-
     await supabase.from("notifications").delete().eq("id", notificationId);
-
-    const notification = notifications.find((n) => n.id === notificationId);
-    setNotifications((prev) => prev.filter((n) => n.id !== notificationId));
-    if (notification && !notification.read) {
-      setUnreadNotifications((prev) => Math.max(0, prev - 1));
-    }
+    mutateInbox();
   };
 
-  const handleNotificationClick = (notification: Notification) => {
+  const handleNotificationClick = (notification: (typeof notifications)[0]) => {
     handleMarkAsRead(notification.id);
-
-    // Navigate based on notification type
     if (notification.related_project_id) {
       router.push(`/projects/${notification.related_project_id}`);
     }
@@ -531,40 +239,38 @@ function InboxPageContent() {
       return;
     }
 
-    // Add message to local state
-    setMessages((prev) => [...prev, message]);
+    // Optimistic update
+    setLocalMessages((prev) => [...prev, message]);
     setNewMessage("");
 
-    // Create notification for other user
+    // Create notification for other user (fire and forget)
     const otherUserId =
       selectedConversation.participant_1 === currentUserId
         ? selectedConversation.participant_2
         : selectedConversation.participant_1;
 
-    // Get sender's name
     const { data: profile } = await supabase
       .from("profiles")
       .select("full_name")
       .eq("user_id", currentUserId)
       .maybeSingle();
 
-    // Create notification for other user (don't block on this - fire and forget)
-    (async () => {
-      const { error } = await supabase.from("notifications").insert({
+    supabase
+      .from("notifications")
+      .insert({
         user_id: otherUserId,
         type: "new_message",
         title: "New Message",
         body: `${profile?.full_name || "Someone"}: ${newMessage.trim().slice(0, 50)}${newMessage.length > 50 ? "..." : ""}`,
         related_user_id: currentUserId,
+      })
+      .then(({ error }) => {
+        if (error) console.error("Error creating notification:", error);
       });
-      if (error) {
-        console.error("Error creating notification:", error);
-        // Don't block message sending if notification fails
-      }
-    })();
 
     setIsSendingMessage(false);
-  }, [newMessage, selectedConversation, currentUserId]);
+    mutateMessages();
+  }, [newMessage, selectedConversation, currentUserId, mutateMessages]);
 
   if (isLoading) {
     return (
@@ -867,13 +573,13 @@ function InboxPageContent() {
 
                 {/* Messages */}
                 <CardContent className="flex-1 overflow-y-auto p-4 space-y-4">
-                  {messages.length === 0 ? (
+                  {localMessages.length === 0 ? (
                     <div className="flex flex-col items-center justify-center h-full text-muted-foreground">
                       <MessageSquare className="h-8 w-8 mb-2" />
                       <p>No messages yet. Start the conversation!</p>
                     </div>
                   ) : (
-                    messages.map((message) => (
+                    localMessages.map((message) => (
                       <div
                         key={message.id}
                         className={cn(
@@ -925,7 +631,6 @@ function InboxPageContent() {
                       value={newMessage}
                       onChange={(e) => {
                         setNewMessage(e.target.value);
-                        // Trigger typing indicator
                         if (e.target.value.length > 0) {
                           setIsTyping(true);
                         } else {
