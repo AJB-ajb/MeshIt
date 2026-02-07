@@ -86,6 +86,9 @@ logs/
 .handoffs/
 .pnpm-store/
 
+# Supabase
+supabase/.temp/
+
 # Serwist
 public/sw*
 public/swe-worker*
