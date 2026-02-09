@@ -25,8 +25,8 @@ import {
 } from "@/components/ui/card";
 import { formatScore } from "@/lib/matching/scoring";
 import { getInitials } from "@/lib/format";
-import { useProjects } from "@/lib/hooks/use-projects";
-import type { Posting, TabId } from "@/lib/hooks/use-projects";
+import { usePostings } from "@/lib/hooks/use-postings";
+import type { Posting, TabId } from "@/lib/hooks/use-postings";
 
 const tabs: { id: TabId; label: string }[] = [
   { id: "discover", label: "Discover" },
@@ -49,7 +49,7 @@ const formatDate = (dateString: string) => {
 export default function ProjectsPage() {
   const [activeTab, setActiveTab] = useState<TabId>("discover");
   const [searchQuery, setSearchQuery] = useState("");
-  const { postings, userId, isLoading } = useProjects(activeTab);
+  const { postings, userId, isLoading } = usePostings(activeTab);
 
   const filteredProjects = postings.filter((project: Posting) => {
     if (!searchQuery) return true;

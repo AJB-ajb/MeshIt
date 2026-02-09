@@ -33,16 +33,10 @@ type Posting = {
   };
 };
 
-/** @deprecated Use Posting */
-type Project = Posting;
-
 type PostingWithScore = Posting & {
   compatibility_score?: number;
   score_breakdown?: ScoreBreakdown;
 };
-
-/** @deprecated Use PostingWithScore */
-type ProjectWithScore = PostingWithScore;
 
 type TabId = "discover" | "my-postings";
 
@@ -156,8 +150,5 @@ export function usePostings(tab: TabId) {
   };
 }
 
-/** @deprecated Use usePostings */
-export const useProjects = usePostings;
-
 export { formatScore };
-export type { Posting, PostingWithScore, Project, ProjectWithScore, TabId };
+export type { Posting, PostingWithScore, TabId };
