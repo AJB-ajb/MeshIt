@@ -26,7 +26,7 @@ import { getTestDataValue } from "@/lib/environment";
 
 type InputMode = "form" | "ai";
 
-type ProjectFormState = {
+type PostingFormState = {
   title: string;
   description: string;
   skills: string;
@@ -37,7 +37,7 @@ type ProjectFormState = {
   mode: string;
 };
 
-const defaultFormState: ProjectFormState = {
+const defaultFormState: PostingFormState = {
   title: "",
   description: "",
   skills: "",
@@ -54,9 +54,9 @@ const parseList = (value: string) =>
     .map((item) => item.trim())
     .filter(Boolean);
 
-export default function NewProjectPage() {
+export default function NewPostingPage() {
   const router = useRouter();
-  const [form, setForm] = useState<ProjectFormState>(defaultFormState);
+  const [form, setForm] = useState<PostingFormState>(defaultFormState);
   const [isSaving, setIsSaving] = useState(false);
   const [error, setError] = useState<string | null>(null);
   const [inputMode, setInputMode] = useState<InputMode>("form");
@@ -64,13 +64,13 @@ export default function NewProjectPage() {
   const [isExtracting, setIsExtracting] = useState(false);
   const [extractionSuccess, setExtractionSuccess] = useState(false);
 
-  const handleChange = (field: keyof ProjectFormState, value: string) => {
+  const handleChange = (field: keyof PostingFormState, value: string) => {
     setForm((prev) => ({ ...prev, [field]: value }));
   };
 
   const handleAiExtract = async () => {
     if (!aiText.trim()) {
-      setError("Please paste some text to extract project information from.");
+      setError("Please paste some text to extract posting information from.");
       return;
     }
 
@@ -88,7 +88,7 @@ export default function NewProjectPage() {
       const data = await response.json();
 
       if (!response.ok) {
-        throw new Error(data.error || "Failed to extract project");
+        throw new Error(data.error || "Failed to extract posting");
       }
 
       const project = data.project;
@@ -115,7 +115,7 @@ export default function NewProjectPage() {
       }, 1500);
     } catch (err) {
       setError(
-        err instanceof Error ? err.message : "Failed to extract project",
+        err instanceof Error ? err.message : "Failed to extract posting",
       );
     } finally {
       setIsExtracting(false);
@@ -127,12 +127,12 @@ export default function NewProjectPage() {
     setError(null);
 
     if (!form.title.trim()) {
-      setError("Please enter a project title.");
+      setError("Please enter a posting title.");
       return;
     }
 
     if (!form.description.trim()) {
-      setError("Please enter a project description.");
+      setError("Please enter a posting description.");
       return;
     }
 
@@ -146,7 +146,7 @@ export default function NewProjectPage() {
 
     if (userError || !user) {
       setIsSaving(false);
-      setError("Please sign in to create a project.");
+      setError("Please sign in to create a posting.");
       return;
     }
 
@@ -188,7 +188,7 @@ export default function NewProjectPage() {
     const now = new Date();
     const expiresAt = new Date(now.getTime() + 90 * 24 * 60 * 60 * 1000);
 
-    const { data: project, error: insertError } = await supabase
+    const { data: posting, error: insertError } = await supabase
       .from("postings")
       .insert({
         creator_id: user.id,
@@ -213,7 +213,7 @@ export default function NewProjectPage() {
       console.error("Insert error:", insertError);
 
       // Provide more specific error messages
-      let errorMessage = "Failed to create project. Please try again.";
+      let errorMessage = "Failed to create posting. Please try again.";
 
       if (insertError.code === "23503") {
         // Foreign key violation - profile doesn't exist
@@ -221,20 +221,20 @@ export default function NewProjectPage() {
           "Your profile is missing. Please complete your profile first.";
       } else if (insertError.code === "23505") {
         // Unique violation
-        errorMessage = "A project with this information already exists.";
+        errorMessage = "A posting with this information already exists.";
       } else if (insertError.code === "23514") {
         // Check constraint violation
-        errorMessage = `Invalid project data: ${insertError.message}`;
+        errorMessage = `Invalid posting data: ${insertError.message}`;
       } else if (insertError.message) {
-        errorMessage = `Failed to create project: ${insertError.message}`;
+        errorMessage = `Failed to create posting: ${insertError.message}`;
       }
 
       setError(errorMessage);
       return;
     }
 
-    // Redirect to the new project's page
-    router.push(`/projects/${project.id}`);
+    // Redirect to the new posting's page
+    router.push(`/projects/${posting.id}`);
   };
 
   return (
@@ -245,14 +245,14 @@ export default function NewProjectPage() {
         className="inline-flex items-center gap-2 text-sm text-muted-foreground hover:text-foreground"
       >
         <ArrowLeft className="h-4 w-4" />
-        Back to projects
+        Back to postings
       </Link>
 
       {/* Header */}
       <div>
-        <h1 className="text-3xl font-bold tracking-tight">Create Project</h1>
+        <h1 className="text-3xl font-bold tracking-tight">Create Posting</h1>
         <p className="mt-1 text-muted-foreground">
-          Describe your project and let AI find the perfect collaborators
+          Describe your posting and let AI find the perfect collaborators
         </p>
       </div>
 
@@ -296,11 +296,11 @@ export default function NewProjectPage() {
           <CardHeader>
             <CardTitle className="flex items-center gap-2">
               <Sparkles className="h-5 w-5 text-primary" />
-              AI Project Extraction
+              AI Posting Extraction
             </CardTitle>
             <CardDescription>
-              Paste your project description from Slack, Discord, a GitHub
-              README, or any text. Our AI will automatically extract project
+              Paste your posting description from Slack, Discord, a GitHub
+              README, or any text. Our AI will automatically extract posting
               details.
             </CardDescription>
           </CardHeader>
@@ -343,7 +343,7 @@ DM if interested!`}
                 ) : (
                   <>
                     <Sparkles className="h-4 w-4" />
-                    Extract Project Details
+                    Extract Posting Details
                   </>
                 )}
               </Button>
@@ -357,7 +357,7 @@ DM if interested!`}
             </div>
             <p className="text-xs text-muted-foreground">
               After extraction, youll be able to review and edit the extracted
-              information before creating your project.
+              information before creating your posting.
             </p>
           </CardContent>
         </Card>
@@ -368,9 +368,9 @@ DM if interested!`}
         <form onSubmit={handleSubmit}>
           <Card>
             <CardHeader>
-              <CardTitle>Project Details</CardTitle>
+              <CardTitle>Posting Details</CardTitle>
               <CardDescription>
-                Tell us about your project in plain language. You can paste from
+                Tell us about your posting in plain language. You can paste from
                 Slack, Discord, or describe it yourself.
               </CardDescription>
             </CardHeader>
@@ -378,7 +378,7 @@ DM if interested!`}
               {/* Title */}
               <div className="space-y-2">
                 <label htmlFor="title" className="text-sm font-medium">
-                  Project Title <span className="text-destructive">*</span>
+                  Posting Title <span className="text-destructive">*</span>
                 </label>
                 <Input
                   id="title"
@@ -549,7 +549,7 @@ Example: Building a Minecraft-style collaborative IDE, need 2-3 people with WebG
                       Creating...
                     </>
                   ) : (
-                    "Create Project"
+                    "Create Posting"
                   )}
                 </Button>
                 <Button type="button" variant="outline" asChild>
@@ -564,8 +564,8 @@ Example: Building a Minecraft-style collaborative IDE, need 2-3 people with WebG
       {/* Info */}
       <p className="text-center text-sm text-muted-foreground">
         {inputMode === "ai"
-          ? "Paste your project description and let AI extract the details automatically."
-          : "After creating your project, our AI will immediately start finding matching collaborators based on your description."}
+          ? "Paste your posting description and let AI extract the details automatically."
+          : "After creating your posting, our AI will immediately start finding matching collaborators based on your description."}
       </p>
     </div>
   );

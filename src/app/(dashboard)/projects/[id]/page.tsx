@@ -37,7 +37,7 @@ import type { ScoreBreakdown, Profile } from "@/lib/supabase/types";
 import { formatScore } from "@/lib/matching/scoring";
 import { getInitials } from "@/lib/format";
 
-type Project = {
+type Posting = {
   id: string;
   title: string;
   description: string;
@@ -83,7 +83,7 @@ type MatchedProfile = {
   breakdown: ScoreBreakdown;
 };
 
-type ProjectFormState = {
+type PostingFormState = {
   title: string;
   description: string;
   skills: string;
@@ -108,12 +108,12 @@ const formatDate = (dateString: string) => {
   return date.toLocaleDateString();
 };
 
-export default function ProjectDetailPage() {
+export default function PostingDetailPage() {
   const router = useRouter();
   const params = useParams();
-  const projectId = params.id as string;
+  const postingId = params.id as string;
 
-  const [project, setProject] = useState<Project | null>(null);
+  const [project, setProject] = useState<Posting | null>(null);
   const [isLoading, setIsLoading] = useState(true);
   const [isOwner, setIsOwner] = useState(false);
   const [currentUserId, setCurrentUserId] = useState<string | null>(null);
@@ -128,7 +128,7 @@ export default function ProjectDetailPage() {
     null,
   );
   const [isComputingMatch, setIsComputingMatch] = useState(false);
-  const [form, setForm] = useState<ProjectFormState>({
+  const [form, setForm] = useState<PostingFormState>({
     title: "",
     description: "",
     skills: "",
@@ -155,9 +155,9 @@ export default function ProjectDetailPage() {
   const [matchedProfiles, setMatchedProfiles] = useState<MatchedProfile[]>([]);
   const [isLoadingMatches, setIsLoadingMatches] = useState(false);
 
-  // Fetch matched profiles for project owner
+  // Fetch matched profiles for posting owner
   const fetchMatchedProfiles = useCallback(
-    async (targetProjectId: string, ownerUserId: string | null) => {
+    async (targetPostingId: string, ownerUserId: string | null) => {
       setIsLoadingMatches(true);
       const supabase = createClient();
 
@@ -178,14 +178,14 @@ export default function ProjectDetailPage() {
         const matchedProfilesData: MatchedProfile[] = [];
 
         for (const profile of allProfiles) {
-          // Skip if this is the project owner
+          // Skip if this is the posting owner
           if (profile.user_id === ownerUserId) continue;
 
           try {
             const { data: breakdown, error: breakdownError } =
               await supabase.rpc("compute_match_breakdown", {
                 profile_user_id: profile.user_id,
-                target_posting_id: targetProjectId,
+                target_posting_id: targetPostingId,
               });
 
             if (!breakdownError && breakdown) {
@@ -226,7 +226,7 @@ export default function ProjectDetailPage() {
   );
 
   useEffect(() => {
-    const fetchProject = async () => {
+    const fetchPosting = async () => {
       setIsLoading(true);
       const supabase = createClient();
 
@@ -251,11 +251,11 @@ export default function ProjectDetailPage() {
           )
         `,
         )
-        .eq("id", projectId)
+        .eq("id", postingId)
         .single();
 
       if (error || !data) {
-        console.error("Error fetching project:", error);
+        console.error("Error fetching posting:", error);
         setIsLoading(false);
         return;
       }
@@ -281,7 +281,7 @@ export default function ProjectDetailPage() {
           await supabase
             .from("applications")
             .select("*")
-            .eq("posting_id", projectId)
+            .eq("posting_id", postingId)
             .eq("applicant_id", user.id)
             .maybeSingle();
 
@@ -315,7 +315,7 @@ export default function ProjectDetailPage() {
           await supabase
             .from("applications")
             .select("*")
-            .eq("posting_id", projectId)
+            .eq("posting_id", postingId)
             .order("created_at", { ascending: false });
 
         if (applicationsError) {
@@ -340,18 +340,18 @@ export default function ProjectDetailPage() {
         }
 
         // Fetch matched profiles for owner
-        fetchMatchedProfiles(projectId, user?.id || null);
+        fetchMatchedProfiles(postingId, user?.id || null);
       }
 
       setIsLoading(false);
     };
 
-    fetchProject();
-  }, [projectId, fetchMatchedProfiles]);
+    fetchPosting();
+  }, [postingId, fetchMatchedProfiles]);
 
   const computeMatchBreakdown = async (
     userId: string,
-    targetProjectId: string,
+    targetPostingId: string,
   ) => {
     setIsComputingMatch(true);
     const supabase = createClient();
@@ -359,7 +359,7 @@ export default function ProjectDetailPage() {
     try {
       const { data, error } = await supabase.rpc("compute_match_breakdown", {
         profile_user_id: userId,
-        target_posting_id: targetProjectId,
+        target_posting_id: targetPostingId,
       });
 
       if (!error && data) {
@@ -372,7 +372,7 @@ export default function ProjectDetailPage() {
     }
   };
 
-  const handleChange = (field: keyof ProjectFormState, value: string) => {
+  const handleChange = (field: keyof PostingFormState, value: string) => {
     setForm((prev) => ({ ...prev, [field]: value }));
   };
 
@@ -402,12 +402,12 @@ export default function ProjectDetailPage() {
         status: form.status,
         updated_at: new Date().toISOString(),
       })
-      .eq("id", projectId);
+      .eq("id", postingId);
 
     setIsSaving(false);
 
     if (updateError) {
-      setError("Failed to update project. Please try again.");
+      setError("Failed to update posting. Please try again.");
       return;
     }
 
@@ -425,7 +425,7 @@ export default function ProjectDetailPage() {
         )
       `,
       )
-      .eq("id", projectId)
+      .eq("id", postingId)
       .single();
 
     if (data) {
@@ -438,7 +438,7 @@ export default function ProjectDetailPage() {
   const handleDelete = async () => {
     if (
       !confirm(
-        "Are you sure you want to delete this project? This action cannot be undone.",
+        "Are you sure you want to delete this posting? This action cannot be undone.",
       )
     ) {
       return;
@@ -450,11 +450,11 @@ export default function ProjectDetailPage() {
     const { error: deleteError } = await supabase
       .from("postings")
       .delete()
-      .eq("id", projectId);
+      .eq("id", postingId);
 
     if (deleteError) {
       setIsDeleting(false);
-      setError("Failed to delete project. Please try again.");
+      setError("Failed to delete posting. Please try again.");
       return;
     }
 
@@ -476,7 +476,7 @@ export default function ProjectDetailPage() {
     const { data: application, error: applyError } = await supabase
       .from("applications")
       .insert({
-        posting_id: projectId,
+        posting_id: postingId,
         applicant_id: currentUserId,
         cover_message: coverMessage.trim() || null,
       })
@@ -489,7 +489,7 @@ export default function ProjectDetailPage() {
       return;
     }
 
-    // Create notification for project owner
+    // Create notification for posting owner
     if (project) {
       // Get applicant's profile for notification
       const { data: profile } = await supabase
@@ -504,8 +504,8 @@ export default function ProjectDetailPage() {
         user_id: project.creator_id,
         type: "application_received",
         title: "New Application Received",
-        body: `${applicantName} has applied to your project "${project.title}"`,
-        related_posting_id: projectId,
+        body: `${applicantName} has applied to your posting "${project.title}"`,
+        related_posting_id: postingId,
         related_application_id: application.id,
         related_user_id: currentUserId,
       });
@@ -577,7 +577,7 @@ export default function ProjectDetailPage() {
           newStatus === "accepted"
             ? `Your application to "${project.title}" has been accepted!`
             : `Your application to "${project.title}" was not selected.`,
-        related_posting_id: projectId,
+        related_posting_id: postingId,
         related_application_id: applicationId,
         related_user_id: project.creator_id,
       });
@@ -601,7 +601,7 @@ export default function ProjectDetailPage() {
     const { data: existingConv } = await supabase
       .from("conversations")
       .select("id")
-      .eq("posting_id", projectId)
+      .eq("posting_id", postingId)
       .or(
         `and(participant_1.eq.${currentUserId},participant_2.eq.${applicantId}),and(participant_1.eq.${applicantId},participant_2.eq.${currentUserId})`,
       )
@@ -616,7 +616,7 @@ export default function ProjectDetailPage() {
     const { data: newConv, error: convError } = await supabase
       .from("conversations")
       .insert({
-        posting_id: projectId,
+        posting_id: postingId,
         participant_1: currentUserId,
         participant_2: applicantId,
       })
@@ -640,7 +640,7 @@ export default function ProjectDetailPage() {
     const { data: existingConv } = await supabase
       .from("conversations")
       .select("id")
-      .eq("posting_id", projectId)
+      .eq("posting_id", postingId)
       .or(
         `and(participant_1.eq.${currentUserId},participant_2.eq.${project.creator_id}),and(participant_1.eq.${project.creator_id},participant_2.eq.${currentUserId})`,
       )
@@ -655,7 +655,7 @@ export default function ProjectDetailPage() {
     const { data: newConv, error: convError } = await supabase
       .from("conversations")
       .insert({
-        posting_id: projectId,
+        posting_id: postingId,
         participant_1: currentUserId,
         participant_2: project.creator_id,
       })
@@ -686,13 +686,13 @@ export default function ProjectDetailPage() {
           className="inline-flex items-center gap-2 text-sm text-muted-foreground hover:text-foreground"
         >
           <ArrowLeft className="h-4 w-4" />
-          Back to projects
+          Back to postings
         </Link>
         <Card>
           <CardContent className="flex min-h-[200px] flex-col items-center justify-center py-12">
-            <p className="text-muted-foreground">Project not found.</p>
+            <p className="text-muted-foreground">Posting not found.</p>
             <Button asChild className="mt-4">
-              <Link href="/projects">Browse Projects</Link>
+              <Link href="/projects">Browse Postings</Link>
             </Button>
           </CardContent>
         </Card>
@@ -712,7 +712,7 @@ export default function ProjectDetailPage() {
         className="inline-flex items-center gap-2 text-sm text-muted-foreground hover:text-foreground"
       >
         <ArrowLeft className="h-4 w-4" />
-        Back to projects
+        Back to postings
       </Link>
 
       {error && (
@@ -847,7 +847,7 @@ export default function ProjectDetailPage() {
                   <textarea
                     value={coverMessage}
                     onChange={(e) => setCoverMessage(e.target.value)}
-                    placeholder="Tell the project owner why you're interested... (optional)"
+                    placeholder="Tell the posting creator why you're interested... (optional)"
                     rows={3}
                     className="flex w-full rounded-md border border-input bg-background px-3 py-2 text-sm ring-offset-background placeholder:text-muted-foreground focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring focus-visible:ring-offset-2"
                   />
@@ -876,11 +876,11 @@ export default function ProjectDetailPage() {
               ) : (
                 <Button onClick={() => setShowApplyForm(true)}>
                   <Send className="h-4 w-4" />
-                  Apply to Project
+                  Apply to Posting
                 </Button>
               )
             ) : (
-              <Badge variant="secondary">Project {project.status}</Badge>
+              <Badge variant="secondary">Posting {project.status}</Badge>
             )}
           </div>
         )}
@@ -892,7 +892,7 @@ export default function ProjectDetailPage() {
           {/* About */}
           <Card>
             <CardHeader>
-              <CardTitle>About this project</CardTitle>
+              <CardTitle>About this posting</CardTitle>
             </CardHeader>
             <CardContent className="space-y-4">
               {isEditing ? (
@@ -1061,7 +1061,7 @@ export default function ProjectDetailPage() {
             </CardContent>
           </Card>
 
-          {/* Applications (for project owner) */}
+          {/* Applications (for posting owner) */}
           {isOwner && (
             <Card
               className={
@@ -1106,7 +1106,7 @@ export default function ProjectDetailPage() {
                       No applications yet
                     </p>
                     <p className="text-xs text-muted-foreground">
-                      Share your project to attract developers!
+                      Share your posting to attract collaborators!
                     </p>
                   </div>
                 ) : (
@@ -1283,7 +1283,7 @@ export default function ProjectDetailPage() {
                   <CardTitle>Your Compatibility</CardTitle>
                 </div>
                 <CardDescription>
-                  How well you match this project
+                  How well you match this posting
                 </CardDescription>
               </CardHeader>
               <CardContent className="space-y-4">
@@ -1327,7 +1327,7 @@ export default function ProjectDetailPage() {
                   <CardTitle>Matched Collaborators</CardTitle>
                 </div>
                 <CardDescription>
-                  Top profiles that match your project requirements
+                  Top profiles that match your posting requirements
                 </CardDescription>
               </CardHeader>
               <CardContent>
@@ -1339,7 +1339,7 @@ export default function ProjectDetailPage() {
                   <div className="text-center py-8">
                     <p className="text-sm text-muted-foreground">
                       No matched profiles found yet. Complete profiles will
-                      appear here as they match your project.
+                      appear here as they match your posting.
                     </p>
                   </div>
                 ) : (
@@ -1479,7 +1479,7 @@ export default function ProjectDetailPage() {
           {/* Creator */}
           <Card>
             <CardHeader>
-              <CardTitle className="text-base">Project Creator</CardTitle>
+              <CardTitle className="text-base">Posting Creator</CardTitle>
             </CardHeader>
             <CardContent className="space-y-4">
               <div className="flex items-center gap-3">
@@ -1524,7 +1524,7 @@ export default function ProjectDetailPage() {
             <CardContent className="space-y-2">
               <Button variant="outline" className="w-full justify-start">
                 <Share2 className="h-4 w-4" />
-                Share Project
+                Share Posting
               </Button>
               <Button variant="outline" className="w-full justify-start">
                 <Flag className="h-4 w-4" />
