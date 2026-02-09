@@ -79,7 +79,7 @@ export default function NewPostingPage() {
     setExtractionSuccess(false);
 
     try {
-      const response = await fetch("/api/extract/project", {
+      const response = await fetch("/api/extract/posting", {
         method: "POST",
         headers: { "Content-Type": "application/json" },
         body: JSON.stringify({ text: aiText }),
@@ -91,20 +91,20 @@ export default function NewPostingPage() {
         throw new Error(data.error || "Failed to extract posting");
       }
 
-      const project = data.project;
+      const extracted = data.posting;
 
       // Map extracted data to form state
       setForm({
-        title: project.title || form.title,
-        description: project.description || form.description,
-        skills: Array.isArray(project.skills)
-          ? project.skills.join(", ")
+        title: extracted.title || form.title,
+        description: extracted.description || form.description,
+        skills: Array.isArray(extracted.skills)
+          ? extracted.skills.join(", ")
           : form.skills,
-        estimatedTime: project.estimated_time || form.estimatedTime,
-        teamSizeMin: project.team_size_min?.toString() || form.teamSizeMin,
-        teamSizeMax: project.team_size_max?.toString() || form.teamSizeMax,
-        category: project.category || form.category,
-        mode: project.mode || form.mode,
+        estimatedTime: extracted.estimated_time || form.estimatedTime,
+        teamSizeMin: extracted.team_size_min?.toString() || form.teamSizeMin,
+        teamSizeMax: extracted.team_size_max?.toString() || form.teamSizeMax,
+        category: extracted.category || form.category,
+        mode: extracted.mode || form.mode,
       });
 
       setExtractionSuccess(true);
