@@ -444,7 +444,7 @@ function InboxPageContent() {
                     No conversations yet
                   </p>
                   <p className="text-sm text-muted-foreground">
-                    Start by contacting a project creator
+                    Start by contacting a posting creator
                   </p>
                 </CardContent>
               </Card>
