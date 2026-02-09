@@ -1,7 +1,7 @@
 import Link from "next/link";
 import { Button } from "@/components/ui/button";
 import { Card, CardContent } from "@/components/ui/card";
-import { ProjectCard } from "@/components/project/project-card";
+import { PostingCard } from "@/components/posting/posting-card";
 
 export type RecommendedProject = {
   id: string;
@@ -37,7 +37,7 @@ export function RecommendedProjects({
       <div className="grid gap-6 lg:grid-cols-2">
         {projects.length > 0 ? (
           projects.map((project) => (
-            <ProjectCard key={project.id} {...project} />
+            <PostingCard key={project.id} {...project} />
           ))
         ) : (
           <Card>

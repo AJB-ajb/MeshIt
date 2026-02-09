@@ -13,7 +13,7 @@ import {
   CardTitle,
 } from "@/components/ui/card";
 
-export interface ProjectCardProps {
+export interface PostingCardProps {
   id: string;
   title: string;
   description: string;
@@ -32,7 +32,7 @@ export interface ProjectCardProps {
   onApply?: () => void;
 }
 
-export function ProjectCard({
+export function PostingCard({
   id,
   title,
   description,
@@ -45,7 +45,7 @@ export function ProjectCard({
   createdAt,
   className,
   onApply,
-}: ProjectCardProps) {
+}: PostingCardProps) {
   return (
     <Card
       className={cn(
