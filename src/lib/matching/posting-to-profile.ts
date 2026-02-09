@@ -1,14 +1,14 @@
 /**
- * Project-to-Profile Matching
+ * Posting-to-Profile Matching
  * Finds profiles that match a posting using pgvector cosine similarity
  */
 
 import { createClient } from "@/lib/supabase/server";
 import type { Profile, ScoreBreakdown } from "@/lib/supabase/types";
-import { generateProjectEmbedding } from "@/lib/ai/embeddings";
+import { generatePostingEmbedding } from "@/lib/ai/embeddings";
 import { getTestDataValue } from "@/lib/environment";
 
-export interface ProjectToProfileMatch {
+export interface PostingToProfileMatch {
   profile: Profile;
   score: number; // 0-1 similarity score
   scoreBreakdown: ScoreBreakdown | null;
@@ -19,40 +19,40 @@ export interface ProjectToProfileMatch {
  * Finds profiles matching a posting
  * Uses the match_users_to_posting database function with pgvector similarity
  *
- * @param projectId The posting ID to find matches for
+ * @param postingId The posting ID to find matches for
  * @param limit Maximum number of matches to return (default: 10)
  * @returns Array of matching profiles with similarity scores
  */
-export async function matchProjectToProfiles(
-  projectId: string,
+export async function matchPostingToProfiles(
+  postingId: string,
   limit: number = 10,
-): Promise<ProjectToProfileMatch[]> {
+): Promise<PostingToProfileMatch[]> {
   const supabase = await createClient();
 
   // First, get the posting and its embedding
-  const { data: project, error: projectError } = await supabase
+  const { data: posting, error: postingError } = await supabase
     .from("postings")
     .select("embedding, creator_id, title, description, skills")
-    .eq("id", projectId)
+    .eq("id", postingId)
     .eq("is_test_data", getTestDataValue())
     .single();
 
-  if (projectError || !project) {
-    throw new Error(`Posting not found: ${projectId}`);
+  if (postingError || !posting) {
+    throw new Error(`Posting not found: ${postingId}`);
   }
 
   // If no embedding exists, try to generate one
-  let embedding = project.embedding;
+  let embedding = posting.embedding;
   if (!embedding || !Array.isArray(embedding)) {
     try {
-      embedding = await generateProjectEmbedding(
-        project.title,
-        project.description,
-        project.skills,
+      embedding = await generatePostingEmbedding(
+        posting.title,
+        posting.description,
+        posting.skills,
       );
 
       // Save the generated embedding
-      await supabase.from("postings").update({ embedding }).eq("id", projectId);
+      await supabase.from("postings").update({ embedding }).eq("id", postingId);
     } catch (embeddingError) {
       console.warn("Could not generate posting embedding:", embeddingError);
       throw new Error(
@@ -64,7 +64,7 @@ export async function matchProjectToProfiles(
   // Call the database function to find matching profiles
   const { data, error } = await supabase.rpc("match_users_to_posting", {
     posting_embedding: embedding,
-    posting_id_param: projectId,
+    posting_id_param: postingId,
     match_limit: limit,
   });
 
@@ -81,13 +81,13 @@ export async function matchProjectToProfiles(
   const { data: existingMatches } = await supabase
     .from("matches")
     .select("id, user_id, similarity_score, status, score_breakdown")
-    .eq("posting_id", projectId)
+    .eq("posting_id", postingId)
     .in("user_id", userIds);
 
   const matchMap = new Map(existingMatches?.map((m) => [m.user_id, m]) || []);
 
   // Transform results into match objects and compute breakdowns
-  const matches: ProjectToProfileMatch[] = await Promise.all(
+  const matches: PostingToProfileMatch[] = await Promise.all(
     // eslint-disable-next-line @typescript-eslint/no-explicit-any
     data.map(async (row: any) => {
       const profile: Profile = {
@@ -125,7 +125,7 @@ export async function matchProjectToProfiles(
           "compute_match_breakdown",
           {
             profile_user_id: row.user_id,
-            target_posting_id: projectId,
+            target_posting_id: postingId,
           },
         );
 
@@ -150,16 +150,16 @@ export async function matchProjectToProfiles(
  * Creates or updates match records in the database
  * Called after finding matches to persist them
  */
-export async function createMatchRecordsForProject(
-  projectId: string,
-  matches: ProjectToProfileMatch[],
+export async function createMatchRecordsForPosting(
+  postingId: string,
+  matches: PostingToProfileMatch[],
 ): Promise<void> {
   const supabase = await createClient();
 
   const matchInserts = matches
     .filter((m) => !m.matchId) // Only create new matches
     .map((m) => ({
-      posting_id: projectId,
+      posting_id: postingId,
       user_id: m.profile.user_id,
       similarity_score: m.score,
       score_breakdown: m.scoreBreakdown,

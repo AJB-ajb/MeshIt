@@ -104,10 +104,10 @@ export async function generateProfileEmbedding(
 }
 
 /**
- * Generates an embedding for a project
+ * Generates an embedding for a posting
  * Combines title, description, and required skills into a single text representation
  */
-export async function generateProjectEmbedding(
+export async function generatePostingEmbedding(
   title: string,
   description: string,
   requiredSkills: string[] | null,

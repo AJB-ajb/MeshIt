@@ -1,14 +1,14 @@
 import { NextResponse } from "next/server";
 import {
-  matchProfileToProjects,
+  matchProfileToPostings,
   createMatchRecords,
-} from "@/lib/matching/profile-to-project";
+} from "@/lib/matching/profile-to-posting";
 import type { MatchResponse } from "@/lib/supabase/types";
 import { withAuth } from "@/lib/api/with-auth";
 
 /**
  * GET /api/matches/for-me
- * Returns projects matching the authenticated user's profile
+ * Returns postings matching the authenticated user's profile
  */
 export const GET = withAuth(async (_req, { user, supabase }) => {
   // Check if user has a profile first
@@ -44,8 +44,8 @@ export const GET = withAuth(async (_req, { user, supabase }) => {
     );
   }
 
-  // Find matching projects
-  const matches = await matchProfileToProjects(user.id, 10);
+  // Find matching postings
+  const matches = await matchProfileToPostings(user.id, 10);
 
   // Create match records in database if they don't exist
   if (matches.length > 0) {
@@ -55,12 +55,12 @@ export const GET = withAuth(async (_req, { user, supabase }) => {
   // Transform to API response format
   const response: MatchResponse[] = matches.map((match) => ({
     id: match.matchId || "",
-    posting: match.project,
+    posting: match.posting,
     score: match.score,
     explanation: null,
     score_breakdown: match.scoreBreakdown,
     status: "pending",
-    created_at: match.project.created_at,
+    created_at: match.posting.created_at,
   }));
 
   return NextResponse.json({ matches: response });

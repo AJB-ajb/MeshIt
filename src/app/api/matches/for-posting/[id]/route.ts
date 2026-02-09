@@ -1,8 +1,8 @@
 import { NextResponse } from "next/server";
 import {
-  matchProjectToProfiles,
-  createMatchRecordsForProject,
-} from "@/lib/matching/project-to-profile";
+  matchPostingToProfiles,
+  createMatchRecordsForPosting,
+} from "@/lib/matching/posting-to-profile";
 import type { MatchResponse } from "@/lib/supabase/types";
 import { getTestDataValue } from "@/lib/environment";
 import { withAuth } from "@/lib/api/with-auth";
@@ -32,10 +32,10 @@ export const GET = withAuth(async (_req, { user, supabase, params }) => {
   }
 
   // Find matching profiles
-  const matches = await matchProjectToProfiles(postingId, 10);
+  const matches = await matchPostingToProfiles(postingId, 10);
 
   // Create match records in database if they don't exist
-  await createMatchRecordsForProject(postingId, matches);
+  await createMatchRecordsForPosting(postingId, matches);
 
   // Transform to API response format
   const response: MatchResponse[] = matches.map((match) => ({

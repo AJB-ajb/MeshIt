@@ -19,7 +19,7 @@ export interface ProfileData {
   bio: string | null;
 }
 
-export interface ProjectData {
+export interface PostingData {
   title: string;
   description: string;
   skills: string[];
@@ -33,7 +33,7 @@ export interface ProjectData {
  */
 export async function generateMatchExplanation(
   profile: ProfileData,
-  project: ProjectData,
+  posting: PostingData,
   score: number,
 ): Promise<string> {
   if (!GOOGLE_AI_API_KEY) {
@@ -59,11 +59,11 @@ User Profile:
 - Bio: ${profile.bio || "Not provided"}
 
 Posting:
-- Title: ${project.title}
-- Description: ${project.description}
-- Skills: ${project.skills.join(", ") || "Not specified"}
-- Category: ${project.category || "Not specified"}
-- Estimated Time: ${project.estimated_time || "Not specified"}
+- Title: ${posting.title}
+- Description: ${posting.description}
+- Skills: ${posting.skills.join(", ") || "Not specified"}
+- Category: ${posting.category || "Not specified"}
+- Estimated Time: ${posting.estimated_time || "Not specified"}
 
 Match Score: ${scorePercent}%
 
@@ -127,12 +127,12 @@ Explanation:`;
 export async function generateMatchExplanations(
   matches: Array<{
     profile: ProfileData;
-    project: ProjectData;
+    posting: PostingData;
     score: number;
   }>,
 ): Promise<string[]> {
   const promises = matches.map((match) =>
-    generateMatchExplanation(match.profile, match.project, match.score).catch(
+    generateMatchExplanation(match.profile, match.posting, match.score).catch(
       (error) => {
         console.error("Failed to generate explanation:", error);
         return null; // Return null on error, caller can handle

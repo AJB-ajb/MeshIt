@@ -1,5 +1,5 @@
 /**
- * Profile-to-Project Matching
+ * Profile-to-Posting Matching
  * Finds postings that match a user's profile using pgvector cosine similarity
  */
 
@@ -7,8 +7,8 @@ import { createClient } from "@/lib/supabase/server";
 import type { Posting, ScoreBreakdown } from "@/lib/supabase/types";
 import { generateProfileEmbedding } from "@/lib/ai/embeddings";
 
-export interface ProfileToProjectMatch {
-  project: Posting;
+export interface ProfileToPostingMatch {
+  posting: Posting;
   score: number; // 0-1 similarity score
   scoreBreakdown: ScoreBreakdown | null;
   matchId?: string; // If match record already exists
@@ -22,10 +22,10 @@ export interface ProfileToProjectMatch {
  * @param limit Maximum number of matches to return (default: 10)
  * @returns Array of matching postings with similarity scores
  */
-export async function matchProfileToProjects(
+export async function matchProfileToPostings(
   userId: string,
   limit: number = 10,
-): Promise<ProfileToProjectMatch[]> {
+): Promise<ProfileToPostingMatch[]> {
   const supabase = await createClient();
 
   // First, get the user's profile and embedding
@@ -74,7 +74,7 @@ export async function matchProfileToProjects(
   });
 
   if (error) {
-    throw new Error(`Failed to match projects: ${error.message}`);
+    throw new Error(`Failed to match postings: ${error.message}`);
   }
 
   if (!data || data.length === 0) {
@@ -94,7 +94,7 @@ export async function matchProfileToProjects(
   );
 
   // Transform results into match objects and compute breakdowns
-  const matches: ProfileToProjectMatch[] = await Promise.all(
+  const matches: ProfileToPostingMatch[] = await Promise.all(
     // eslint-disable-next-line @typescript-eslint/no-explicit-any
     data.map(async (row: any) => {
       const posting: Posting = {
@@ -144,7 +144,7 @@ export async function matchProfileToProjects(
       }
 
       return {
-        project: posting,
+        posting: posting,
         score: row.similarity,
         scoreBreakdown,
         matchId: existingMatch?.id,
@@ -162,7 +162,7 @@ export async function matchProfileToProjects(
  */
 export async function createMatchRecords(
   userId: string,
-  matches: ProfileToProjectMatch[],
+  matches: ProfileToPostingMatch[],
 ): Promise<void> {
   const supabase = await createClient();
 
@@ -171,7 +171,7 @@ export async function createMatchRecords(
     .filter((m) => !m.matchId) // Only create new matches
     .map((m) => ({
       user_id: userId,
-      posting_id: m.project.id,
+      posting_id: m.posting.id,
       similarity_score: m.score,
       score_breakdown: m.scoreBreakdown,
       status: "pending" as const,

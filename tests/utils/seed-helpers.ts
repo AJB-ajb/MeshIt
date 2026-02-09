@@ -10,7 +10,7 @@ import { APIRequestContext } from "@playwright/test";
 import { supabaseAdmin } from "./supabase";
 import type { TestUser } from "../factories/user-factory";
 import type { TestProfile } from "../factories/profile-factory";
-import type { TestProject } from "../factories/project-factory";
+import type { TestPosting } from "../factories/posting-factory";
 import type { TestMatch } from "../factories/match-factory";
 
 /**
@@ -59,54 +59,54 @@ export async function seedProfile(profileData: TestProfile): Promise<void> {
 }
 
 /**
- * Seed a project directly into the database
+ * Seed a posting directly into the database
  */
-export async function seedProjectDirect(
-  projectData: Partial<TestProject> & { creator_id: string; title: string },
-): Promise<TestProject> {
+export async function seedPostingDirect(
+  postingData: Partial<TestPosting> & { creator_id: string; title: string },
+): Promise<TestPosting> {
   if (!supabaseAdmin) {
-    throw new Error("SUPABASE_SERVICE_ROLE_KEY required for seedProjectDirect");
+    throw new Error("SUPABASE_SERVICE_ROLE_KEY required for seedPostingDirect");
   }
 
   const { data, error } = await supabaseAdmin
     .from("postings")
-    .insert(projectData)
+    .insert(postingData)
     .select()
     .single();
 
   if (error) {
-    throw new Error(`Failed to seed project: ${error.message}`);
+    throw new Error(`Failed to seed posting: ${error.message}`);
   }
 
   return data;
 }
 
 /**
- * Seed a project via API (requires authenticated request context)
+ * Seed a posting via API (requires authenticated request context)
  */
-export async function seedProject(
+export async function seedPosting(
   request: APIRequestContext,
-  projectData: TestProject,
-): Promise<TestProject> {
-  const response = await request.post("/api/projects", {
-    data: projectData,
+  postingData: TestPosting,
+): Promise<TestPosting> {
+  const response = await request.post("/api/postings", {
+    data: postingData,
   });
 
   if (!response.ok()) {
-    throw new Error(`Failed to seed project: ${response.statusText()}`);
+    throw new Error(`Failed to seed posting: ${response.statusText()}`);
   }
 
   return await response.json();
 }
 
 /**
- * Seed multiple projects
+ * Seed multiple postings
  */
-export async function seedProjects(
+export async function seedPostings(
   request: APIRequestContext,
-  projects: TestProject[],
-): Promise<TestProject[]> {
-  return Promise.all(projects.map((p) => seedProject(request, p)));
+  postings: TestPosting[],
+): Promise<TestPosting[]> {
+  return Promise.all(postings.map((p) => seedPosting(request, p)));
 }
 
 /**
