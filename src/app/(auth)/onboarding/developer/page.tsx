@@ -2,7 +2,8 @@
 
 import { Suspense, useEffect, useMemo, useState } from "react";
 import { useRouter, useSearchParams } from "next/navigation";
-import { Sparkles, FileText, Loader2, CheckCircle } from "lucide-react";
+import { Sparkles, FileText, Loader2, CheckCircle, Mic } from "lucide-react";
+import { SpeechInput } from "@/components/ai-elements/speech-input";
 
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
@@ -336,28 +337,38 @@ function DeveloperOnboardingContent() {
                   AI Profile Extraction
                 </CardTitle>
                 <CardDescription>
-                  Paste your GitHub profile README, LinkedIn bio, resume, or any text describing yourself. 
+                  Paste your GitHub profile README, LinkedIn bio, resume, or use the mic to describe yourself.
                   Our AI will automatically extract your profile information.
                 </CardDescription>
               </CardHeader>
               <CardContent className="space-y-4">
-                <textarea
-                  rows={12}
-                  value={aiText}
-                  onChange={(e) => setAiText(e.target.value)}
-                  className="flex w-full rounded-md border border-input bg-background px-3 py-2 text-sm ring-offset-background placeholder:text-muted-foreground focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring focus-visible:ring-offset-2"
-                  placeholder={`Paste your profile text here...
+                <div className="relative">
+                  <textarea
+                    rows={12}
+                    value={aiText}
+                    onChange={(e) => setAiText(e.target.value)}
+                    className="flex w-full rounded-md border border-input bg-background px-3 py-2 text-sm ring-offset-background placeholder:text-muted-foreground focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring focus-visible:ring-offset-2"
+                    placeholder={`Paste your profile text here, or use the mic to describe yourself...
 
 Example:
 Hi, I'm Alex! I'm a full-stack developer with 5 years of experience.
 
-🔧 Tech Stack: React, TypeScript, Node.js, PostgreSQL, AWS
-🎯 Interests: AI/ML, fintech, developer tools
-📍 Based in San Francisco, available 15 hrs/week
+Tech Stack: React, TypeScript, Node.js, PostgreSQL, AWS
+Interests: AI/ML, fintech, developer tools
+Based in San Francisco, available 15 hrs/week
 
 Currently looking for hackathon projects and open source contributions.
 Check out my work at github.com/alexdev`}
-                />
+                  />
+                  <SpeechInput
+                    className="absolute bottom-2 right-2 h-10 w-10 p-0"
+                    size="icon"
+                    variant="ghost"
+                    onTranscriptionChange={(text) =>
+                      setAiText((prev) => (prev ? prev + " " + text : text))
+                    }
+                  />
+                </div>
                 <div className="flex gap-3">
                   <Button
                     type="button"
@@ -441,14 +452,24 @@ Check out my work at github.com/alexdev`}
                 <label htmlFor="bio" className="text-sm font-medium">
                   About you
                 </label>
-                <textarea
-                  id="bio"
-                  rows={4}
-                  className="flex w-full rounded-md border border-input bg-background px-3 py-2 text-sm ring-offset-background placeholder:text-muted-foreground focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring focus-visible:ring-offset-2"
-                  value={form.bio}
-                  onChange={(event) => handleChange("bio", event.target.value)}
-                  placeholder="What do you enjoy building? What makes you unique?"
-                />
+                <div className="relative">
+                  <textarea
+                    id="bio"
+                    rows={4}
+                    className="flex w-full rounded-md border border-input bg-background px-3 py-2 text-sm ring-offset-background placeholder:text-muted-foreground focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring focus-visible:ring-offset-2"
+                    value={form.bio}
+                    onChange={(event) => handleChange("bio", event.target.value)}
+                    placeholder="What do you enjoy building? What makes you unique?"
+                  />
+                  <SpeechInput
+                    className="absolute bottom-2 right-2 h-10 w-10 p-0"
+                    size="icon"
+                    variant="ghost"
+                    onTranscriptionChange={(text) =>
+                      handleChange("bio", form.bio ? form.bio + " " + text : text)
+                    }
+                  />
+                </div>
               </div>
 
               <div className="grid gap-4 md:grid-cols-2">

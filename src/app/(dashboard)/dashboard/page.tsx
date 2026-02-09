@@ -628,7 +628,7 @@ const defaultStats: StatItem[] = [
     value: "0",
     description: "Total conversations",
     icon: MessageSquare,
-    href: "/messages",
+    href: "/inbox",
   },
   {
     title: "Match Rate",

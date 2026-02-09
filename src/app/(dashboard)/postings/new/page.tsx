@@ -5,12 +5,12 @@ import { useRouter } from "next/navigation";
 import Link from "next/link";
 import {
   ArrowLeft,
-  Mic,
   Loader2,
   Sparkles,
   FileText,
   CheckCircle,
 } from "lucide-react";
+import { SpeechInput } from "@/components/ai-elements/speech-input";
 
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
@@ -300,17 +300,18 @@ export default function NewPostingPage() {
             </CardTitle>
             <CardDescription>
               Paste your posting description from Slack, Discord, a GitHub
-              README, or any text. Our AI will automatically extract posting
+              README, or use the mic to describe it. Our AI will automatically extract posting
               details.
             </CardDescription>
           </CardHeader>
           <CardContent className="space-y-4">
-            <textarea
-              rows={12}
-              value={aiText}
-              onChange={(e) => setAiText(e.target.value)}
-              className="flex w-full rounded-md border border-input bg-background px-3 py-2 text-sm ring-offset-background placeholder:text-muted-foreground focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring focus-visible:ring-offset-2"
-              placeholder={`Paste your project text here...
+            <div className="relative">
+              <textarea
+                rows={12}
+                value={aiText}
+                onChange={(e) => setAiText(e.target.value)}
+                className="flex w-full rounded-md border border-input bg-background px-3 py-2 text-sm ring-offset-background placeholder:text-muted-foreground focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring focus-visible:ring-offset-2"
+                placeholder={`Paste your posting text here, or use the mic to describe it...
 
 Example:
 Hey everyone! Looking for 2-3 devs to join my hackathon project this weekend 🚀
@@ -322,7 +323,16 @@ Need: Frontend dev + someone with AI/ML experience
 Commitment: ~10 hrs over the weekend
 
 DM if interested!`}
-            />
+              />
+              <SpeechInput
+                className="absolute bottom-2 right-2 h-10 w-10 p-0"
+                size="icon"
+                variant="ghost"
+                onTranscriptionChange={(text) =>
+                  setAiText((prev) => (prev ? prev + " " + text : text))
+                }
+              />
+            </div>
             <div className="flex gap-3">
               <Button
                 type="button"
@@ -407,15 +417,15 @@ DM if interested!`}
 
 Example: Building a Minecraft-style collaborative IDE, need 2-3 people with WebGL or game dev experience, hackathon this weekend."
                   />
-                  <Button
-                    type="button"
-                    variant="ghost"
+                  <SpeechInput
+                    className="absolute bottom-2 right-2 h-10 w-10 p-0"
                     size="icon"
-                    className="absolute bottom-2 right-2"
-                    title="Use voice input"
-                  >
-                    <Mic className="h-4 w-4" />
-                  </Button>
+                    variant="ghost"
+                    type="button"
+                    onTranscriptionChange={(text) =>
+                      handleChange("description", form.description ? form.description + " " + text : text)
+                    }
+                  />
                 </div>
                 <p className="text-xs text-muted-foreground">
                   Our AI will extract skills, team size, and timeline from your

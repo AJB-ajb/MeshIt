@@ -265,7 +265,7 @@ export default function MatchesPage() {
                     )}
                     {match.status === "accepted" && (
                       <Button asChild>
-                        <Link href={`/messages?project=${project.id}`}>
+                        <Link href={`/inbox`}>
                           <MessageSquare className="h-4 w-4" />
                           Message Team
                         </Link>
