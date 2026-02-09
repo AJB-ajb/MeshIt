@@ -5,8 +5,10 @@ import { useRouter } from "next/navigation";
 import { createClient } from "@/lib/supabase/client";
 import {
   type ProfileFormState,
+  type ExtractedProfileV2,
   defaultFormState,
   parseList,
+  mapExtractedToFormState,
 } from "@/lib/types/profile";
 
 export function useProfile() {
@@ -28,6 +30,9 @@ export function useProfile() {
     linkedin: false,
   });
   const [isGithubProvider, setIsGithubProvider] = useState(false);
+  const [sourceText, setSourceText] = useState<string | null>(null);
+  const [canUndo, setCanUndo] = useState(false);
+  const [isApplyingUpdate, setIsApplyingUpdate] = useState(false);
 
   const handleChange = useCallback(
     (field: keyof ProfileFormState, value: string) => {
@@ -84,6 +89,8 @@ export function useProfile() {
         .single();
 
       if (data) {
+        setSourceText(data.source_text ?? null);
+        setCanUndo(!!data.previous_source_text);
         const preferences = data.project_preferences ?? {};
         const hardFilters = data.hard_filters ?? {};
         setForm({
@@ -226,6 +233,191 @@ export function useProfile() {
     [form],
   );
 
+  const applyFreeFormUpdate = useCallback(
+    async (updatedText: string, extractedProfile: ExtractedProfileV2) => {
+      setError(null);
+      setIsApplyingUpdate(true);
+
+      const supabase = createClient();
+      const {
+        data: { user },
+        error: userError,
+      } = await supabase.auth.getUser();
+
+      if (userError || !user) {
+        setIsApplyingUpdate(false);
+        setError("Please sign in again.");
+        return;
+      }
+
+      // Build snapshot of current profile fields for undo
+      const currentSnapshot: Record<string, unknown> = {
+        full_name: form.fullName,
+        headline: form.headline,
+        bio: form.bio,
+        location: form.location,
+        skills: parseList(form.skills),
+        interests: parseList(form.interests),
+        languages: parseList(form.languages),
+        portfolio_url: form.portfolioUrl,
+        github_url: form.githubUrl,
+      };
+
+      // Save updated profile + undo data to DB
+      const { error: upsertError } = await supabase.from("profiles").upsert(
+        {
+          user_id: user.id,
+          source_text: updatedText,
+          previous_source_text: sourceText,
+          previous_profile_snapshot: currentSnapshot,
+          // Apply extracted fields
+          ...(extractedProfile.full_name != null && {
+            full_name: extractedProfile.full_name,
+          }),
+          ...(extractedProfile.headline != null && {
+            headline: extractedProfile.headline,
+          }),
+          ...(extractedProfile.bio != null && { bio: extractedProfile.bio }),
+          ...(extractedProfile.location != null && {
+            location: extractedProfile.location,
+          }),
+          ...(extractedProfile.skills != null && {
+            skills: extractedProfile.skills,
+          }),
+          ...(extractedProfile.interests != null && {
+            interests: extractedProfile.interests,
+          }),
+          ...(extractedProfile.languages != null && {
+            languages: extractedProfile.languages,
+          }),
+          ...(extractedProfile.portfolio_url != null && {
+            portfolio_url: extractedProfile.portfolio_url,
+          }),
+          ...(extractedProfile.github_url != null && {
+            github_url: extractedProfile.github_url,
+          }),
+          ...(extractedProfile.skill_levels != null && {
+            skill_levels: extractedProfile.skill_levels,
+          }),
+          ...(extractedProfile.location_preference != null && {
+            location_preference: extractedProfile.location_preference,
+          }),
+          ...(extractedProfile.availability_slots != null && {
+            availability_slots: extractedProfile.availability_slots,
+          }),
+          updated_at: new Date().toISOString(),
+        },
+        { onConflict: "user_id" },
+      );
+
+      setIsApplyingUpdate(false);
+
+      if (upsertError) {
+        setError("Failed to save update. Please try again.");
+        return;
+      }
+
+      // Update local state
+      setSourceText(updatedText);
+      setCanUndo(true);
+      setForm((prev) => mapExtractedToFormState(extractedProfile, prev));
+      setSuccess(true);
+    },
+    [form, sourceText],
+  );
+
+  const undoLastUpdate = useCallback(async () => {
+    setError(null);
+    setIsApplyingUpdate(true);
+
+    const supabase = createClient();
+    const {
+      data: { user },
+      error: userError,
+    } = await supabase.auth.getUser();
+
+    if (userError || !user) {
+      setIsApplyingUpdate(false);
+      setError("Please sign in again.");
+      return;
+    }
+
+    // Fetch the previous snapshot from DB
+    const { data } = await supabase
+      .from("profiles")
+      .select("previous_source_text, previous_profile_snapshot")
+      .eq("user_id", user.id)
+      .single();
+
+    if (!data?.previous_source_text) {
+      setIsApplyingUpdate(false);
+      setError("Nothing to undo.");
+      return;
+    }
+
+    const snapshot = (data.previous_profile_snapshot ?? {}) as Record<
+      string,
+      unknown
+    >;
+
+    // Restore previous state
+    const { error: upsertError } = await supabase.from("profiles").upsert(
+      {
+        user_id: user.id,
+        source_text: data.previous_source_text,
+        previous_source_text: null,
+        previous_profile_snapshot: null,
+        ...(snapshot.full_name != null && { full_name: snapshot.full_name }),
+        ...(snapshot.headline != null && { headline: snapshot.headline }),
+        ...(snapshot.bio != null && { bio: snapshot.bio }),
+        ...(snapshot.location != null && { location: snapshot.location }),
+        ...(snapshot.skills != null && { skills: snapshot.skills }),
+        ...(snapshot.interests != null && { interests: snapshot.interests }),
+        ...(snapshot.languages != null && { languages: snapshot.languages }),
+        ...(snapshot.portfolio_url != null && {
+          portfolio_url: snapshot.portfolio_url,
+        }),
+        ...(snapshot.github_url != null && {
+          github_url: snapshot.github_url,
+        }),
+        updated_at: new Date().toISOString(),
+      },
+      { onConflict: "user_id" },
+    );
+
+    setIsApplyingUpdate(false);
+
+    if (upsertError) {
+      setError("Failed to undo. Please try again.");
+      return;
+    }
+
+    // Update local state
+    setSourceText(data.previous_source_text);
+    setCanUndo(false);
+    if (snapshot) {
+      setForm((prev) => ({
+        ...prev,
+        fullName: (snapshot.full_name as string) ?? prev.fullName,
+        headline: (snapshot.headline as string) ?? prev.headline,
+        bio: (snapshot.bio as string) ?? prev.bio,
+        location: (snapshot.location as string) ?? prev.location,
+        skills: Array.isArray(snapshot.skills)
+          ? snapshot.skills.join(", ")
+          : prev.skills,
+        interests: Array.isArray(snapshot.interests)
+          ? snapshot.interests.join(", ")
+          : prev.interests,
+        languages: Array.isArray(snapshot.languages)
+          ? snapshot.languages.join(", ")
+          : prev.languages,
+        portfolioUrl: (snapshot.portfolio_url as string) ?? prev.portfolioUrl,
+        githubUrl: (snapshot.github_url as string) ?? prev.githubUrl,
+      }));
+    }
+    setSuccess(true);
+  }, []);
+
   const handleLinkProvider = useCallback(
     async (provider: "github" | "google" | "linkedin_oidc") => {
       const supabase = createClient();
@@ -260,5 +452,10 @@ export function useProfile() {
     handleSubmit,
     handleLinkProvider,
     fetchProfile,
+    sourceText,
+    canUndo,
+    isApplyingUpdate,
+    applyFreeFormUpdate,
+    undoLastUpdate,
   };
 }

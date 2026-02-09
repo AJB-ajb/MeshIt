@@ -12,6 +12,7 @@ import { ProfileForm } from "@/components/profile/profile-form";
 import { ProfileView } from "@/components/profile/profile-view";
 import { GitHubIntegrationCard } from "@/components/profile/github-integration-card";
 import { IntegrationsSection } from "@/components/profile/integrations-section";
+import { FreeFormProfileUpdate } from "@/components/profile/free-form-profile-update";
 
 export default function ProfilePage() {
   const {
@@ -30,6 +31,11 @@ export default function ProfilePage() {
     handleSubmit,
     handleLinkProvider,
     fetchProfile,
+    sourceText,
+    canUndo,
+    isApplyingUpdate,
+    applyFreeFormUpdate,
+    undoLastUpdate,
   } = useProfile();
 
   const {
@@ -125,6 +131,13 @@ export default function ProfilePage() {
             githubSyncError={githubSyncError}
             onSync={handleGithubSync}
             onApplySuggestion={applySuggestion}
+          />
+          <FreeFormProfileUpdate
+            sourceText={sourceText}
+            canUndo={canUndo}
+            isApplying={isApplyingUpdate}
+            onUpdate={applyFreeFormUpdate}
+            onUndo={undoLastUpdate}
           />
           <ProfileView form={form} />
           <IntegrationsSection
