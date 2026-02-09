@@ -34,32 +34,7 @@ Idea-based social platform for quickly finding people to do things with — proj
 
 ## Features
 
-### UX
-
-- Setup profile page
-  - Enter personal profile via simple text description or voice transcript (30s to 1min, possibly prompts the person can answer)
-  - Posting has expiration date; can be reactivated
-
-- Create posting page
-  - Fully automated posting creation from Slack/WhatsApp paste or voice transcript
-  - Auto-create posting thumbnail from transcript (Gemini)
-
-- Browse postings page
-  - Filter via natural language / voice transcript
-  - Express interest: "I'd like to join this"
-
-- Match page:
-  - **Open mode**: Go through interest requests from other users (application mechanic)
-  - **Friend-ask mode**: Select and order friends to ask; send requests one-by-one until one accepts or all decline
-
-- Messaging page:
-  - Basic instant messaging
-  - People can share their WhatsApp / Slack / Telegram / Discord links via button for direct integration
-
-- Notifications:
-  - For time-critical postings, instant notifications
-  - Daily digest for other postings
-    - Possibly AI-generated digest
+See [UX.md](UX.md) for design principles, pages, and interaction patterns.
 
 ### Use Cases
 
@@ -95,10 +70,7 @@ See [Matching.md](Matching.md) for the matching algorithm.
 
 ## Design Principles
 
-- Minimal friction
-- No required configuration
-- Strong filters available (location, skill level)
-- We don't need to be perfect, just better than random chance
+See [UX.md](UX.md).
 
 ## Motivation
 
