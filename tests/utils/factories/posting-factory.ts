@@ -1,11 +1,11 @@
 /**
- * Project Factory
- * Creates test project data for MeshIt postings table
+ * Posting Factory
+ * Creates test posting data for MeshIt postings table
  */
 
 import { faker } from "@faker-js/faker";
 
-export type TestProject = {
+export type TestPosting = {
   id: string;
   creator_id: string;
   title: string;
@@ -25,7 +25,7 @@ export type TestProject = {
   expiration_date: Date;
 };
 
-const projectTitles = [
+const postingTitles = [
   "Build E-Commerce Platform",
   "Create Social Media Dashboard",
   "Develop AI Chatbot",
@@ -71,9 +71,9 @@ const tagPool = [
   "fullstack",
 ];
 
-export const createProject = (
-  overrides: Partial<TestProject> = {},
-): TestProject => {
+export const createPosting = (
+  overrides: Partial<TestPosting> = {},
+): TestPosting => {
   const expirationDate = new Date();
   expirationDate.setDate(expirationDate.getDate() + 30); // 30 days from now
 
@@ -82,7 +82,7 @@ export const createProject = (
   return {
     id: faker.string.uuid(),
     creator_id: faker.string.uuid(),
-    title: faker.helpers.arrayElement(projectTitles),
+    title: faker.helpers.arrayElement(postingTitles),
     description: faker.lorem.paragraphs(2),
     skills: faker.helpers.arrayElements(
       skillPool,
@@ -109,23 +109,23 @@ export const createProject = (
   };
 };
 
-export const createProjects = (
+export const createPostings = (
   count: number,
-  overrides: Partial<TestProject> = {},
-): TestProject[] => {
-  return Array.from({ length: count }, () => createProject(overrides));
+  overrides: Partial<TestPosting> = {},
+): TestPosting[] => {
+  return Array.from({ length: count }, () => createPosting(overrides));
 };
 
 /**
- * Create an expired project
+ * Create an expired posting
  */
-export const createExpiredProject = (
-  overrides: Partial<TestProject> = {},
-): TestProject => {
+export const createExpiredPosting = (
+  overrides: Partial<TestPosting> = {},
+): TestPosting => {
   const pastDate = new Date();
   pastDate.setDate(pastDate.getDate() - 5); // 5 days ago
 
-  return createProject({
+  return createPosting({
     status: "expired",
     expiration_date: pastDate,
     ...overrides,
@@ -133,12 +133,12 @@ export const createExpiredProject = (
 };
 
 /**
- * Create a filled project
+ * Create a filled posting
  */
-export const createFilledProject = (
-  overrides: Partial<TestProject> = {},
-): TestProject => {
-  return createProject({
+export const createFilledPosting = (
+  overrides: Partial<TestPosting> = {},
+): TestPosting => {
+  return createPosting({
     status: "filled",
     ...overrides,
   });

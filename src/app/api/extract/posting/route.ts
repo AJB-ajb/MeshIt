@@ -4,19 +4,19 @@ import { createClient } from "@/lib/supabase/server";
 const OPENAI_API_KEY = process.env.OPENAI_API_KEY;
 
 /**
- * Project extraction schema for structured output
+ * Posting extraction schema for structured output
  */
-const projectSchema = {
+const postingSchema = {
   type: "object",
   properties: {
     title: {
       type: "string",
-      description: "A concise project title (max 100 characters)",
+      description: "A concise posting title (max 100 characters)",
     },
     description: {
       type: "string",
       description:
-        "A clear project description explaining what the project is about and what's being built",
+        "A clear description explaining what the posting is about and what's being built",
     },
     skills: {
       type: "array",
@@ -59,15 +59,15 @@ const projectSchema = {
     goals: {
       type: "array",
       items: { type: "string" },
-      description: "Key goals or milestones for the project",
+      description: "Key goals or milestones for the posting",
     },
   },
   required: ["title", "description", "skills"],
 };
 
 /**
- * POST /api/extract/project
- * Extracts project information from unstructured text using OpenAI
+ * POST /api/extract/posting
+ * Extracts posting information from unstructured text using OpenAI
  */
 export async function POST(request: Request) {
   try {
@@ -95,7 +95,7 @@ export async function POST(request: Request) {
     if (!text || typeof text !== "string" || text.trim().length < 10) {
       return NextResponse.json(
         {
-          error: "Please provide more text to extract project information from",
+          error: "Please provide more text to extract posting information from",
         },
         { status: 400 },
       );
@@ -113,13 +113,13 @@ export async function POST(request: Request) {
         messages: [
           {
             role: "system",
-            content: `You are an expert at extracting project requirements from unstructured text.
+            content: `You are an expert at extracting posting requirements from unstructured text.
 Extract as much relevant information as possible from the provided text, which could be:
 - A Slack/Discord message looking for collaborators
 - A project idea description
 - A GitHub repository README
 - A hackathon project pitch
-- Any text describing a project that needs collaborators
+- Any text describing a posting that needs collaborators
 
 Be thorough in extracting skills - look for programming languages, frameworks, tools, and technologies.
 Categorize the posting as study, hackathon, personal, professional, or social based on context.
@@ -129,17 +129,17 @@ Return only the extracted data, do not make up information that cannot be inferr
           },
           {
             role: "user",
-            content: `Extract project information from this text:\n\n${text}`,
+            content: `Extract posting information from this text:\n\n${text}`,
           },
         ],
         functions: [
           {
-            name: "extract_project",
-            description: "Extract project requirements from text",
-            parameters: projectSchema,
+            name: "extract_posting",
+            description: "Extract posting requirements from text",
+            parameters: postingSchema,
           },
         ],
-        function_call: { name: "extract_project" },
+        function_call: { name: "extract_posting" },
         temperature: 0.3,
       }),
     });
@@ -156,25 +156,25 @@ Return only the extracted data, do not make up information that cannot be inferr
     const data = await response.json();
     const functionCall = data.choices?.[0]?.message?.function_call;
 
-    if (!functionCall || functionCall.name !== "extract_project") {
+    if (!functionCall || functionCall.name !== "extract_posting") {
       return NextResponse.json(
-        { error: "Failed to extract project information" },
+        { error: "Failed to extract posting information" },
         { status: 500 },
       );
     }
 
-    const extractedProject = JSON.parse(functionCall.arguments);
+    const extractedPosting = JSON.parse(functionCall.arguments);
 
     return NextResponse.json({
       success: true,
-      project: extractedProject,
+      posting: extractedPosting,
     });
   } catch (error) {
-    console.error("Project extraction error:", error);
+    console.error("Posting extraction error:", error);
     return NextResponse.json(
       {
         error:
-          error instanceof Error ? error.message : "Failed to extract project",
+          error instanceof Error ? error.message : "Failed to extract posting",
       },
       { status: 500 },
     );

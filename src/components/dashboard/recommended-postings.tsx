@@ -1,9 +1,9 @@
 import Link from "next/link";
 import { Button } from "@/components/ui/button";
 import { Card, CardContent } from "@/components/ui/card";
-import { ProjectCard } from "@/components/project/project-card";
+import { PostingCard } from "@/components/posting/posting-card";
 
-export type RecommendedProject = {
+export type RecommendedPosting = {
   id: string;
   title: string;
   description: string;
@@ -16,34 +16,34 @@ export type RecommendedProject = {
   createdAt: string;
 };
 
-export function RecommendedProjects({
-  projects,
+export function RecommendedPostings({
+  postings,
 }: {
-  projects: RecommendedProject[];
+  postings: RecommendedPosting[];
 }) {
   return (
-    <div data-testid="recommended-projects" className="space-y-4">
+    <div data-testid="recommended-postings" className="space-y-4">
       <div className="flex items-center justify-between">
         <div>
-          <h2 className="text-xl font-semibold">Recommended projects</h2>
+          <h2 className="text-xl font-semibold">Recommended postings</h2>
           <p className="text-sm text-muted-foreground">
-            Project posters that match your profile and preferences.
+            Postings that match your profile and preferences.
           </p>
         </div>
         <Button variant="outline" asChild>
-          <Link href="/projects">Browse all projects</Link>
+          <Link href="/postings">Browse all postings</Link>
         </Button>
       </div>
       <div className="grid gap-6 lg:grid-cols-2">
-        {projects.length > 0 ? (
-          projects.map((project) => (
-            <ProjectCard key={project.id} {...project} />
+        {postings.length > 0 ? (
+          postings.map((posting) => (
+            <PostingCard key={posting.id} {...posting} />
           ))
         ) : (
           <Card>
             <CardContent className="flex min-h-[200px] flex-col items-center justify-center py-12">
               <p className="text-muted-foreground">
-                No recommended projects yet. Complete your profile to get
+                No recommended postings yet. Complete your profile to get
                 personalized recommendations!
               </p>
             </CardContent>

@@ -20,13 +20,13 @@ vi.mock("@/lib/ai/embeddings", () => ({
 
 import { createClient } from "@/lib/supabase/server";
 import {
-  matchProfileToProjects,
+  matchProfileToPostings,
   createMatchRecords,
-} from "../profile-to-project";
+} from "../profile-to-posting";
 import {
-  matchProjectToProfiles,
-  createMatchRecordsForProject,
-} from "../project-to-profile";
+  matchPostingToProfiles,
+  createMatchRecordsForPosting,
+} from "../posting-to-profile";
 
 // Helper to create mock Supabase client
 function createMockSupabase(overrides: Record<string, unknown> = {}) {
@@ -42,7 +42,7 @@ function createMockSupabase(overrides: Record<string, unknown> = {}) {
   return { mockClient, mockFrom, mockRpc };
 }
 
-describe("matchProfileToProjects", () => {
+describe("matchProfileToPostings", () => {
   beforeEach(() => {
     vi.clearAllMocks();
   });
@@ -117,7 +117,7 @@ describe("matchProfileToProjects", () => {
       mockClient as unknown as Awaited<ReturnType<typeof createClient>>,
     );
 
-    const matches = await matchProfileToProjects("user-1");
+    const matches = await matchProfileToPostings("user-1");
 
     expect(mockRpc).toHaveBeenCalledWith("match_postings_to_user", {
       user_embedding: userEmbedding,
@@ -127,7 +127,7 @@ describe("matchProfileToProjects", () => {
 
     expect(matches).toHaveLength(1);
     expect(matches[0].score).toBe(0.85);
-    expect(matches[0].project.title).toBe("AI Project");
+    expect(matches[0].posting.title).toBe("AI Project");
   });
 
   it("throws error when profile not found", async () => {
@@ -148,7 +148,7 @@ describe("matchProfileToProjects", () => {
       mockClient as unknown as Awaited<ReturnType<typeof createClient>>,
     );
 
-    await expect(matchProfileToProjects("nonexistent")).rejects.toThrow(
+    await expect(matchProfileToPostings("nonexistent")).rejects.toThrow(
       "Profile not found",
     );
   });
@@ -171,7 +171,7 @@ describe("matchProfileToProjects", () => {
       mockClient as unknown as Awaited<ReturnType<typeof createClient>>,
     );
 
-    await expect(matchProfileToProjects("user-1")).rejects.toThrow(
+    await expect(matchProfileToPostings("user-1")).rejects.toThrow(
       "Could not generate profile embedding",
     );
   });
@@ -200,7 +200,7 @@ describe("matchProfileToProjects", () => {
       mockClient as unknown as Awaited<ReturnType<typeof createClient>>,
     );
 
-    const matches = await matchProfileToProjects("user-1");
+    const matches = await matchProfileToPostings("user-1");
     expect(matches).toEqual([]);
   });
 
@@ -228,7 +228,7 @@ describe("matchProfileToProjects", () => {
       mockClient as unknown as Awaited<ReturnType<typeof createClient>>,
     );
 
-    await matchProfileToProjects("user-1", 5);
+    await matchProfileToPostings("user-1", 5);
 
     expect(mockRpc).toHaveBeenCalledWith(
       "match_postings_to_user",
@@ -237,7 +237,7 @@ describe("matchProfileToProjects", () => {
   });
 });
 
-describe("matchProjectToProfiles", () => {
+describe("matchPostingToProfiles", () => {
   beforeEach(() => {
     vi.clearAllMocks();
   });
@@ -306,7 +306,7 @@ describe("matchProjectToProfiles", () => {
       mockClient as unknown as Awaited<ReturnType<typeof createClient>>,
     );
 
-    const matches = await matchProjectToProfiles("post-1");
+    const matches = await matchPostingToProfiles("post-1");
 
     expect(mockRpc).toHaveBeenCalledWith("match_users_to_posting", {
       posting_embedding: postingEmbedding,
@@ -339,7 +339,7 @@ describe("matchProjectToProfiles", () => {
       mockClient as unknown as Awaited<ReturnType<typeof createClient>>,
     );
 
-    await expect(matchProjectToProfiles("nonexistent")).rejects.toThrow(
+    await expect(matchPostingToProfiles("nonexistent")).rejects.toThrow(
       "Posting not found",
     );
   });
@@ -370,7 +370,7 @@ describe("matchProjectToProfiles", () => {
       mockClient as unknown as Awaited<ReturnType<typeof createClient>>,
     );
 
-    await expect(matchProjectToProfiles("post-1")).rejects.toThrow(
+    await expect(matchPostingToProfiles("post-1")).rejects.toThrow(
       "Could not generate posting embedding",
     );
   });
@@ -395,7 +395,7 @@ describe("createMatchRecords", () => {
 
     await createMatchRecords("user-1", [
       {
-        project: {
+        posting: {
           id: "post-1",
           creator_id: "creator-1",
           title: "Test",
@@ -453,7 +453,7 @@ describe("createMatchRecords", () => {
 
     await createMatchRecords("user-1", [
       {
-        project: {
+        posting: {
           id: "post-1",
           creator_id: "creator-1",
           title: "Test",
@@ -504,7 +504,7 @@ describe("createMatchRecords", () => {
   });
 });
 
-describe("createMatchRecordsForProject", () => {
+describe("createMatchRecordsForPosting", () => {
   beforeEach(() => {
     vi.clearAllMocks();
   });
@@ -521,7 +521,7 @@ describe("createMatchRecordsForProject", () => {
       mockClient as unknown as Awaited<ReturnType<typeof createClient>>,
     );
 
-    await createMatchRecordsForProject("post-1", [
+    await createMatchRecordsForPosting("post-1", [
       {
         profile: {
           user_id: "user-1",

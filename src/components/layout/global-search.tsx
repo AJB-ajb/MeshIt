@@ -40,7 +40,7 @@ export function GlobalSearch() {
   const handleSelect = useCallback(
     (result: SearchResult) => {
       if (result.type === "posting") {
-        router.push(`/projects/${result.id}`);
+        router.push(`/postings/${result.id}`);
       } else {
         router.push(`/profile`);
       }
@@ -121,7 +121,7 @@ export function GlobalSearch() {
         <Input
           ref={inputRef}
           type="search"
-          placeholder="Search projects, profiles... (⌘K)"
+          placeholder="Search postings, profiles... (⌘K)"
           className="pl-9 pr-9 bg-muted/50"
           value={query}
           onChange={(e) => {
@@ -162,11 +162,11 @@ export function GlobalSearch() {
             </div>
           ) : results.length > 0 ? (
             <div className="max-h-[400px] overflow-y-auto">
-              {/* Projects Section */}
+              {/* Postings Section */}
               {results.some((r) => r.type === "posting") && (
                 <div>
                   <div className="px-3 py-2 text-xs font-medium text-muted-foreground bg-muted/50">
-                    Projects
+                    Postings
                   </div>
                   {results
                     .filter((r) => r.type === "posting")

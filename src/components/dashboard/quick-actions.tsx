@@ -28,12 +28,12 @@ export function QuickActions({ persona }: { persona: string }) {
             className="justify-start gap-3 h-auto py-4"
             asChild
           >
-            <Link href="/projects/new">
+            <Link href="/postings/new">
               <FolderKanban className="h-5 w-5" />
               <div className="text-left">
-                <div className="font-medium">Create Project</div>
+                <div className="font-medium">Create Posting</div>
                 <div className="text-xs text-muted-foreground">
-                  Post a new project to find collaborators
+                  Create a new posting to find collaborators
                 </div>
               </div>
               <ArrowRight className="ml-auto h-4 w-4" />
@@ -45,12 +45,12 @@ export function QuickActions({ persona }: { persona: string }) {
             className="justify-start gap-3 h-auto py-4"
             asChild
           >
-            <Link href="/projects">
+            <Link href="/postings">
               <FolderKanban className="h-5 w-5" />
               <div className="text-left">
-                <div className="font-medium">Explore Projects</div>
+                <div className="font-medium">Explore Postings</div>
                 <div className="text-xs text-muted-foreground">
-                  Discover projects looking for people like you
+                  Discover postings looking for people like you
                 </div>
               </div>
               <ArrowRight className="ml-auto h-4 w-4" />
@@ -72,8 +72,8 @@ export function QuickActions({ persona }: { persona: string }) {
               </div>
               <div className="text-xs text-muted-foreground">
                 {persona === "project_owner"
-                  ? "See developers who matched your projects"
-                  : "See projects that match your skills"}
+                  ? "See people who matched your postings"
+                  : "See postings that match your skills"}
               </div>
             </div>
             <ArrowRight className="ml-auto h-4 w-4" />
@@ -84,18 +84,18 @@ export function QuickActions({ persona }: { persona: string }) {
           className="justify-start gap-3 h-auto py-4"
           asChild
         >
-          <Link href="/projects">
+          <Link href="/postings">
             <TrendingUp className="h-5 w-5" />
             <div className="text-left">
               <div className="font-medium">
                 {persona === "project_owner"
-                  ? "Manage Projects"
-                  : "Explore Projects"}
+                  ? "Manage Postings"
+                  : "Explore Postings"}
               </div>
               <div className="text-xs text-muted-foreground">
                 {persona === "project_owner"
-                  ? "Track your posted projects"
-                  : "Discover projects looking for people like you"}
+                  ? "Track your postings"
+                  : "Discover postings looking for people like you"}
               </div>
             </div>
             <ArrowRight className="ml-auto h-4 w-4" />

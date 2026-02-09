@@ -25,13 +25,13 @@ import {
 } from "@/components/dashboard/stats-overview";
 import { QuickActions } from "@/components/dashboard/quick-actions";
 import {
-  RecommendedProjects,
-  type RecommendedProject,
-} from "@/components/dashboard/recommended-projects";
+  RecommendedPostings,
+  type RecommendedPosting,
+} from "@/components/dashboard/recommended-postings";
 import {
-  ProjectPerformance,
-  type ProjectMetric,
-} from "@/components/dashboard/project-performance";
+  PostingPerformance,
+  type PostingMetric,
+} from "@/components/dashboard/posting-performance";
 
 export const metadata: Metadata = {
   title: "Dashboard",
@@ -55,16 +55,16 @@ async function RecentActivityList({
   }> = [];
 
   if (persona === "project_owner") {
-    // Get user's posting IDs
-    const { data: userProjects } = await supabase
+    // Get user's postings IDs
+    const { data: userPostings } = await supabase
       .from("postings")
       .select("id")
       .eq("creator_id", userId)
       .eq("is_test_data", getTestDataValue());
 
-    const projectIds = userProjects?.map((p) => p.id) || [];
+    const postingIds = userPostings?.map((p) => p.id) || [];
 
-    if (projectIds.length > 0) {
+    if (postingIds.length > 0) {
       // Get recent applications
       const { data: recentApplications } = await supabase
         .from("applications")
@@ -83,7 +83,7 @@ async function RecentActivityList({
           )
         `,
         )
-        .in("posting_id", projectIds)
+        .in("posting_id", postingIds)
         .order("created_at", { ascending: false })
         .limit(3);
 
@@ -95,9 +95,9 @@ async function RecentActivityList({
           activities.push({
             type: "application",
             title: `New application from ${profiles?.full_name || "Someone"}`,
-            description: `Applied to "${postings?.title || "Project"}"`,
+            description: `Applied to "${postings?.title || "Posting"}"`,
             time: formatTimeAgo(a.created_at as string),
-            href: `/projects/${postings?.id}`,
+            href: `/postings/${postings?.id}`,
           });
         });
       }
@@ -120,7 +120,7 @@ async function RecentActivityList({
           )
         `,
         )
-        .in("posting_id", projectIds)
+        .in("posting_id", postingIds)
         .order("created_at", { ascending: false })
         .limit(3);
 
@@ -132,7 +132,7 @@ async function RecentActivityList({
           activities.push({
             type: "match",
             title: `New match: ${profiles?.full_name || "Developer"}`,
-            description: `Matched with "${postings?.title || "Project"}"`,
+            description: `Matched with "${postings?.title || "Posting"}"`,
             time: formatTimeAgo(m.created_at as string),
             href: `/matches`,
           });
@@ -164,10 +164,10 @@ async function RecentActivityList({
         const postings = a.postings as Record<string, unknown> | null;
         activities.push({
           type: "application",
-          title: `Application to "${postings?.title || "Project"}"`,
+          title: `Application to "${postings?.title || "Posting"}"`,
           description: `Status: ${a.status}`,
           time: formatTimeAgo(a.created_at as string),
-          href: `/projects/${postings?.id}`,
+          href: `/postings/${postings?.id}`,
         });
       });
     }
@@ -197,7 +197,7 @@ async function RecentActivityList({
         const postings = m.postings as Record<string, unknown> | null;
         activities.push({
           type: "match",
-          title: `New match: "${postings?.title || "Project"}"`,
+          title: `New match: "${postings?.title || "Posting"}"`,
           description: `Match score: ${Math.round(((m.similarity_score as number) || 0) * 100)}%`,
           time: formatTimeAgo(m.created_at as string),
           href: `/matches`,
@@ -275,7 +275,7 @@ async function RecentActivityList({
   if (recentActivities.length === 0) {
     return (
       <p className="text-sm text-muted-foreground">
-        No recent activity yet. Create a project or explore matches to get
+        No recent activity yet. Create a posting or explore matches to get
         started!
       </p>
     );
@@ -322,36 +322,36 @@ async function fetchOwnerStats(
   supabase: Awaited<ReturnType<typeof createClient>>,
   userId: string,
 ): Promise<StatItem[]> {
-  const { count: liveProjectsCount } = await supabase
+  const { count: livePostingsCount } = await supabase
     .from("postings")
     .select("*", { count: "exact", head: true })
     .eq("creator_id", userId)
     .eq("status", "open")
     .eq("is_test_data", getTestDataValue());
 
-  const { data: userProjects } = await supabase
+  const { data: userPostings } = await supabase
     .from("postings")
     .select("id")
     .eq("creator_id", userId)
     .eq("is_test_data", getTestDataValue());
 
-  const projectIds = userProjects?.map((p) => p.id) || [];
+  const postingIds = userPostings?.map((p) => p.id) || [];
 
   const { count: applicationsCount } =
-    projectIds.length > 0
+    postingIds.length > 0
       ? await supabase
           .from("applications")
           .select("*", { count: "exact", head: true })
-          .in("posting_id", projectIds)
+          .in("posting_id", postingIds)
           .eq("status", "pending")
       : { count: 0 };
 
   const { count: matchesCount } =
-    projectIds.length > 0
+    postingIds.length > 0
       ? await supabase
           .from("matches")
           .select("*", { count: "exact", head: true })
-          .in("posting_id", projectIds)
+          .in("posting_id", postingIds)
           .eq("status", "pending")
       : { count: 0 };
 
@@ -380,11 +380,11 @@ async function fetchOwnerStats(
       : { count: 0 };
 
   const { data: matchesData } =
-    projectIds.length > 0
+    postingIds.length > 0
       ? await supabase
           .from("matches")
           .select("similarity_score")
-          .in("posting_id", projectIds)
+          .in("posting_id", postingIds)
       : { data: null };
 
   const avgMatchQuality =
@@ -398,11 +398,11 @@ async function fetchOwnerStats(
 
   return [
     {
-      title: "Live Projects",
-      value: String(liveProjectsCount || 0),
-      description: "Projects currently open",
+      title: "Live Postings",
+      value: String(livePostingsCount || 0),
+      description: "Postings currently open",
       icon: FolderKanban,
-      href: "/projects",
+      href: "/postings",
     },
     {
       title: "New Applicants",
@@ -438,7 +438,7 @@ async function fetchDeveloperStats(
     .eq("user_id", userId)
     .eq("status", "accepted");
 
-  const activeProjectsCount = acceptedMatches?.length || 0;
+  const activePostingsCount = acceptedMatches?.length || 0;
 
   const { count: pendingMatchesCount } = await supabase
     .from("matches")
@@ -476,16 +476,16 @@ async function fetchDeveloperStats(
 
   return [
     {
-      title: "Active Projects",
-      value: String(activeProjectsCount),
-      description: "Projects you're involved in",
+      title: "Active Postings",
+      value: String(activePostingsCount),
+      description: "Postings you're involved in",
       icon: FolderKanban,
-      href: "/projects",
+      href: "/postings",
     },
     {
       title: "New Matches",
       value: String(pendingMatchesCount || 0),
-      description: "Projects waiting for your review",
+      description: "Postings waiting for your review",
       icon: Users,
       href: "/matches",
     },
@@ -494,7 +494,7 @@ async function fetchDeveloperStats(
       value: String(applicationsCount || 0),
       description: "Applications you've submitted",
       icon: TrendingUp,
-      href: "/projects",
+      href: "/postings",
     },
     {
       title: "Conversations",
@@ -506,10 +506,10 @@ async function fetchDeveloperStats(
   ];
 }
 
-async function fetchRecommendedProjects(
+async function fetchRecommendedPostings(
   supabase: Awaited<ReturnType<typeof createClient>>,
   userId: string,
-): Promise<RecommendedProject[]> {
+): Promise<RecommendedPosting[]> {
   const { data: topMatches } = await supabase
     .from("matches")
     .select(
@@ -562,14 +562,14 @@ async function fetchRecommendedProjects(
         createdAt: formatDate(posting.created_at as string),
       };
     })
-    .filter(Boolean) as RecommendedProject[];
+    .filter(Boolean) as RecommendedPosting[];
 }
 
-async function fetchOwnerProjectMetrics(
+async function fetchOwnerPostingMetrics(
   supabase: Awaited<ReturnType<typeof createClient>>,
   userId: string,
-): Promise<ProjectMetric[]> {
-  const { data: userProjects } = await supabase
+): Promise<PostingMetric[]> {
+  const { data: userPostings } = await supabase
     .from("postings")
     .select("id, title, status")
     .eq("creator_id", userId)
@@ -577,30 +577,30 @@ async function fetchOwnerProjectMetrics(
     .eq("is_test_data", getTestDataValue())
     .limit(2);
 
-  if (!userProjects) return [];
+  if (!userPostings) return [];
 
-  const projectIds = userProjects.map((p) => p.id);
+  const postingIds = userPostings.map((p) => p.id);
 
   const { data: matchesData } =
-    projectIds.length > 0
+    postingIds.length > 0
       ? await supabase
           .from("matches")
           .select("posting_id, status")
-          .in("posting_id", projectIds)
+          .in("posting_id", postingIds)
       : { data: null };
 
-  return userProjects.map((project) => {
-    const projectMatches =
-      matchesData?.filter((m) => m.posting_id === project.id) || [];
-    const applicants = projectMatches.filter(
+  return userPostings.map((posting: { id: string; title: string; status: string }) => {
+    const postingMatches =
+      matchesData?.filter((m) => m.posting_id === posting.id) || [];
+    const applicants = postingMatches.filter(
       (m) => m.status === "pending",
     ).length;
-    const totalMatches = projectMatches.length;
+    const totalMatches = postingMatches.length;
 
     return {
-      id: project.id,
-      title: project.title,
-      status: project.status,
+      id: posting.id,
+      title: posting.title,
+      status: posting.status,
       applicants,
       matches: totalMatches,
       views: 0,
@@ -610,16 +610,16 @@ async function fetchOwnerProjectMetrics(
 
 const defaultStats: StatItem[] = [
   {
-    title: "Active Projects",
+    title: "Active Postings",
     value: "0",
-    description: "Projects you're involved in",
+    description: "Postings you're involved in",
     icon: FolderKanban,
-    href: "/projects",
+    href: "/postings",
   },
   {
     title: "New Matches",
     value: "0",
-    description: "Projects waiting for your review",
+    description: "Postings waiting for your review",
     icon: Users,
     href: "/matches",
   },
@@ -647,19 +647,19 @@ export default async function DashboardPage() {
   const persona = (user?.user_metadata?.persona as string) ?? "developer";
 
   let stats: StatItem[] = defaultStats;
-  let recommendedProjects: RecommendedProject[] = [];
-  let ownerProjectMetrics: ProjectMetric[] = [];
+  let recommendedPostings: RecommendedPosting[] = [];
+  let ownerPostingMetrics: PostingMetric[] = [];
 
   if (user) {
     if (persona === "project_owner") {
-      [stats, ownerProjectMetrics] = await Promise.all([
+      [stats, ownerPostingMetrics] = await Promise.all([
         fetchOwnerStats(supabase, user.id),
-        fetchOwnerProjectMetrics(supabase, user.id),
+        fetchOwnerPostingMetrics(supabase, user.id),
       ]);
     } else {
-      [stats, recommendedProjects] = await Promise.all([
+      [stats, recommendedPostings] = await Promise.all([
         fetchDeveloperStats(supabase, user.id),
-        fetchRecommendedProjects(supabase, user.id),
+        fetchRecommendedPostings(supabase, user.id),
       ]);
     }
   }
@@ -671,14 +671,14 @@ export default async function DashboardPage() {
         <div>
           <h1 className="text-3xl font-bold tracking-tight">Dashboard</h1>
           <p className="mt-1 text-muted-foreground">
-            Welcome back! Heres whats happening with your projects.
+            Welcome back! Heres whats happening with your postings.
           </p>
         </div>
         {persona === "project_owner" ? (
           <Button asChild>
-            <Link href="/projects/new">
+            <Link href="/postings/new">
               <Plus className="h-4 w-4" />
-              Add a project
+              Add a posting
             </Link>
           </Button>
         ) : null}
@@ -688,9 +688,9 @@ export default async function DashboardPage() {
       <QuickActions persona={persona} />
 
       {persona === "developer" ? (
-        <RecommendedProjects projects={recommendedProjects} />
+        <RecommendedPostings postings={recommendedPostings} />
       ) : (
-        <ProjectPerformance metrics={ownerProjectMetrics} />
+        <PostingPerformance metrics={ownerPostingMetrics} />
       )}
 
       {/* Recent activity */}
