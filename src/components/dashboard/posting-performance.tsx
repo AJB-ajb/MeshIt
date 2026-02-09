@@ -10,7 +10,7 @@ import {
   CardTitle,
 } from "@/components/ui/card";
 
-export type ProjectMetric = {
+export type PostingMetric = {
   id: string;
   title: string;
   status: string;
@@ -19,54 +19,54 @@ export type ProjectMetric = {
   views: number;
 };
 
-export function ProjectPerformance({
+export function PostingPerformance({
   metrics,
 }: {
-  metrics: ProjectMetric[];
+  metrics: PostingMetric[];
 }) {
   return (
-    <div data-testid="project-performance" className="space-y-4">
+    <div data-testid="posting-performance" className="space-y-4">
       <div className="flex items-center justify-between">
         <div>
-          <h2 className="text-xl font-semibold">Project performance</h2>
+          <h2 className="text-xl font-semibold">Posting performance</h2>
           <p className="text-sm text-muted-foreground">
-            Track your posted projects and their engagement metrics.
+            Track your postings and their engagement metrics.
           </p>
         </div>
         <Button asChild>
           <Link href="/projects/new">
             <Plus className="h-4 w-4" />
-            Add project
+            Add posting
           </Link>
         </Button>
       </div>
       <div className="grid gap-4 lg:grid-cols-2">
         {metrics.length > 0 ? (
-          metrics.map((project) => (
-            <Card key={project.id}>
+          metrics.map((posting) => (
+            <Card key={posting.id}>
               <CardHeader className="pb-3">
                 <div className="flex items-center justify-between">
-                  <CardTitle className="text-lg">{project.title}</CardTitle>
-                  <Badge variant="outline">{project.status}</Badge>
+                  <CardTitle className="text-lg">{posting.title}</CardTitle>
+                  <Badge variant="outline">{posting.status}</Badge>
                 </div>
                 <CardDescription>
-                  Track applicants, matches, and views for this project.
+                  Track applicants, matches, and views for this posting.
                 </CardDescription>
               </CardHeader>
               <CardContent className="grid grid-cols-3 gap-4 text-sm">
                 <div>
                   <p className="text-muted-foreground">Applicants</p>
                   <p className="text-lg font-semibold">
-                    {project.applicants}
+                    {posting.applicants}
                   </p>
                 </div>
                 <div>
                   <p className="text-muted-foreground">Matches</p>
-                  <p className="text-lg font-semibold">{project.matches}</p>
+                  <p className="text-lg font-semibold">{posting.matches}</p>
                 </div>
                 <div>
                   <p className="text-muted-foreground">Views</p>
-                  <p className="text-lg font-semibold">{project.views}</p>
+                  <p className="text-lg font-semibold">{posting.views}</p>
                 </div>
               </CardContent>
             </Card>
@@ -75,8 +75,8 @@ export function ProjectPerformance({
           <Card>
             <CardContent className="flex min-h-[200px] flex-col items-center justify-center py-12">
               <p className="text-muted-foreground">
-                You haven&apos;t created any projects yet. Create your first
-                project to see metrics here!
+                You haven&apos;t created any postings yet. Create your first
+                posting to see metrics here!
               </p>
             </CardContent>
           </Card>

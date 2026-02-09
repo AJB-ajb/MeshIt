@@ -25,13 +25,13 @@ import {
 } from "@/components/dashboard/stats-overview";
 import { QuickActions } from "@/components/dashboard/quick-actions";
 import {
-  RecommendedProjects,
-  type RecommendedProject,
-} from "@/components/dashboard/recommended-projects";
+  RecommendedPostings,
+  type RecommendedPosting,
+} from "@/components/dashboard/recommended-postings";
 import {
-  ProjectPerformance,
-  type ProjectMetric,
-} from "@/components/dashboard/project-performance";
+  PostingPerformance,
+  type PostingMetric,
+} from "@/components/dashboard/posting-performance";
 
 export const metadata: Metadata = {
   title: "Dashboard",
@@ -506,10 +506,10 @@ async function fetchDeveloperStats(
   ];
 }
 
-async function fetchRecommendedProjects(
+async function fetchRecommendedPostings(
   supabase: Awaited<ReturnType<typeof createClient>>,
   userId: string,
-): Promise<RecommendedProject[]> {
+): Promise<RecommendedPosting[]> {
   const { data: topMatches } = await supabase
     .from("matches")
     .select(
@@ -562,13 +562,13 @@ async function fetchRecommendedProjects(
         createdAt: formatDate(posting.created_at as string),
       };
     })
-    .filter(Boolean) as RecommendedProject[];
+    .filter(Boolean) as RecommendedPosting[];
 }
 
-async function fetchOwnerProjectMetrics(
+async function fetchOwnerPostingMetrics(
   supabase: Awaited<ReturnType<typeof createClient>>,
   userId: string,
-): Promise<ProjectMetric[]> {
+): Promise<PostingMetric[]> {
   const { data: userProjects } = await supabase
     .from("postings")
     .select("id, title, status")
@@ -647,19 +647,19 @@ export default async function DashboardPage() {
   const persona = (user?.user_metadata?.persona as string) ?? "developer";
 
   let stats: StatItem[] = defaultStats;
-  let recommendedProjects: RecommendedProject[] = [];
-  let ownerProjectMetrics: ProjectMetric[] = [];
+  let recommendedPostings: RecommendedPosting[] = [];
+  let ownerPostingMetrics: PostingMetric[] = [];
 
   if (user) {
     if (persona === "project_owner") {
-      [stats, ownerProjectMetrics] = await Promise.all([
+      [stats, ownerPostingMetrics] = await Promise.all([
         fetchOwnerStats(supabase, user.id),
-        fetchOwnerProjectMetrics(supabase, user.id),
+        fetchOwnerPostingMetrics(supabase, user.id),
       ]);
     } else {
-      [stats, recommendedProjects] = await Promise.all([
+      [stats, recommendedPostings] = await Promise.all([
         fetchDeveloperStats(supabase, user.id),
-        fetchRecommendedProjects(supabase, user.id),
+        fetchRecommendedPostings(supabase, user.id),
       ]);
     }
   }
@@ -688,9 +688,9 @@ export default async function DashboardPage() {
       <QuickActions persona={persona} />
 
       {persona === "developer" ? (
-        <RecommendedProjects projects={recommendedProjects} />
+        <RecommendedPostings postings={recommendedPostings} />
       ) : (
-        <ProjectPerformance metrics={ownerProjectMetrics} />
+        <PostingPerformance metrics={ownerPostingMetrics} />
       )}
 
       {/* Recent activity */}
