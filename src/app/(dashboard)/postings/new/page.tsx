@@ -234,14 +234,14 @@ export default function NewPostingPage() {
     }
 
     // Redirect to the new posting's page
-    router.push(`/projects/${posting.id}`);
+    router.push(`/postings/${posting.id}`);
   };
 
   return (
     <div className="mx-auto max-w-2xl space-y-6">
       {/* Back link */}
       <Link
-        href="/projects"
+        href="/postings"
         className="inline-flex items-center gap-2 text-sm text-muted-foreground hover:text-foreground"
       >
         <ArrowLeft className="h-4 w-4" />
@@ -553,7 +553,7 @@ Example: Building a Minecraft-style collaborative IDE, need 2-3 people with WebG
                   )}
                 </Button>
                 <Button type="button" variant="outline" asChild>
-                  <Link href="/projects">Cancel</Link>
+                  <Link href="/postings">Cancel</Link>
                 </Button>
               </div>
             </CardContent>

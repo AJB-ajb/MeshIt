@@ -34,7 +34,7 @@ export function PostingPerformance({
           </p>
         </div>
         <Button asChild>
-          <Link href="/projects/new">
+          <Link href="/postings/new">
             <Plus className="h-4 w-4" />
             Add posting
           </Link>

@@ -64,7 +64,7 @@ export default async function LandingPage() {
               </Link>
             </Button>
             <Button size="lg" variant="outline" className="px-8" asChild>
-              <Link href="/projects">Explore postings</Link>
+              <Link href="/postings">Explore postings</Link>
             </Button>
           </div>
         </section>

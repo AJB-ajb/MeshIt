@@ -458,7 +458,7 @@ export default function PostingDetailPage() {
       return;
     }
 
-    router.push("/projects");
+    router.push("/postings");
   };
 
   const handleApply = async () => {
@@ -682,7 +682,7 @@ export default function PostingDetailPage() {
     return (
       <div className="space-y-6">
         <Link
-          href="/projects"
+          href="/postings"
           className="inline-flex items-center gap-2 text-sm text-muted-foreground hover:text-foreground"
         >
           <ArrowLeft className="h-4 w-4" />
@@ -692,7 +692,7 @@ export default function PostingDetailPage() {
           <CardContent className="flex min-h-[200px] flex-col items-center justify-center py-12">
             <p className="text-muted-foreground">Posting not found.</p>
             <Button asChild className="mt-4">
-              <Link href="/projects">Browse Postings</Link>
+              <Link href="/postings">Browse Postings</Link>
             </Button>
           </CardContent>
         </Card>
@@ -708,7 +708,7 @@ export default function PostingDetailPage() {
     <div className="space-y-6">
       {/* Back link */}
       <Link
-        href="/projects"
+        href="/postings"
         className="inline-flex items-center gap-2 text-sm text-muted-foreground hover:text-foreground"
       >
         <ArrowLeft className="h-4 w-4" />

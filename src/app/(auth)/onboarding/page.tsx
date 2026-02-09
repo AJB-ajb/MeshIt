@@ -109,7 +109,7 @@ function OnboardingContent() {
 
     // Use push instead of replace for more reliable navigation
     const destination =
-      persona === "developer" ? "/onboarding/developer" : "/projects/new";
+      persona === "developer" ? "/onboarding/developer" : "/postings/new";
 
     // If there's a custom next destination and it's not an onboarding route, use it
     const finalDestination =

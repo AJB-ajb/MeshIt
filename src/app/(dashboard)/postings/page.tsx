@@ -74,7 +74,7 @@ export default function PostingsPage() {
           </p>
         </div>
         <Button asChild>
-          <Link href="/projects/new">
+          <Link href="/postings/new">
             <Plus className="h-4 w-4" />
             New Posting
           </Link>
@@ -134,7 +134,7 @@ export default function PostingsPage() {
             </p>
             {activeTab === "my-postings" && (
               <Button asChild className="mt-4">
-                <Link href="/projects/new">
+                <Link href="/postings/new">
                   <Plus className="h-4 w-4" />
                   Create your first posting
                 </Link>
@@ -157,7 +157,7 @@ export default function PostingsPage() {
                       <div className="flex items-center gap-3 flex-wrap">
                         <CardTitle className="text-xl">
                           <Link
-                            href={`/projects/${posting.id}`}
+                            href={`/postings/${posting.id}`}
                             className="hover:underline cursor-pointer"
                           >
                             {posting.title}
@@ -189,7 +189,7 @@ export default function PostingsPage() {
                     </div>
                     <div className="flex gap-2 shrink-0">
                       <Button variant="outline" asChild>
-                        <Link href={`/projects/${posting.id}`}>
+                        <Link href={`/postings/${posting.id}`}>
                           {isOwner ? "Edit" : "View Details"}
                         </Link>
                       </Button>

@@ -22,7 +22,7 @@ import { NavItem } from "./nav-item";
 
 const navigation = [
   { href: "/dashboard", icon: LayoutDashboard, label: "Dashboard" },
-  { href: "/projects", icon: FolderKanban, label: "Postings" },
+  { href: "/postings", icon: FolderKanban, label: "Postings" },
   { href: "/matches", icon: Users, label: "Matches" },
   { href: "/inbox", icon: Inbox, label: "Inbox" },
 ];
@@ -131,7 +131,7 @@ export function Sidebar({ className }: SidebarProps) {
             )}
             asChild
           >
-            <Link href="/projects/new">
+            <Link href="/postings/new">
               <Plus className="h-4 w-4 flex-shrink-0" />
               <span
                 className={cn(

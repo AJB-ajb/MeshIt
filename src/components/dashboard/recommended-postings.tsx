@@ -31,7 +31,7 @@ export function RecommendedPostings({
           </p>
         </div>
         <Button variant="outline" asChild>
-          <Link href="/projects">Browse all postings</Link>
+          <Link href="/postings">Browse all postings</Link>
         </Button>
       </div>
       <div className="grid gap-6 lg:grid-cols-2">

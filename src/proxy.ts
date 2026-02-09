@@ -5,7 +5,7 @@ import { updateSession } from "@/lib/supabase/middleware";
 const PROTECTED_ROUTES = [
   "/dashboard",
   "/profile",
-  "/projects",
+  "/postings",
   "/matches",
   "/messages",
   "/onboarding",

@@ -65,7 +65,7 @@ export function PostingCard({
           </div>
           <div className="flex gap-2">
             <Button variant="outline" asChild>
-              <Link href={`/projects/${id}`}>
+              <Link href={`/postings/${id}`}>
                 View Details
                 <ArrowRight className="h-4 w-4" />
               </Link>

@@ -153,7 +153,7 @@ function InboxPageContent() {
             notification.body || "",
             () => {
               if (notification.related_posting_id) {
-                router.push(`/projects/${notification.related_posting_id}`);
+                router.push(`/postings/${notification.related_posting_id}`);
               }
             },
           );
@@ -206,7 +206,7 @@ function InboxPageContent() {
   const handleNotificationClick = (notification: (typeof notifications)[0]) => {
     handleMarkAsRead(notification.id);
     if (notification.related_posting_id) {
-      router.push(`/projects/${notification.related_posting_id}`);
+      router.push(`/postings/${notification.related_posting_id}`);
     }
   };
 
@@ -553,7 +553,7 @@ function InboxPageContent() {
                         </div>
                         {selectedConversation.posting && (
                           <Link
-                            href={`/projects/${selectedConversation.posting_id}`}
+                            href={`/postings/${selectedConversation.posting_id}`}
                             className="text-xs text-primary hover:underline"
                           >
                             Re: {selectedConversation.posting.title}

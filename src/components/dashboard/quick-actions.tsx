@@ -28,7 +28,7 @@ export function QuickActions({ persona }: { persona: string }) {
             className="justify-start gap-3 h-auto py-4"
             asChild
           >
-            <Link href="/projects/new">
+            <Link href="/postings/new">
               <FolderKanban className="h-5 w-5" />
               <div className="text-left">
                 <div className="font-medium">Create Posting</div>
@@ -45,7 +45,7 @@ export function QuickActions({ persona }: { persona: string }) {
             className="justify-start gap-3 h-auto py-4"
             asChild
           >
-            <Link href="/projects">
+            <Link href="/postings">
               <FolderKanban className="h-5 w-5" />
               <div className="text-left">
                 <div className="font-medium">Explore Postings</div>
@@ -84,7 +84,7 @@ export function QuickActions({ persona }: { persona: string }) {
           className="justify-start gap-3 h-auto py-4"
           asChild
         >
-          <Link href="/projects">
+          <Link href="/postings">
             <TrendingUp className="h-5 w-5" />
             <div className="text-left">
               <div className="font-medium">

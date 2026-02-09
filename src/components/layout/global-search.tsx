@@ -40,7 +40,7 @@ export function GlobalSearch() {
   const handleSelect = useCallback(
     (result: SearchResult) => {
       if (result.type === "posting") {
-        router.push(`/projects/${result.id}`);
+        router.push(`/postings/${result.id}`);
       } else {
         router.push(`/profile`);
       }

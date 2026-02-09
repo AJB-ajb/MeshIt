@@ -97,7 +97,7 @@ async function RecentActivityList({
             title: `New application from ${profiles?.full_name || "Someone"}`,
             description: `Applied to "${postings?.title || "Posting"}"`,
             time: formatTimeAgo(a.created_at as string),
-            href: `/projects/${postings?.id}`,
+            href: `/postings/${postings?.id}`,
           });
         });
       }
@@ -167,7 +167,7 @@ async function RecentActivityList({
           title: `Application to "${postings?.title || "Posting"}"`,
           description: `Status: ${a.status}`,
           time: formatTimeAgo(a.created_at as string),
-          href: `/projects/${postings?.id}`,
+          href: `/postings/${postings?.id}`,
         });
       });
     }
@@ -402,7 +402,7 @@ async function fetchOwnerStats(
       value: String(livePostingsCount || 0),
       description: "Postings currently open",
       icon: FolderKanban,
-      href: "/projects",
+      href: "/postings",
     },
     {
       title: "New Applicants",
@@ -480,7 +480,7 @@ async function fetchDeveloperStats(
       value: String(activePostingsCount),
       description: "Postings you're involved in",
       icon: FolderKanban,
-      href: "/projects",
+      href: "/postings",
     },
     {
       title: "New Matches",
@@ -494,7 +494,7 @@ async function fetchDeveloperStats(
       value: String(applicationsCount || 0),
       description: "Applications you've submitted",
       icon: TrendingUp,
-      href: "/projects",
+      href: "/postings",
     },
     {
       title: "Conversations",
@@ -614,7 +614,7 @@ const defaultStats: StatItem[] = [
     value: "0",
     description: "Postings you're involved in",
     icon: FolderKanban,
-    href: "/projects",
+    href: "/postings",
   },
   {
     title: "New Matches",
@@ -676,7 +676,7 @@ export default async function DashboardPage() {
         </div>
         {persona === "project_owner" ? (
           <Button asChild>
-            <Link href="/projects/new">
+            <Link href="/postings/new">
               <Plus className="h-4 w-4" />
               Add a posting
             </Link>
