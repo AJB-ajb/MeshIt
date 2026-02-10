@@ -2,7 +2,7 @@
 
 ## Design Principles
 
-1. **Minimal friction** — no required configuration, one-click OAuth, fast setup
+1. **Minimal friction** — no required configuration, one-click OAuth, 30-second onboarding (see below)
 2. **Fast, simple, efficient usage**
    - **Keyboard-first:** forms are navigable and completable via keyboard (Tab, Enter, shortcuts)
    - **Free-form first:** the default input is a single free-form text or voice field; reference fields and guiding questions are shown alongside as a helpful scaffold, but not required
@@ -40,6 +40,17 @@
 - **Sidebar CTA:** New Posting button
 - **Header:** Global search, theme toggle, notifications bell, user menu
 
+## Onboarding Flow
+
+Target: a not-yet-registered user with a written project description can post in **under 30 seconds**.
+
+1. Click "Post project" CTA on landing page
+2. OAuth login (Google, GitHub, LinkedIn — one click)
+3. Paste project description into free-form field
+4. Post
+
+Personal profile configuration is **not required** to create a posting. It can be completed later to improve matching quality. See [Vision.md](Vision.md) for the product reasoning behind this.
+
 ## Interaction Patterns
 
 - **Persona-driven views:** developer vs posting creator see different dashboards, stats, and quick actions
@@ -49,3 +60,4 @@
 - `[planned]` **Cascading invites:** sequential 1:1 invite flow — order friends by preference, send requests one-by-one
 - `[planned]` **Voice input** for posting creation and natural language filtering
 - `[planned]` **AI-generated daily digest** notifications
+- `[planned]` **Markdown-first interface**: Markdown input/output for postings, conversations, and configuration. Copy posting as markdown. Auto-clean/format options. Handoff document export (full context including platform metadata).

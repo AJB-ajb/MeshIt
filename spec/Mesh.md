@@ -23,6 +23,18 @@ Idea-based social platform for quickly finding people to do things with — proj
 - Projects, activities, and social plans are all first-class posting types
 - Don't artificially limit applicability
 
+### Target Audiences
+
+- **Academic collaboration**: Finding the right subset of collaborators for specific tasks
+- **Course projects**: Matching on work style, skill level, and interest alignment
+- **People upskilling**: Finding learning partners and coordinating schedules
+- **Professional upskilling / mentorship**: Matching mentors and mentees (e.g., AI safety orgs)
+- **Hobbyists**: Game dev, writing, art, theater — finding collaborators
+- **Hackathons**: Finding aligned teammates; channels as shared context with QR codes
+- **Spontaneous activities**: Asking friends for quick plans with fast expiry and cascading invites
+
+See [Vision.md](Vision.md) for detailed analysis of each audience.
+
 ### Particular Use Cases
 
 - Hackathon teammates
@@ -67,6 +79,12 @@ See [Matching.md](Matching.md) for the matching algorithm.
   - Navigate, search and filter via natural language
   - Automatically translates to UI actions
 - Mentor / mentee matching
+- Channels (shared context for hackathons, courses, communities — with setup defaults like expiry and category)
+- QR code and share link generation for channels and postings
+- Project images
+- Markdown-first interface (markdown input/output, copy as markdown, auto-format, handoff document export)
+- AI agent integration via markdown interface
+- Test / staging database environment for user research
 
 ## Design Principles
 
@@ -79,6 +97,8 @@ See [UX.md](UX.md).
 - Small teams (2-4) outperform large groups for most tasks
 - Current tools (Slack, WhatsApp) don't scale for matching
 - Pair work is undervalued and underutilized
+
+See [Vision.md](Vision.md) for deeper philosophy, insights, and target audience analysis.
 
 ## Competitors
 
