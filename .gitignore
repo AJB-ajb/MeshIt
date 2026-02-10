@@ -83,7 +83,8 @@ venv/
 logs/
 .env*.local
 .claude/
-.handoffs/
+.prompts/*
+.handoffs/*
 .pnpm-store/
 
 # Supabase
