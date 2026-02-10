@@ -70,7 +70,9 @@ async function fetchPostings(key: string): Promise<PostingsResult> {
   if (tab === "my-postings" && user) {
     query = query.eq("creator_id", user.id);
   } else {
-    query = query.eq("status", "open");
+    query = query
+      .eq("status", "open")
+      .gt("expires_at", new Date().toISOString());
     if (user) {
       query = query.neq("creator_id", user.id);
     }

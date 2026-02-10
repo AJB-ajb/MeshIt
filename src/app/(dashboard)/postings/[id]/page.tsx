@@ -11,6 +11,7 @@ import {
   Share2,
   Flag,
   MessageSquare,
+  RefreshCw,
   Check,
   Sparkles,
   Loader2,
@@ -108,6 +109,25 @@ const formatDate = (dateString: string) => {
   return date.toLocaleDateString();
 };
 
+const isExpired = (expiresAt: string | null) => {
+  if (!expiresAt) return false;
+  return new Date(expiresAt) < new Date();
+};
+
+const formatExpiry = (expiresAt: string | null) => {
+  if (!expiresAt) return null;
+  const date = new Date(expiresAt);
+  const now = new Date();
+  const diffDays = Math.ceil((date.getTime() - now.getTime()) / (1000 * 60 * 60 * 24));
+
+  if (diffDays < 0) return `Expired ${Math.abs(diffDays)} days ago`;
+  if (diffDays === 0) return "Expires today";
+  if (diffDays === 1) return "Expires tomorrow";
+  if (diffDays < 7) return `Expires in ${diffDays} days`;
+  if (diffDays < 30) return `Expires in ${Math.floor(diffDays / 7)} weeks`;
+  return `Expires ${date.toLocaleDateString()}`;
+};
+
 export default function PostingDetailPage() {
   const router = useRouter();
   const params = useParams();
@@ -120,6 +140,7 @@ export default function PostingDetailPage() {
   const [isEditing, setIsEditing] = useState(false);
   const [isSaving, setIsSaving] = useState(false);
   const [isDeleting, setIsDeleting] = useState(false);
+  const [isReactivating, setIsReactivating] = useState(false);
   const [error, setError] = useState<string | null>(null);
   const [currentUserProfile, setCurrentUserProfile] = useState<Profile | null>(
     null,
@@ -461,6 +482,38 @@ export default function PostingDetailPage() {
     router.push("/postings");
   };
 
+  const handleReactivate = async () => {
+    setIsReactivating(true);
+    const supabase = createClient();
+
+    const newExpiresAt = new Date(Date.now() + 90 * 24 * 60 * 60 * 1000);
+
+    const { error: updateError } = await supabase
+      .from("postings")
+      .update({
+        status: "open",
+        expires_at: newExpiresAt.toISOString(),
+        updated_at: new Date().toISOString(),
+      })
+      .eq("id", postingId);
+
+    if (updateError) {
+      setError("Failed to reactivate posting. Please try again.");
+      setIsReactivating(false);
+      return;
+    }
+
+    // Refresh
+    const { data } = await supabase
+      .from("postings")
+      .select(`*, profiles:creator_id (full_name, headline, skills, user_id)`)
+      .eq("id", postingId)
+      .single();
+
+    if (data) setProject(data);
+    setIsReactivating(false);
+  };
+
   const handleApply = async () => {
     if (!currentUserId) {
       router.push("/login");
@@ -739,14 +792,19 @@ export default function PostingDetailPage() {
             <Badge
               variant={
                 project.status === "open"
-                  ? "default"
+                  ? isExpired(project.expires_at) ? "destructive" : "default"
                   : project.status === "filled"
                     ? "secondary"
                     : "outline"
               }
             >
-              {project.status}
+              {isExpired(project.expires_at) ? "Expired" : project.status}
             </Badge>
+            {project.expires_at && (
+              <span className={`text-xs ${isExpired(project.expires_at) ? "text-destructive" : "text-muted-foreground"}`}>
+                {formatExpiry(project.expires_at)}
+              </span>
+            )}
             {/* Show compatibility score badge for non-owners */}
             {!isOwner && matchBreakdown && (
               <Badge
@@ -791,6 +849,16 @@ export default function PostingDetailPage() {
               </>
             ) : (
               <>
+                {isExpired(project.expires_at) && (
+                  <Button onClick={handleReactivate} disabled={isReactivating}>
+                    {isReactivating ? (
+                      <Loader2 className="h-4 w-4 animate-spin" />
+                    ) : (
+                      <RefreshCw className="h-4 w-4" />
+                    )}
+                    Reactivate
+                  </Button>
+                )}
                 <Button variant="outline" onClick={() => setIsEditing(true)}>
                   <Pencil className="h-4 w-4" />
                   Edit

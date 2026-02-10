@@ -11,7 +11,10 @@ import {
   Clock,
   Loader2,
   Sparkles,
+  X,
 } from "lucide-react";
+import { SpeechInput } from "@/components/ai-elements/speech-input";
+import { transcribeAudio } from "@/lib/transcribe";
 
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
@@ -49,18 +52,38 @@ const formatDate = (dateString: string) => {
 export default function PostingsPage() {
   const [activeTab, setActiveTab] = useState<TabId>("discover");
   const [searchQuery, setSearchQuery] = useState("");
+  const [showFilters, setShowFilters] = useState(false);
+  const [filterCategory, setFilterCategory] = useState<string>("all");
+  const [filterMode, setFilterMode] = useState<string>("all");
   const { postings, userId, isLoading } = usePostings(activeTab);
 
+  const hasActiveFilters = filterCategory !== "all" || filterMode !== "all";
+
+  const clearFilters = () => {
+    setFilterCategory("all");
+    setFilterMode("all");
+  };
+
   const filteredPostings = postings.filter((posting: Posting) => {
-    if (!searchQuery) return true;
-    const query = searchQuery.toLowerCase();
-    return (
-      posting.title.toLowerCase().includes(query) ||
-      posting.description.toLowerCase().includes(query) ||
-      posting.skills.some((skill: string) =>
-        skill.toLowerCase().includes(query),
-      )
-    );
+    // Text search
+    if (searchQuery) {
+      const query = searchQuery.toLowerCase();
+      const matchesSearch =
+        posting.title.toLowerCase().includes(query) ||
+        posting.description.toLowerCase().includes(query) ||
+        posting.skills.some((skill: string) =>
+          skill.toLowerCase().includes(query),
+        );
+      if (!matchesSearch) return false;
+    }
+
+    // Category filter
+    if (filterCategory !== "all" && posting.category !== filterCategory) return false;
+
+    // Mode filter
+    if (filterMode !== "all" && posting.mode !== filterMode) return false;
+
+    return true;
   });
 
   return (
@@ -107,17 +130,78 @@ export default function PostingsPage() {
             <Input
               type="search"
               placeholder="Search postings, skills..."
-              className="pl-9"
+              className="pl-9 pr-10"
               value={searchQuery}
               onChange={(e) => setSearchQuery(e.target.value)}
             />
+            <SpeechInput
+              className="absolute right-1 top-1/2 -translate-y-1/2 h-8 w-8 p-0"
+              size="icon"
+              variant="ghost"
+              onAudioRecorded={transcribeAudio}
+              onTranscriptionChange={(text) => setSearchQuery(text)}
+            />
           </div>
-          <Button variant="outline" size="icon">
+          <Button
+            variant={hasActiveFilters ? "default" : "outline"}
+            size="icon"
+            onClick={() => setShowFilters((v) => !v)}
+          >
             <Filter className="h-4 w-4" />
             <span className="sr-only">Filter</span>
           </Button>
         </div>
       </div>
+
+      {/* Filter panel */}
+      {showFilters && (
+        <Card>
+          <CardContent className="pt-4 pb-4">
+            <div className="flex items-center justify-between mb-3">
+              <h3 className="text-sm font-medium">Filters</h3>
+              <div className="flex gap-2">
+                {hasActiveFilters && (
+                  <Button variant="ghost" size="sm" onClick={clearFilters}>
+                    Clear all
+                  </Button>
+                )}
+                <Button variant="ghost" size="icon" className="h-8 w-8" onClick={() => setShowFilters(false)}>
+                  <X className="h-4 w-4" />
+                </Button>
+              </div>
+            </div>
+            <div className="grid gap-4 sm:grid-cols-2">
+              <div className="space-y-1.5">
+                <label className="text-xs font-medium text-muted-foreground">Category</label>
+                <select
+                  value={filterCategory}
+                  onChange={(e) => setFilterCategory(e.target.value)}
+                  className="flex h-9 w-full rounded-md border border-input bg-background px-3 py-1 text-sm"
+                >
+                  <option value="all">Any category</option>
+                  <option value="study">Study</option>
+                  <option value="hackathon">Hackathon</option>
+                  <option value="personal">Personal</option>
+                  <option value="professional">Professional</option>
+                  <option value="social">Social</option>
+                </select>
+              </div>
+              <div className="space-y-1.5">
+                <label className="text-xs font-medium text-muted-foreground">Mode</label>
+                <select
+                  value={filterMode}
+                  onChange={(e) => setFilterMode(e.target.value)}
+                  className="flex h-9 w-full rounded-md border border-input bg-background px-3 py-1 text-sm"
+                >
+                  <option value="all">Any mode</option>
+                  <option value="open">Open</option>
+                  <option value="friend_ask">Friend Ask</option>
+                </select>
+              </div>
+            </div>
+          </CardContent>
+        </Card>
+      )}
 
       {/* Loading state */}
       {isLoading ? (
@@ -163,6 +247,11 @@ export default function PostingsPage() {
                             {posting.title}
                           </Link>
                         </CardTitle>
+                        {posting.context_identifier && (
+                          <Badge variant="secondary" className="text-xs">
+                            {posting.context_identifier}
+                          </Badge>
+                        )}
                         {posting.status !== "open" && (
                           <Badge
                             variant={
