@@ -14,6 +14,7 @@ import {
   X,
 } from "lucide-react";
 import { SpeechInput } from "@/components/ai-elements/speech-input";
+import { transcribeAudio } from "@/lib/transcribe";
 
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
@@ -137,6 +138,7 @@ export default function PostingsPage() {
               className="absolute right-1 top-1/2 -translate-y-1/2 h-8 w-8 p-0"
               size="icon"
               variant="ghost"
+              onAudioRecorded={transcribeAudio}
               onTranscriptionChange={(text) => setSearchQuery(text)}
             />
           </div>

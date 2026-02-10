@@ -4,6 +4,7 @@ import { Suspense, useEffect, useMemo, useState } from "react";
 import { useRouter, useSearchParams } from "next/navigation";
 import { Sparkles, FileText, Loader2, CheckCircle, Mic } from "lucide-react";
 import { SpeechInput } from "@/components/ai-elements/speech-input";
+import { transcribeAudio } from "@/lib/transcribe";
 
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
@@ -364,6 +365,7 @@ Check out my work at github.com/alexdev`}
                     className="absolute bottom-2 right-2 h-10 w-10 p-0"
                     size="icon"
                     variant="ghost"
+                    onAudioRecorded={transcribeAudio}
                     onTranscriptionChange={(text) =>
                       setAiText((prev) => (prev ? prev + " " + text : text))
                     }
@@ -465,6 +467,7 @@ Check out my work at github.com/alexdev`}
                     className="absolute bottom-2 right-2 h-10 w-10 p-0"
                     size="icon"
                     variant="ghost"
+                    onAudioRecorded={transcribeAudio}
                     onTranscriptionChange={(text) =>
                       handleChange("bio", form.bio ? form.bio + " " + text : text)
                     }
