@@ -161,28 +161,8 @@ export function useProfile() {
         return;
       }
 
-      const availabilityHours = Number(form.availabilityHours);
       const locationLat = Number(form.locationLat);
       const locationLng = Number(form.locationLng);
-      const remotePreference = Number(form.remotePreference);
-      const filterMaxDistance = Number(form.filterMaxDistance);
-      const filterMinHours = Number(form.filterMinHours);
-      const filterMaxHours = Number(form.filterMaxHours);
-      const filterLanguages = parseList(form.filterLanguages);
-
-      const hardFilters: Record<string, unknown> = {};
-      if (Number.isFinite(filterMaxDistance) && filterMaxDistance > 0) {
-        hardFilters.max_distance_km = filterMaxDistance;
-      }
-      if (Number.isFinite(filterMinHours) && filterMinHours > 0) {
-        hardFilters.min_hours = filterMinHours;
-      }
-      if (Number.isFinite(filterMaxHours) && filterMaxHours > 0) {
-        hardFilters.max_hours = filterMaxHours;
-      }
-      if (filterLanguages.length > 0) {
-        hardFilters.languages = filterLanguages;
-      }
 
       const { error: upsertError } = await supabase.from("profiles").upsert(
         {
@@ -193,28 +173,11 @@ export function useProfile() {
           location: form.location.trim(),
           location_lat: Number.isFinite(locationLat) ? locationLat : null,
           location_lng: Number.isFinite(locationLng) ? locationLng : null,
-          experience_level: form.experienceLevel,
-          collaboration_style: form.collaborationStyle,
-          remote_preference: Number.isFinite(remotePreference)
-            ? Math.min(100, Math.max(0, remotePreference))
-            : null,
-          availability_hours: Number.isFinite(availabilityHours)
-            ? availabilityHours
-            : null,
           skills: parseList(form.skills),
           interests: parseList(form.interests),
           languages: parseList(form.languages),
           portfolio_url: form.portfolioUrl.trim(),
           github_url: form.githubUrl.trim(),
-          project_preferences: {
-            project_types: parseList(form.projectTypes),
-            preferred_roles: parseList(form.preferredRoles),
-            preferred_stack: parseList(form.preferredStack),
-            commitment_level: form.commitmentLevel,
-            timeline_preference: form.timelinePreference,
-          },
-          hard_filters:
-            Object.keys(hardFilters).length > 0 ? hardFilters : null,
           updated_at: new Date().toISOString(),
         },
         { onConflict: "user_id" },

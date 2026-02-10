@@ -9,7 +9,7 @@ import { Input } from "@/components/ui/input";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { EmptyState } from "@/components/ui/empty-state";
 import { useMatches } from "@/lib/hooks/use-matches";
-import type { Project } from "@/lib/supabase/types";
+import type { Posting } from "@/lib/supabase/types";
 
 const statusColors = {
   pending: "bg-warning/10 text-warning",
@@ -94,7 +94,7 @@ export default function MatchesPage() {
         <div>
           <h1 className="text-3xl font-bold tracking-tight">Matches</h1>
           <p className="mt-1 text-muted-foreground">
-            Projects that match your skills and interests
+            Postings that match your skills and interests
           </p>
         </div>
         <Card className="border-warning/30 bg-warning/5">
@@ -131,7 +131,7 @@ export default function MatchesPage() {
       <div>
         <h1 className="text-3xl font-bold tracking-tight">Matches</h1>
         <p className="mt-1 text-muted-foreground">
-          Projects that match your skills and interests
+          Postings that match your skills and interests
         </p>
       </div>
 
@@ -155,7 +155,7 @@ export default function MatchesPage() {
       {matches.length === 0 ? (
         <EmptyState
           title="No matches yet"
-          description="Complete your profile to start seeing project matches that align with your skills and interests."
+          description="Complete your profile to start seeing matches that align with your skills and interests."
           action={{
             label: "Complete Profile",
             href: "/profile",
@@ -164,7 +164,7 @@ export default function MatchesPage() {
       ) : (
         <div className="space-y-4">
           {matches.map((match) => {
-            const project = match.posting as Project;
+            const posting = match.posting as Posting;
             const matchScore = Math.round(match.score * 100);
             const matchedAt = formatTimeAgo(match.created_at);
 
@@ -179,7 +179,7 @@ export default function MatchesPage() {
                             href={`/matches/${match.id}`}
                             className="hover:underline"
                           >
-                            {project.title}
+                            {posting.title}
                           </Link>
                         </CardTitle>
                         <span className="rounded-full bg-success/10 px-2.5 py-0.5 text-xs font-medium text-success">
@@ -216,15 +216,15 @@ export default function MatchesPage() {
                     </div>
                   )}
 
-                  {/* Project description */}
+                  {/* Posting description */}
                   <p className="text-sm text-muted-foreground line-clamp-2">
-                    {project.description}
+                    {posting.description}
                   </p>
 
                   {/* Skills */}
-                  {project.skills && project.skills.length > 0 && (
+                  {posting.skills && posting.skills.length > 0 && (
                     <div className="flex flex-wrap gap-2">
-                      {project.skills.slice(0, 5).map((skill) => (
+                      {posting.skills.slice(0, 5).map((skill) => (
                         <span
                           key={skill}
                           className="rounded-md border border-border bg-muted/50 px-2.5 py-0.5 text-xs font-medium"
@@ -232,9 +232,9 @@ export default function MatchesPage() {
                           {skill}
                         </span>
                       ))}
-                      {project.skills.length > 5 && (
+                      {posting.skills.length > 5 && (
                         <span className="rounded-md border border-border bg-muted/50 px-2.5 py-0.5 text-xs font-medium">
-                          +{project.skills.length - 5}
+                          +{posting.skills.length - 5}
                         </span>
                       )}
                     </div>

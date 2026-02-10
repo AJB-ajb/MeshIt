@@ -1,12 +1,7 @@
 "use client";
 
 import { Badge } from "@/components/ui/badge";
-import {
-  Card,
-  CardContent,
-  CardHeader,
-  CardTitle,
-} from "@/components/ui/card";
+import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import type { ProfileFormState } from "@/lib/types/profile";
 import { parseList } from "@/lib/types/profile";
 
@@ -24,15 +19,11 @@ export function ProfileView({ form }: { form: ProfileFormState }) {
           <div className="grid gap-4 md:grid-cols-2">
             <div>
               <p className="text-sm text-muted-foreground">Full name</p>
-              <p className="font-medium">
-                {form.fullName || "Not provided"}
-              </p>
+              <p className="font-medium">{form.fullName || "Not provided"}</p>
             </div>
             <div>
               <p className="text-sm text-muted-foreground">Headline</p>
-              <p className="font-medium">
-                {form.headline || "Not provided"}
-              </p>
+              <p className="font-medium">{form.headline || "Not provided"}</p>
             </div>
           </div>
 
@@ -68,29 +59,19 @@ export function ProfileView({ form }: { form: ProfileFormState }) {
 
           <div className="grid gap-4 md:grid-cols-2">
             <div>
-              <p className="text-sm text-muted-foreground">
-                Remote preference
-              </p>
+              <p className="text-sm text-muted-foreground">Remote preference</p>
               <p className="font-medium">{form.remotePreference}% remote</p>
             </div>
             <div>
-              <p className="text-sm text-muted-foreground">
-                Spoken languages
-              </p>
-              <p className="font-medium">
-                {form.languages || "Not provided"}
-              </p>
+              <p className="text-sm text-muted-foreground">Spoken languages</p>
+              <p className="font-medium">{form.languages || "Not provided"}</p>
             </div>
           </div>
 
           <div className="grid gap-4 md:grid-cols-2">
             <div>
-              <p className="text-sm text-muted-foreground">
-                Experience level
-              </p>
-              <p className="font-medium capitalize">
-                {form.experienceLevel}
-              </p>
+              <p className="text-sm text-muted-foreground">Experience level</p>
+              <p className="font-medium capitalize">{form.experienceLevel}</p>
             </div>
             <div>
               <p className="text-sm text-muted-foreground">
@@ -121,9 +102,7 @@ export function ProfileView({ form }: { form: ProfileFormState }) {
 
           {interestsList.length > 0 && (
             <div>
-              <p className="mb-2 text-sm text-muted-foreground">
-                Interests
-              </p>
+              <p className="mb-2 text-sm text-muted-foreground">Interests</p>
               <div className="flex flex-wrap gap-2">
                 {interestsList.map((interest) => (
                   <Badge key={interest} variant="outline">
@@ -171,20 +150,18 @@ export function ProfileView({ form }: { form: ProfileFormState }) {
 
       <Card>
         <CardHeader>
-          <CardTitle>Project Preferences</CardTitle>
+          <CardTitle>Posting Preferences</CardTitle>
         </CardHeader>
         <CardContent className="space-y-4">
           <div className="grid gap-4 md:grid-cols-2">
             <div>
-              <p className="text-sm text-muted-foreground">Project types</p>
+              <p className="text-sm text-muted-foreground">Posting types</p>
               <p className="font-medium">
                 {form.projectTypes || "Not provided"}
               </p>
             </div>
             <div>
-              <p className="text-sm text-muted-foreground">
-                Preferred roles
-              </p>
+              <p className="text-sm text-muted-foreground">Preferred roles</p>
               <p className="font-medium">
                 {form.preferredRoles || "Not provided"}
               </p>
@@ -203,11 +180,11 @@ export function ProfileView({ form }: { form: ProfileFormState }) {
           <div className="grid gap-4 md:grid-cols-2">
             <div>
               <p className="text-sm text-muted-foreground">
-                Preferred project commitment
+                Preferred commitment
               </p>
               <p className="font-medium">{form.commitmentLevel} hrs/week</p>
               <p className="text-xs text-muted-foreground mt-1">
-                Your preferred project commitment level
+                Your preferred commitment level
               </p>
             </div>
             <div>
@@ -246,9 +223,7 @@ export function ProfileView({ form }: { form: ProfileFormState }) {
               <p className="text-sm text-muted-foreground">
                 Required languages
               </p>
-              <p className="font-medium">
-                {form.filterLanguages || "Any"}
-              </p>
+              <p className="font-medium">{form.filterLanguages || "Any"}</p>
             </div>
           </div>
 

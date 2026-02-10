@@ -261,11 +261,7 @@ function SettingsContent() {
           <div>
             <p className="text-sm text-muted-foreground">Account type</p>
             <p className="font-medium capitalize">
-              {persona === "developer"
-                ? "Developer"
-                : persona === "project_owner"
-                  ? "Project Owner"
-                  : "Not set"}
+              {persona ? persona.replace("_", " ") : "Member"}
             </p>
           </div>
         </CardContent>

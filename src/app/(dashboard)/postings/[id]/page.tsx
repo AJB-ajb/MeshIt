@@ -118,7 +118,9 @@ const formatExpiry = (expiresAt: string | null) => {
   if (!expiresAt) return null;
   const date = new Date(expiresAt);
   const now = new Date();
-  const diffDays = Math.ceil((date.getTime() - now.getTime()) / (1000 * 60 * 60 * 24));
+  const diffDays = Math.ceil(
+    (date.getTime() - now.getTime()) / (1000 * 60 * 60 * 24),
+  );
 
   if (diffDays < 0) return `Expired ${Math.abs(diffDays)} days ago`;
   if (diffDays === 0) return "Expires today";
@@ -133,7 +135,7 @@ export default function PostingDetailPage() {
   const params = useParams();
   const postingId = params.id as string;
 
-  const [project, setProject] = useState<Posting | null>(null);
+  const [posting, setPosting] = useState<Posting | null>(null);
   const [isLoading, setIsLoading] = useState(true);
   const [isOwner, setIsOwner] = useState(false);
   const [currentUserId, setCurrentUserId] = useState<string | null>(null);
@@ -157,7 +159,7 @@ export default function PostingDetailPage() {
     teamSizeMin: "2",
     teamSizeMax: "5",
     category: "personal",
-    mode: "remote",
+    mode: "open",
     status: "open",
   });
 
@@ -281,7 +283,7 @@ export default function PostingDetailPage() {
         return;
       }
 
-      setProject(data);
+      setPosting(data);
       const ownerCheck = user?.id === data.creator_id;
       setIsOwner(ownerCheck);
       setForm({
@@ -292,7 +294,7 @@ export default function PostingDetailPage() {
         teamSizeMin: data.team_size_min?.toString() || "2",
         teamSizeMax: data.team_size_max?.toString() || "5",
         category: data.category || "personal",
-        mode: data.mode || "remote",
+        mode: data.mode || "open",
         status: data.status || "open",
       });
 
@@ -450,7 +452,7 @@ export default function PostingDetailPage() {
       .single();
 
     if (data) {
-      setProject(data);
+      setPosting(data);
     }
 
     setIsEditing(false);
@@ -510,7 +512,9 @@ export default function PostingDetailPage() {
       .eq("id", postingId)
       .single();
 
-    if (data) setProject(data);
+    if (data) {
+      setPosting(data);
+    }
     setIsReactivating(false);
   };
 
@@ -543,7 +547,7 @@ export default function PostingDetailPage() {
     }
 
     // Create notification for posting owner
-    if (project) {
+    if (posting) {
       // Get applicant's profile for notification
       const { data: profile } = await supabase
         .from("profiles")
@@ -554,10 +558,10 @@ export default function PostingDetailPage() {
       const applicantName = profile?.full_name || "Someone";
 
       await supabase.from("notifications").insert({
-        user_id: project.creator_id,
+        user_id: posting.creator_id,
         type: "application_received",
         title: "New Application Received",
-        body: `${applicantName} has applied to your posting "${project.title}"`,
+        body: `${applicantName} has applied to your posting "${posting.title}"`,
         related_posting_id: postingId,
         related_application_id: application.id,
         related_user_id: currentUserId,
@@ -615,7 +619,7 @@ export default function PostingDetailPage() {
     const application = applications.find((a) => a.id === applicationId);
 
     // Create notification for applicant
-    if (application && project) {
+    if (application && posting) {
       await supabase.from("notifications").insert({
         user_id: application.applicant_id,
         type:
@@ -628,11 +632,11 @@ export default function PostingDetailPage() {
             : "Application Update",
         body:
           newStatus === "accepted"
-            ? `Your application to "${project.title}" has been accepted!`
-            : `Your application to "${project.title}" was not selected.`,
+            ? `Your application to "${posting.title}" has been accepted!`
+            : `Your application to "${posting.title}" was not selected.`,
         related_posting_id: postingId,
         related_application_id: applicationId,
-        related_user_id: project.creator_id,
+        related_user_id: posting.creator_id,
       });
     }
 
@@ -646,7 +650,7 @@ export default function PostingDetailPage() {
   };
 
   const handleMessageApplicant = async (applicantId: string) => {
-    if (!currentUserId || !project) return;
+    if (!currentUserId || !posting) return;
 
     const supabase = createClient();
 
@@ -685,7 +689,7 @@ export default function PostingDetailPage() {
   };
 
   const handleContactCreator = async () => {
-    if (!currentUserId || !project) return;
+    if (!currentUserId || !posting) return;
 
     const supabase = createClient();
 
@@ -695,7 +699,7 @@ export default function PostingDetailPage() {
       .select("id")
       .eq("posting_id", postingId)
       .or(
-        `and(participant_1.eq.${currentUserId},participant_2.eq.${project.creator_id}),and(participant_1.eq.${project.creator_id},participant_2.eq.${currentUserId})`,
+        `and(participant_1.eq.${currentUserId},participant_2.eq.${posting.creator_id}),and(participant_1.eq.${posting.creator_id},participant_2.eq.${currentUserId})`,
       )
       .single();
 
@@ -710,7 +714,7 @@ export default function PostingDetailPage() {
       .insert({
         posting_id: postingId,
         participant_1: currentUserId,
-        participant_2: project.creator_id,
+        participant_2: posting.creator_id,
       })
       .select()
       .single();
@@ -731,7 +735,7 @@ export default function PostingDetailPage() {
     );
   }
 
-  if (!project) {
+  if (!posting) {
     return (
       <div className="space-y-6">
         <Link
@@ -753,9 +757,9 @@ export default function PostingDetailPage() {
     );
   }
 
-  const creatorName = project.profiles?.full_name || "Unknown";
-  const creatorHeadline = project.profiles?.headline || "";
-  const creatorSkills = project.profiles?.skills || [];
+  const creatorName = posting.profiles?.full_name || "Unknown";
+  const creatorHeadline = posting.profiles?.headline || "";
+  const creatorSkills = posting.profiles?.skills || [];
 
   return (
     <div className="space-y-6">
@@ -786,23 +790,27 @@ export default function PostingDetailPage() {
               />
             ) : (
               <h1 className="text-3xl font-bold tracking-tight">
-                {project.title}
+                {posting.title}
               </h1>
             )}
             <Badge
               variant={
-                project.status === "open"
-                  ? isExpired(project.expires_at) ? "destructive" : "default"
-                  : project.status === "filled"
+                posting.status === "open"
+                  ? isExpired(posting.expires_at)
+                    ? "destructive"
+                    : "default"
+                  : posting.status === "filled"
                     ? "secondary"
                     : "outline"
               }
             >
-              {isExpired(project.expires_at) ? "Expired" : project.status}
+              {isExpired(posting.expires_at) ? "Expired" : posting.status}
             </Badge>
-            {project.expires_at && (
-              <span className={`text-xs ${isExpired(project.expires_at) ? "text-destructive" : "text-muted-foreground"}`}>
-                {formatExpiry(project.expires_at)}
+            {posting.expires_at && (
+              <span
+                className={`text-xs ${isExpired(posting.expires_at) ? "text-destructive" : "text-muted-foreground"}`}
+              >
+                {formatExpiry(posting.expires_at)}
               </span>
             )}
             {/* Show compatibility score badge for non-owners */}
@@ -823,7 +831,7 @@ export default function PostingDetailPage() {
             )}
           </div>
           <p className="text-muted-foreground">
-            Created by {creatorName} • {formatDate(project.created_at)}
+            Created by {creatorName} • {formatDate(posting.created_at)}
           </p>
         </div>
         {isOwner ? (
@@ -849,7 +857,7 @@ export default function PostingDetailPage() {
               </>
             ) : (
               <>
-                {isExpired(project.expires_at) && (
+                {isExpired(posting.expires_at) && (
                   <Button onClick={handleReactivate} disabled={isReactivating}>
                     {isReactivating ? (
                       <Loader2 className="h-4 w-4 animate-spin" />
@@ -909,7 +917,7 @@ export default function PostingDetailPage() {
                   </Button>
                 )}
               </div>
-            ) : project.status === "open" ? (
+            ) : posting.status === "open" ? (
               showApplyForm ? (
                 <div className="flex flex-col gap-2 w-full max-w-md">
                   <textarea
@@ -948,7 +956,7 @@ export default function PostingDetailPage() {
                 </Button>
               )
             ) : (
-              <Badge variant="secondary">Posting {project.status}</Badge>
+              <Badge variant="secondary">Posting {posting.status}</Badge>
             )}
           </div>
         )}
@@ -972,7 +980,7 @@ export default function PostingDetailPage() {
                 />
               ) : (
                 <p className="text-muted-foreground whitespace-pre-wrap">
-                  {project.description}
+                  {posting.description}
                 </p>
               )}
 
@@ -987,12 +995,12 @@ export default function PostingDetailPage() {
                   />
                 ) : (
                   <div className="flex flex-wrap gap-2">
-                    {project.skills?.map((skill) => (
+                    {posting.skills?.map((skill) => (
                       <Badge key={skill} variant="secondary">
                         {skill}
                       </Badge>
                     ))}
-                    {(!project.skills || project.skills.length === 0) && (
+                    {(!posting.skills || posting.skills.length === 0) && (
                       <span className="text-sm text-muted-foreground">
                         No specific skills listed
                       </span>
@@ -1076,9 +1084,8 @@ export default function PostingDetailPage() {
                         onChange={(e) => handleChange("mode", e.target.value)}
                         className="flex h-10 w-full rounded-md border border-input bg-background px-3 py-2 text-sm"
                       >
-                        <option value="remote">Remote</option>
-                        <option value="in_person">In Person</option>
-                        <option value="hybrid">Hybrid</option>
+                        <option value="open">Open</option>
+                        <option value="friend_ask">Friend Ask</option>
                       </select>
                     </div>
                     <div className="space-y-2">
@@ -1103,7 +1110,7 @@ export default function PostingDetailPage() {
                       Team Size
                     </p>
                     <p className="font-medium">
-                      {project.team_size_min}-{project.team_size_max} people
+                      {posting.team_size_min}-{posting.team_size_max} people
                     </p>
                   </div>
                   <div className="rounded-lg border border-border p-4">
@@ -1112,7 +1119,7 @@ export default function PostingDetailPage() {
                       Estimated Time
                     </p>
                     <p className="font-medium">
-                      {project.estimated_time || "Not specified"}
+                      {posting.estimated_time || "Not specified"}
                     </p>
                   </div>
                   <div className="rounded-lg border border-border p-4">
@@ -1121,7 +1128,7 @@ export default function PostingDetailPage() {
                       Category
                     </p>
                     <p className="font-medium capitalize">
-                      {project.category || "Not specified"}
+                      {posting.category || "Not specified"}
                     </p>
                   </div>
                 </div>

@@ -147,9 +147,7 @@ export function ProfileForm({
                 }
               >
                 <Search className="mr-2 h-4 w-4" />
-                {location.showAutocomplete
-                  ? "Manual entry"
-                  : "Search location"}
+                {location.showAutocomplete ? "Manual entry" : "Search location"}
               </Button>
             </div>
 
@@ -197,8 +195,8 @@ export function ProfileForm({
               placeholder="e.g., 10"
             />
             <p className="text-xs text-muted-foreground">
-              Your actual weekly availability for projects. This is used for
-              matching with project requirements.
+              Your actual weekly availability. This is used for matching with
+              posting requirements.
             </p>
           </div>
 
@@ -331,25 +329,25 @@ export function ProfileForm({
 
       <Card>
         <CardHeader>
-          <CardTitle>Project Preferences</CardTitle>
+          <CardTitle>Posting Preferences</CardTitle>
           <CardDescription>
-            Tell us what kinds of projects youre excited to join.
+            Tell us what kinds of postings youre excited to join.
           </CardDescription>
         </CardHeader>
         <CardContent className="space-y-5">
           <div className="rounded-md border border-blue-200 bg-blue-50/50 dark:bg-blue-950/20 dark:border-blue-900 p-3">
             <p className="text-xs text-blue-700 dark:text-blue-300">
-              <strong>Note:</strong> &quot;Preferred project commitment&quot; is
-              different from &quot;Availability&quot; above. Availability is your
-              actual weekly hours available, while preferred commitment is the
-              project commitment level you&apos;re looking for. Make sure both
-              are set for accurate matching.
+              <strong>Note:</strong> &quot;Preferred commitment&quot; is
+              different from &quot;Availability&quot; above. Availability is
+              your actual weekly hours available, while preferred commitment is
+              the commitment level you&apos;re looking for. Make sure both are
+              set for accurate matching.
             </p>
           </div>
           <div className="grid gap-4 md:grid-cols-2">
             <div className="space-y-2">
               <label htmlFor="projectTypes" className="text-sm font-medium">
-                Project types (comma-separated)
+                Posting types (comma-separated)
               </label>
               <Input
                 id="projectTypes"
@@ -386,7 +384,7 @@ export function ProfileForm({
           <div className="grid gap-4 md:grid-cols-2">
             <div className="space-y-2">
               <label htmlFor="commitmentLevel" className="text-sm font-medium">
-                Preferred project commitment
+                Preferred commitment
               </label>
               <select
                 id="commitmentLevel"
@@ -400,8 +398,8 @@ export function ProfileForm({
                 <option value="20">20+ hrs/week</option>
               </select>
               <p className="text-xs text-muted-foreground">
-                Your preferred project commitment level. This helps match you
-                with projects that fit your desired time investment.
+                Your preferred commitment level. This helps match you with
+                postings that fit your desired time investment.
               </p>
             </div>
             <div className="space-y-2">
@@ -431,8 +429,8 @@ export function ProfileForm({
         <CardHeader>
           <CardTitle>Match Filters</CardTitle>
           <CardDescription>
-            Set preferences for which projects rank higher in your matches.
-            Projects outside these preferences will still appear but with lower
+            Set preferences for which postings rank higher in your matches.
+            Postings outside these preferences will still appear but with lower
             scores.
           </CardDescription>
         </CardHeader>
@@ -468,7 +466,7 @@ export function ProfileForm({
                 placeholder="e.g., en, de"
               />
               <p className="text-xs text-muted-foreground">
-                Project owners must speak these languages
+                Posting creators must speak these languages
               </p>
             </div>
           </div>

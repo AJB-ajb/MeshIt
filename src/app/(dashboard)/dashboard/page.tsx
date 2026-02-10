@@ -44,17 +44,17 @@ async function RecentActivityList({
 }: {
   supabase: Awaited<ReturnType<typeof createClient>>;
   userId: string;
-  persona: string;
+  persona?: string;
 }) {
   const activities: Array<{
-    type: "match" | "application" | "message" | "project";
+    type: "match" | "application" | "message" | "posting";
     title: string;
     description: string;
     time: string;
     href: string;
   }> = [];
 
-  if (persona === "project_owner") {
+  {
     // Get user's postings IDs
     const { data: userPostings } = await supabase
       .from("postings")
@@ -139,8 +139,10 @@ async function RecentActivityList({
         });
       }
     }
-  } else {
-    // Developer: Get recent applications
+  }
+
+  {
+    // Get recent applications by this user
     const { data: recentApplications } = await supabase
       .from("applications")
       .select(
@@ -299,7 +301,7 @@ async function RecentActivityList({
             {activity.type === "message" && (
               <MessageSquare className="h-4 w-4 text-primary" />
             )}
-            {activity.type === "project" && (
+            {activity.type === "posting" && (
               <TrendingUp className="h-4 w-4 text-primary" />
             )}
           </div>
@@ -589,23 +591,25 @@ async function fetchOwnerPostingMetrics(
           .in("posting_id", postingIds)
       : { data: null };
 
-  return userPostings.map((posting: { id: string; title: string; status: string }) => {
-    const postingMatches =
-      matchesData?.filter((m) => m.posting_id === posting.id) || [];
-    const applicants = postingMatches.filter(
-      (m) => m.status === "pending",
-    ).length;
-    const totalMatches = postingMatches.length;
+  return userPostings.map(
+    (posting: { id: string; title: string; status: string }) => {
+      const postingMatches =
+        matchesData?.filter((m) => m.posting_id === posting.id) || [];
+      const applicants = postingMatches.filter(
+        (m) => m.status === "pending",
+      ).length;
+      const totalMatches = postingMatches.length;
 
-    return {
-      id: posting.id,
-      title: posting.title,
-      status: posting.status,
-      applicants,
-      matches: totalMatches,
-      views: 0,
-    };
-  });
+      return {
+        id: posting.id,
+        title: posting.title,
+        status: posting.status,
+        applicants,
+        matches: totalMatches,
+        views: 0,
+      };
+    },
+  );
 }
 
 const defaultStats: StatItem[] = [
@@ -644,24 +648,16 @@ export default async function DashboardPage() {
   const {
     data: { user },
   } = await supabase.auth.getUser();
-  const persona = (user?.user_metadata?.persona as string) ?? "developer";
-
   let stats: StatItem[] = defaultStats;
   let recommendedPostings: RecommendedPosting[] = [];
   let ownerPostingMetrics: PostingMetric[] = [];
 
   if (user) {
-    if (persona === "project_owner") {
-      [stats, ownerPostingMetrics] = await Promise.all([
-        fetchOwnerStats(supabase, user.id),
-        fetchOwnerPostingMetrics(supabase, user.id),
-      ]);
-    } else {
-      [stats, recommendedPostings] = await Promise.all([
-        fetchDeveloperStats(supabase, user.id),
-        fetchRecommendedPostings(supabase, user.id),
-      ]);
-    }
+    [stats, recommendedPostings, ownerPostingMetrics] = await Promise.all([
+      fetchOwnerStats(supabase, user.id),
+      fetchRecommendedPostings(supabase, user.id),
+      fetchOwnerPostingMetrics(supabase, user.id),
+    ]);
   }
 
   return (
@@ -674,22 +670,19 @@ export default async function DashboardPage() {
             Welcome back! Heres whats happening with your postings.
           </p>
         </div>
-        {persona === "project_owner" ? (
-          <Button asChild>
-            <Link href="/postings/new">
-              <Plus className="h-4 w-4" />
-              Add a posting
-            </Link>
-          </Button>
-        ) : null}
+        <Button asChild>
+          <Link href="/postings/new">
+            <Plus className="h-4 w-4" />
+            New Posting
+          </Link>
+        </Button>
       </div>
 
       <StatsOverview stats={stats} />
-      <QuickActions persona={persona} />
+      <QuickActions />
 
-      {persona === "developer" ? (
-        <RecommendedPostings postings={recommendedPostings} />
-      ) : (
+      <RecommendedPostings postings={recommendedPostings} />
+      {ownerPostingMetrics.length > 0 && (
         <PostingPerformance metrics={ownerPostingMetrics} />
       )}
 
@@ -703,11 +696,7 @@ export default async function DashboardPage() {
         </CardHeader>
         <CardContent>
           {user ? (
-            <RecentActivityList
-              supabase={supabase}
-              userId={user.id}
-              persona={persona}
-            />
+            <RecentActivityList supabase={supabase} userId={user.id} />
           ) : (
             <p className="text-sm text-muted-foreground">
               Sign in to see your recent activity

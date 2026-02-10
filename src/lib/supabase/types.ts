@@ -122,7 +122,7 @@ export interface ProfileUpdate {
 }
 
 // ============================================
-// POSTING TYPES (formerly Project)
+// POSTING TYPES
 // ============================================
 
 export interface Posting {
@@ -155,9 +155,6 @@ export interface Posting {
   expires_at: string;
 }
 
-/** @deprecated Use Posting */
-export type Project = Posting;
-
 export interface PostingInsert {
   id?: string;
   creator_id: string;
@@ -188,9 +185,6 @@ export interface PostingInsert {
   expires_at: string;
 }
 
-/** @deprecated Use PostingInsert */
-export type ProjectInsert = PostingInsert;
-
 export interface PostingUpdate {
   id?: string;
   creator_id?: string;
@@ -220,9 +214,6 @@ export interface PostingUpdate {
   updated_at?: string;
   expires_at?: string;
 }
-
-/** @deprecated Use PostingUpdate */
-export type ProjectUpdate = PostingUpdate;
 
 // ============================================
 // MATCH TYPES
@@ -327,9 +318,6 @@ export interface FriendshipInsert {
 export interface MatchWithPosting extends Match {
   posting: Posting;
 }
-
-/** @deprecated Use MatchWithPosting */
-export type MatchWithProject = MatchWithPosting;
 
 export interface MatchWithProfile extends Match {
   profile: Profile;

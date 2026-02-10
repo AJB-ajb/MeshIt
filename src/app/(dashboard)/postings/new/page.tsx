@@ -46,7 +46,7 @@ const defaultFormState: PostingFormState = {
   teamSizeMin: "2",
   teamSizeMax: "5",
   category: "personal",
-  mode: "remote",
+  mode: "open",
 };
 
 const parseList = (value: string) =>
@@ -301,8 +301,8 @@ export default function NewPostingPage() {
             </CardTitle>
             <CardDescription>
               Paste your posting description from Slack, Discord, a GitHub
-              README, or use the mic to describe it. Our AI will automatically extract posting
-              details.
+              README, or use the mic to describe it. Our AI will automatically
+              extract posting details.
             </CardDescription>
           </CardHeader>
           <CardContent className="space-y-4">
@@ -426,7 +426,10 @@ Example: Building a Minecraft-style collaborative IDE, need 2-3 people with WebG
                     type="button"
                     onAudioRecorded={transcribeAudio}
                     onTranscriptionChange={(text) =>
-                      handleChange("description", form.description ? form.description + " " + text : text)
+                      handleChange(
+                        "description",
+                        form.description ? form.description + " " + text : text,
+                      )
                     }
                   />
                 </div>
@@ -542,9 +545,8 @@ Example: Building a Minecraft-style collaborative IDE, need 2-3 people with WebG
                     onChange={(e) => handleChange("mode", e.target.value)}
                     className="flex h-10 w-full rounded-md border border-input bg-background px-3 py-2 text-sm ring-offset-background focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring focus-visible:ring-offset-2"
                   >
-                    <option value="remote">Remote</option>
-                    <option value="in_person">In Person</option>
-                    <option value="hybrid">Hybrid</option>
+                    <option value="open">Open</option>
+                    <option value="friend_ask">Friend Ask</option>
                   </select>
                 </div>
               </div>
