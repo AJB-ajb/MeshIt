@@ -18,7 +18,7 @@ const nextConfig: NextConfig = {
 // To enable: set ENABLE_PWA=true environment variable
 const createConfig = () => {
   const isPwaEnabled = process.env.ENABLE_PWA === "true";
-  
+
   if (!isPwaEnabled || process.env.NODE_ENV !== "production") {
     return nextConfig;
   }
