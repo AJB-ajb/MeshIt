@@ -30,7 +30,6 @@ export default function ProfilePage() {
     handleChange,
     handleSubmit,
     handleLinkProvider,
-    fetchProfile,
     sourceText,
     canUndo,
     isApplyingUpdate,
@@ -49,13 +48,12 @@ export default function ProfilePage() {
 
   const location = useLocation(setForm, () => {});
 
+  // Fetch GitHub sync status once we know the user has a GitHub provider
   useEffect(() => {
-    fetchProfile().then(({ hasGithubProvider }) => {
-      if (hasGithubProvider) {
-        fetchGithubSyncStatus();
-      }
-    });
-  }, [fetchProfile, fetchGithubSyncStatus]);
+    if (isGithubProvider) {
+      fetchGithubSyncStatus();
+    }
+  }, [isGithubProvider, fetchGithubSyncStatus]);
 
   if (isLoading) {
     return (

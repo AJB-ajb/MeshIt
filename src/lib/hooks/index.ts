@@ -5,3 +5,4 @@ export { useSettings } from "./use-settings";
 export { usePostings } from "./use-postings";
 export { useSearch } from "./use-search";
 export { usePostingDetail } from "./use-posting-detail";
+export { useProfile } from "./use-profile";

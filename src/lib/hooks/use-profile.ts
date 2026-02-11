@@ -1,6 +1,7 @@
 "use client";
 
-import { useState, useCallback } from "react";
+import { useState, useCallback, useEffect, useRef } from "react";
+import useSWR from "swr";
 import { useRouter } from "next/navigation";
 import { createClient } from "@/lib/supabase/client";
 import {
@@ -11,28 +12,161 @@ import {
   mapExtractedToFormState,
 } from "@/lib/types/profile";
 
+// ---------------------------------------------------------------------------
+// Types
+// ---------------------------------------------------------------------------
+
+type ProfileData = {
+  form: ProfileFormState;
+  userEmail: string | null;
+  connectedProviders: {
+    github: boolean;
+    google: boolean;
+    linkedin: boolean;
+  };
+  isGithubProvider: boolean;
+  sourceText: string | null;
+  canUndo: boolean;
+};
+
+// ---------------------------------------------------------------------------
+// Fetcher
+// ---------------------------------------------------------------------------
+
+async function fetchProfile(): Promise<ProfileData> {
+  const supabase = createClient();
+
+  const {
+    data: { user },
+  } = await supabase.auth.getUser();
+
+  if (!user) {
+    throw new Error("Not authenticated");
+  }
+
+  const identities = user.identities || [];
+  const connectedProviders = {
+    github: identities.some(
+      (id: { provider: string }) => id.provider === "github",
+    ),
+    google: identities.some(
+      (id: { provider: string }) => id.provider === "google",
+    ),
+    linkedin: identities.some(
+      (id: { provider: string }) => id.provider === "linkedin_oidc",
+    ),
+  };
+
+  const appProvider = user.app_metadata?.provider;
+  const appProviders = user.app_metadata?.providers || [];
+  const hasGithubIdentity = identities.some(
+    (identity: { provider: string }) => identity.provider === "github",
+  );
+  const isGithubProvider =
+    appProvider === "github" ||
+    appProviders.includes("github") ||
+    hasGithubIdentity;
+
+  const { data } = await supabase
+    .from("profiles")
+    .select("*")
+    .eq("user_id", user.id)
+    .single();
+
+  let form = defaultFormState;
+  let sourceText: string | null = null;
+  let canUndo = false;
+
+  if (data) {
+    sourceText = data.source_text ?? null;
+    canUndo = !!data.previous_source_text;
+    const preferences = data.project_preferences ?? {};
+    const hardFilters = data.hard_filters ?? {};
+    form = {
+      fullName: data.full_name ?? "",
+      headline: data.headline ?? "",
+      bio: data.bio ?? "",
+      location: data.location ?? "",
+      locationLat: data.location_lat?.toString() ?? "",
+      locationLng: data.location_lng?.toString() ?? "",
+      experienceLevel: data.experience_level ?? "intermediate",
+      collaborationStyle: data.collaboration_style ?? "async",
+      remotePreference: data.remote_preference?.toString() ?? "50",
+      availabilityHours: data.availability_hours?.toString() ?? "",
+      skills: Array.isArray(data.skills) ? data.skills.join(", ") : "",
+      interests: Array.isArray(data.interests) ? data.interests.join(", ") : "",
+      languages: Array.isArray(data.languages) ? data.languages.join(", ") : "",
+      projectTypes: Array.isArray(preferences.project_types)
+        ? preferences.project_types.join(", ")
+        : "",
+      preferredRoles: Array.isArray(preferences.preferred_roles)
+        ? preferences.preferred_roles.join(", ")
+        : "",
+      preferredStack: Array.isArray(preferences.preferred_stack)
+        ? preferences.preferred_stack.join(", ")
+        : "",
+      commitmentLevel: preferences.commitment_level ?? "10",
+      timelinePreference: preferences.timeline_preference ?? "1_month",
+      portfolioUrl: data.portfolio_url ?? "",
+      githubUrl: data.github_url ?? "",
+      filterMaxDistance: hardFilters.max_distance_km?.toString() ?? "",
+      filterMinHours: hardFilters.min_hours?.toString() ?? "",
+      filterMaxHours: hardFilters.max_hours?.toString() ?? "",
+      filterLanguages: Array.isArray(hardFilters.languages)
+        ? hardFilters.languages.join(", ")
+        : "",
+    };
+  }
+
+  return {
+    form,
+    userEmail: user.email ?? null,
+    connectedProviders,
+    isGithubProvider,
+    sourceText,
+    canUndo,
+  };
+}
+
+// ---------------------------------------------------------------------------
+// Hook
+// ---------------------------------------------------------------------------
+
 export function useProfile() {
   const router = useRouter();
+  const {
+    data,
+    error: fetchError,
+    isLoading,
+    mutate,
+  } = useSWR("profile", fetchProfile, {
+    onError: () => {
+      router.replace("/login");
+    },
+  });
+
+  // Local UI state
   const [form, setForm] = useState<ProfileFormState>(defaultFormState);
-  const [isLoading, setIsLoading] = useState(true);
   const [isSaving, setIsSaving] = useState(false);
   const [error, setError] = useState<string | null>(null);
   const [success, setSuccess] = useState(false);
   const [isEditing, setIsEditing] = useState(false);
-  const [userEmail, setUserEmail] = useState<string | null>(null);
-  const [connectedProviders, setConnectedProviders] = useState<{
-    github: boolean;
-    google: boolean;
-    linkedin: boolean;
-  }>({
-    github: false,
-    google: false,
-    linkedin: false,
-  });
-  const [isGithubProvider, setIsGithubProvider] = useState(false);
-  const [sourceText, setSourceText] = useState<string | null>(null);
-  const [canUndo, setCanUndo] = useState(false);
   const [isApplyingUpdate, setIsApplyingUpdate] = useState(false);
+
+  // Sync SWR data into local form state when data arrives or revalidates,
+  // but only when the user is NOT actively editing.
+  const isEditingRef = useRef(isEditing);
+  useEffect(() => {
+    isEditingRef.current = isEditing;
+  }, [isEditing]);
+
+  useEffect(() => {
+    if (data?.form && !isEditingRef.current) {
+      queueMicrotask(() => {
+        setForm(data.form);
+      });
+    }
+  }, [data]);
 
   const handleChange = useCallback(
     (field: keyof ProfileFormState, value: string) => {
@@ -41,106 +175,6 @@ export function useProfile() {
     },
     [],
   );
-
-  const fetchProfile = useCallback(async () => {
-    const supabase = createClient();
-
-    try {
-      const {
-        data: { user },
-      } = await supabase.auth.getUser();
-
-      if (!user) {
-        router.replace("/login");
-        return { hasGithubProvider: false };
-      }
-
-      setUserEmail(user.email ?? null);
-
-      const identities = user.identities || [];
-      setConnectedProviders({
-        github: identities.some(
-          (id: { provider: string }) => id.provider === "github",
-        ),
-        google: identities.some(
-          (id: { provider: string }) => id.provider === "google",
-        ),
-        linkedin: identities.some(
-          (id: { provider: string }) => id.provider === "linkedin_oidc",
-        ),
-      });
-
-      const appProvider = user.app_metadata?.provider;
-      const appProviders = user.app_metadata?.providers || [];
-      const hasGithubIdentity = identities.some(
-        (identity: { provider: string }) => identity.provider === "github",
-      );
-      const hasGithubProvider =
-        appProvider === "github" ||
-        appProviders.includes("github") ||
-        hasGithubIdentity;
-
-      setIsGithubProvider(hasGithubProvider);
-
-      const { data } = await supabase
-        .from("profiles")
-        .select("*")
-        .eq("user_id", user.id)
-        .single();
-
-      if (data) {
-        setSourceText(data.source_text ?? null);
-        setCanUndo(!!data.previous_source_text);
-        const preferences = data.project_preferences ?? {};
-        const hardFilters = data.hard_filters ?? {};
-        setForm({
-          fullName: data.full_name ?? "",
-          headline: data.headline ?? "",
-          bio: data.bio ?? "",
-          location: data.location ?? "",
-          locationLat: data.location_lat?.toString() ?? "",
-          locationLng: data.location_lng?.toString() ?? "",
-          experienceLevel: data.experience_level ?? "intermediate",
-          collaborationStyle: data.collaboration_style ?? "async",
-          remotePreference: data.remote_preference?.toString() ?? "50",
-          availabilityHours: data.availability_hours?.toString() ?? "",
-          skills: Array.isArray(data.skills) ? data.skills.join(", ") : "",
-          interests: Array.isArray(data.interests)
-            ? data.interests.join(", ")
-            : "",
-          languages: Array.isArray(data.languages)
-            ? data.languages.join(", ")
-            : "",
-          projectTypes: Array.isArray(preferences.project_types)
-            ? preferences.project_types.join(", ")
-            : "",
-          preferredRoles: Array.isArray(preferences.preferred_roles)
-            ? preferences.preferred_roles.join(", ")
-            : "",
-          preferredStack: Array.isArray(preferences.preferred_stack)
-            ? preferences.preferred_stack.join(", ")
-            : "",
-          commitmentLevel: preferences.commitment_level ?? "10",
-          timelinePreference: preferences.timeline_preference ?? "1_month",
-          portfolioUrl: data.portfolio_url ?? "",
-          githubUrl: data.github_url ?? "",
-          filterMaxDistance: hardFilters.max_distance_km?.toString() ?? "",
-          filterMinHours: hardFilters.min_hours?.toString() ?? "",
-          filterMaxHours: hardFilters.max_hours?.toString() ?? "",
-          filterLanguages: Array.isArray(hardFilters.languages)
-            ? hardFilters.languages.join(", ")
-            : "",
-        });
-      }
-
-      return { hasGithubProvider };
-    } catch {
-      router.replace("/login");
-      return { hasGithubProvider: false };
-    } finally {
-      setIsLoading(false);
-    }
-  }, [router]);
 
   const handleSubmit = useCallback(
     async (event: React.FormEvent<HTMLFormElement>) => {
@@ -192,8 +226,9 @@ export function useProfile() {
 
       setSuccess(true);
       setIsEditing(false);
+      await mutate();
     },
-    [form],
+    [form, mutate],
   );
 
   const applyFreeFormUpdate = useCallback(
@@ -231,7 +266,7 @@ export function useProfile() {
         {
           user_id: user.id,
           source_text: updatedText,
-          previous_source_text: sourceText,
+          previous_source_text: data?.sourceText ?? null,
           previous_profile_snapshot: currentSnapshot,
           // Apply extracted fields
           ...(extractedProfile.full_name != null && {
@@ -280,13 +315,12 @@ export function useProfile() {
         return;
       }
 
-      // Update local state
-      setSourceText(updatedText);
-      setCanUndo(true);
+      // Optimistically update local form state
       setForm((prev) => mapExtractedToFormState(extractedProfile, prev));
       setSuccess(true);
+      await mutate();
     },
-    [form, sourceText],
+    [form, data?.sourceText, mutate],
   );
 
   const undoLastUpdate = useCallback(async () => {
@@ -306,19 +340,19 @@ export function useProfile() {
     }
 
     // Fetch the previous snapshot from DB
-    const { data } = await supabase
+    const { data: profileData } = await supabase
       .from("profiles")
       .select("previous_source_text, previous_profile_snapshot")
       .eq("user_id", user.id)
       .single();
 
-    if (!data?.previous_source_text) {
+    if (!profileData?.previous_source_text) {
       setIsApplyingUpdate(false);
       setError("Nothing to undo.");
       return;
     }
 
-    const snapshot = (data.previous_profile_snapshot ?? {}) as Record<
+    const snapshot = (profileData.previous_profile_snapshot ?? {}) as Record<
       string,
       unknown
     >;
@@ -327,7 +361,7 @@ export function useProfile() {
     const { error: upsertError } = await supabase.from("profiles").upsert(
       {
         user_id: user.id,
-        source_text: data.previous_source_text,
+        source_text: profileData.previous_source_text,
         previous_source_text: null,
         previous_profile_snapshot: null,
         ...(snapshot.full_name != null && { full_name: snapshot.full_name }),
@@ -355,9 +389,7 @@ export function useProfile() {
       return;
     }
 
-    // Update local state
-    setSourceText(data.previous_source_text);
-    setCanUndo(false);
+    // Optimistically update local form state from snapshot
     if (snapshot) {
       setForm((prev) => ({
         ...prev,
@@ -379,7 +411,8 @@ export function useProfile() {
       }));
     }
     setSuccess(true);
-  }, []);
+    await mutate();
+  }, [mutate]);
 
   const handleLinkProvider = useCallback(
     async (provider: "github" | "google" | "linkedin_oidc") => {
@@ -403,22 +436,26 @@ export function useProfile() {
     setForm,
     isLoading,
     isSaving,
-    error,
+    error: error ?? (fetchError ? "Failed to load profile." : null),
     setError,
     success,
     isEditing,
     setIsEditing,
-    userEmail,
-    connectedProviders,
-    isGithubProvider,
+    userEmail: data?.userEmail ?? null,
+    connectedProviders: data?.connectedProviders ?? {
+      github: false,
+      google: false,
+      linkedin: false,
+    },
+    isGithubProvider: data?.isGithubProvider ?? false,
     handleChange,
     handleSubmit,
     handleLinkProvider,
-    fetchProfile,
-    sourceText,
-    canUndo,
+    sourceText: data?.sourceText ?? null,
+    canUndo: data?.canUndo ?? false,
     isApplyingUpdate,
     applyFreeFormUpdate,
     undoLastUpdate,
+    mutate,
   };
 }
