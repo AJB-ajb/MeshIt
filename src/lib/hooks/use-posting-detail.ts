@@ -142,10 +142,7 @@ async function fetchPostingDetail(key: string): Promise<PostingDetailData> {
       supabase.from("profiles").select("*").eq("user_id", user.id).single(),
     ]);
 
-    if (
-      applicationResult.data &&
-      (!applicationResult.error || applicationResult.error.code === "PGRST116")
-    ) {
+    if (applicationResult.data && !applicationResult.error) {
       myApplication = applicationResult.data;
       hasApplied = true;
     }

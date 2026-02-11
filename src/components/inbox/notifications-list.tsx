@@ -13,6 +13,7 @@ import {
 import { Button } from "@/components/ui/button";
 import { Card, CardContent } from "@/components/ui/card";
 import { cn } from "@/lib/utils";
+import type { Notification } from "@/lib/supabase/realtime";
 
 const formatDate = (dateString: string) => {
   const date = new Date(dateString);
@@ -41,17 +42,6 @@ const getNotificationIcon = (type: string) => {
     default:
       return <Bell className="h-4 w-4" />;
   }
-};
-
-type Notification = {
-  id: string;
-  type: string;
-  title: string;
-  body: string | null;
-  read: boolean;
-  created_at: string;
-  related_posting_id: string | null;
-  [key: string]: unknown;
 };
 
 type NotificationsListProps = {
