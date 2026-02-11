@@ -21,20 +21,22 @@ User profile information including skills, preferences, and matching-related dat
 | `full_name` | text | YES | null | User's display name |
 | `headline` | text | YES | null | Short professional headline |
 | `bio` | text | YES | null | Longer biography/description |
-| `location` | text | YES | null | **Legacy:** Human-readable location string for display |
+| `location` | text | YES | null | Human-readable location string for display |
 | `location_lat` | double precision | YES | null | Latitude coordinate for matching |
 | `location_lng` | double precision | YES | null | Longitude coordinate for matching |
-| `experience_level` | text | YES | null | One of: junior, intermediate, senior, lead |
-| `collaboration_style` | text | YES | null | **Legacy:** One of: async, sync, hybrid. Kept for UI display |
-| `remote_preference` | integer | YES | null | 0-100 percentage (0=on-site, 100=fully remote) |
-| `availability_hours` | integer | YES | null | Hours per week available |
-| `skills` | text[] | YES | null | Array of skill strings |
+| `skills` | text[] | YES | null | Array of skill strings (backward-compat keyword matching) |
+| `skill_levels` | jsonb | YES | null | Domain-to-level map, e.g. `{"frontend": 7, "design": 4}` (0-10 scale) |
 | `interests` | text[] | YES | null | Array of interest strings |
-| `languages` | text[] | YES | null | Spoken languages (ISO codes: en, de, es, etc.) |
+| `languages` | text[] | YES | '{}' | Spoken languages (ISO codes: en, de, es, etc.) |
+| `location_mode` | text | YES | 'either' | One of: remote, in_person, either |
+| `location_preference` | double precision | YES | null | 0.0 = in-person only, 0.5 = either, 1.0 = remote only |
+| `availability_slots` | jsonb | YES | null | Weekly availability grid, e.g. `{"mon": ["morning","evening"]}` |
+| `collaboration_style` | text | YES | null | **Optional:** One of: async, sync, hybrid |
 | `portfolio_url` | text | YES | null | Link to portfolio |
 | `github_url` | text | YES | null | Link to GitHub profile |
-| `project_preferences` | jsonb | NO | '{}' | See JSONB structure below |
-| `hard_filters` | jsonb | YES | null | See JSONB structure below |
+| `source_text` | text | YES | null | Free-form text description that profile fields are derived from |
+| `previous_source_text` | text | YES | null | Previous source_text for single-level undo |
+| `previous_profile_snapshot` | jsonb | YES | null | Previous profile field values (JSON) for single-level undo |
 | `embedding` | vector(1536) | YES | null | OpenAI embedding for semantic matching |
 | `is_test_data` | boolean | NO | true | Flag for test/mock data (true) vs production data (false) |
 | `created_at` | timestamptz | NO | now() | Record creation timestamp |
@@ -105,34 +107,28 @@ Matches between users and projects, including scores and status.
 
 ## JSONB Structures
 
-### project_preferences (profiles)
+### skill_levels (profiles)
 
-Stored in `profiles.project_preferences`:
-
-```typescript
-interface ProjectPreferences {
-  project_types?: string[];      // e.g., ["web", "mobile", "ai"]
-  preferred_roles?: string[];    // e.g., ["frontend", "backend", "fullstack"]
-  preferred_stack?: string[];    // e.g., ["react", "node", "python"]
-  commitment_level?: string;     // e.g., "5", "10", "15", "20"
-  timeline_preference?: string;  // e.g., "weekend", "1_week", "1_month", "ongoing"
-}
-```
-
-### hard_filters (profiles and projects)
-
-Stored in `profiles.hard_filters` and `projects.hard_filters`:
+Stored in `profiles.skill_levels`:
 
 ```typescript
-interface HardFilters {
-  max_distance_km?: number;      // Maximum distance in kilometers
-  min_hours?: number;            // Minimum commitment hours/week
-  max_hours?: number;            // Maximum commitment hours/week
-  languages?: string[];          // Required spoken languages (ISO codes)
-}
+// Map of domain name → skill level (0-10)
+// Reference: 1-2 Beginner, 3-4 Can follow tutorials, 5-6 Intermediate, 7-8 Advanced, 9-10 Expert
+type SkillLevels = Record<string, number>;
+// Example: { "frontend": 7, "python": 5, "design": 3 }
 ```
 
-**Behavior:** Hard filters are integrated into match scoring. Matches violating filters receive penalized scores (approaching 0) but still appear in results, ranked lower.
+### availability_slots (profiles)
+
+Stored in `profiles.availability_slots`:
+
+```typescript
+// Map of day → array of time-of-day slots
+// Days: mon, tue, wed, thu, fri, sat, sun
+// Slots: morning, afternoon, evening
+type AvailabilitySlots = Record<string, string[]>;
+// Example: { "mon": ["morning", "evening"], "sat": ["afternoon"] }
+```
 
 ### score_breakdown (matches)
 
@@ -174,7 +170,19 @@ Fields kept for backward compatibility but superseded by newer fields:
 | Table | Field | Superseded By | Reason Kept |
 |-------|-------|---------------|-------------|
 | profiles | `location` (text) | `location_lat`, `location_lng` | Human-readable display in UI |
-| profiles | `collaboration_style` | `remote_preference` | UI display, different granularity |
+| profiles | `skills` (text[]) | `skill_levels` (jsonb) | Keyword matching and backward compat |
+| profiles | `location_preference` (double) | `location_mode` (text) | Continuous scale kept for scoring |
+| profiles | `collaboration_style` | — | Optional, demoted from required |
+
+### Removed Columns (dropped in redesign migration)
+
+| Table | Field | Replaced By | Migration |
+|-------|-------|-------------|-----------|
+| profiles | `experience_level` | `skill_levels` per-domain | `20260207000000_redesign_postings_schema.sql` |
+| profiles | `remote_preference` | `location_mode` + `location_preference` | `20260207000000_redesign_postings_schema.sql` |
+| profiles | `availability_hours` | `availability_slots` | `20260207000000_redesign_postings_schema.sql` |
+| profiles | `project_preferences` | — (removed) | `20260207000000_redesign_postings_schema.sql` |
+| profiles | `hard_filters` | — (removed) | `20260207000000_redesign_postings_schema.sql` |
 
 ---
 

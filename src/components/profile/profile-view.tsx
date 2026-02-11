@@ -3,11 +3,33 @@
 import { Badge } from "@/components/ui/badge";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import type { ProfileFormState } from "@/lib/types/profile";
-import { parseList } from "@/lib/types/profile";
+import {
+  parseList,
+  DAYS,
+  DAY_LABELS,
+  TIME_SLOTS,
+  TIME_SLOT_LABELS,
+} from "@/lib/types/profile";
+
+const LOCATION_MODE_DISPLAY: Record<string, string> = {
+  remote: "Remote",
+  in_person: "In-person",
+  either: "Either",
+};
+
+function skillLevelLabel(level: number): string {
+  if (level <= 2) return "Beginner";
+  if (level <= 4) return "Can follow tutorials";
+  if (level <= 6) return "Intermediate";
+  if (level <= 8) return "Advanced";
+  return "Expert";
+}
 
 export function ProfileView({ form }: { form: ProfileFormState }) {
   const skillsList = parseList(form.skills);
   const interestsList = parseList(form.interests);
+
+  const hasAvailability = Object.keys(form.availabilitySlots).length > 0;
 
   return (
     <div data-testid="profile-view" className="space-y-6">
@@ -45,24 +67,6 @@ export function ProfileView({ form }: { form: ProfileFormState }) {
               </p>
             </div>
             <div>
-              <p className="text-sm text-muted-foreground">Availability</p>
-              <p className="font-medium">
-                {form.availabilityHours
-                  ? `${form.availabilityHours} hrs/week`
-                  : "Not provided"}
-              </p>
-              <p className="text-xs text-muted-foreground mt-1">
-                Your actual weekly availability
-              </p>
-            </div>
-          </div>
-
-          <div className="grid gap-4 md:grid-cols-2">
-            <div>
-              <p className="text-sm text-muted-foreground">Remote preference</p>
-              <p className="font-medium">{form.remotePreference}% remote</p>
-            </div>
-            <div>
               <p className="text-sm text-muted-foreground">Spoken languages</p>
               <p className="font-medium">{form.languages || "Not provided"}</p>
             </div>
@@ -70,8 +74,10 @@ export function ProfileView({ form }: { form: ProfileFormState }) {
 
           <div className="grid gap-4 md:grid-cols-2">
             <div>
-              <p className="text-sm text-muted-foreground">Experience level</p>
-              <p className="font-medium capitalize">{form.experienceLevel}</p>
+              <p className="text-sm text-muted-foreground">Location mode</p>
+              <p className="font-medium">
+                {LOCATION_MODE_DISPLAY[form.locationMode] ?? "Either"}
+              </p>
             </div>
             <div>
               <p className="text-sm text-muted-foreground">
@@ -86,6 +92,33 @@ export function ProfileView({ form }: { form: ProfileFormState }) {
               </p>
             </div>
           </div>
+
+          {/* Skill levels */}
+          {form.skillLevels.length > 0 && (
+            <div>
+              <p className="mb-2 text-sm text-muted-foreground">
+                Skill Levels
+              </p>
+              <div className="space-y-2">
+                {form.skillLevels.map((skill, i) => (
+                  <div key={i} className="flex items-center gap-3">
+                    <span className="w-32 truncate text-sm font-medium">
+                      {skill.name || "Unnamed"}
+                    </span>
+                    <div className="flex-1 h-2 rounded-full bg-muted overflow-hidden">
+                      <div
+                        className="h-full rounded-full bg-primary"
+                        style={{ width: `${(skill.level / 10) * 100}%` }}
+                      />
+                    </div>
+                    <span className="text-xs text-muted-foreground w-24 text-right">
+                      {skill.level}/10 ({skillLevelLabel(skill.level)})
+                    </span>
+                  </div>
+                ))}
+              </div>
+            </div>
+          )}
 
           {skillsList.length > 0 && (
             <div>
@@ -148,63 +181,58 @@ export function ProfileView({ form }: { form: ProfileFormState }) {
         </CardContent>
       </Card>
 
-      <Card>
-        <CardHeader>
-          <CardTitle>Posting Preferences</CardTitle>
-        </CardHeader>
-        <CardContent className="space-y-4">
-          <div className="grid gap-4 md:grid-cols-2">
-            <div>
-              <p className="text-sm text-muted-foreground">Posting types</p>
-              <p className="font-medium">
-                {form.projectTypes || "Not provided"}
-              </p>
+      {/* Availability */}
+      {hasAvailability && (
+        <Card>
+          <CardHeader>
+            <CardTitle>Availability</CardTitle>
+          </CardHeader>
+          <CardContent>
+            <div className="overflow-x-auto">
+              <table className="w-full border-collapse text-sm">
+                <thead>
+                  <tr>
+                    <th className="p-2 text-left font-medium text-muted-foreground" />
+                    {TIME_SLOTS.map((slot) => (
+                      <th
+                        key={slot}
+                        className="p-2 text-center font-medium text-muted-foreground"
+                      >
+                        {TIME_SLOT_LABELS[slot]}
+                      </th>
+                    ))}
+                  </tr>
+                </thead>
+                <tbody>
+                  {DAYS.map((day) => (
+                    <tr key={day}>
+                      <td className="p-2 font-medium">{DAY_LABELS[day]}</td>
+                      {TIME_SLOTS.map((slot) => {
+                        const active = (
+                          form.availabilitySlots[day] ?? []
+                        ).includes(slot);
+                        return (
+                          <td key={slot} className="p-1 text-center">
+                            <div
+                              className={`h-6 w-full rounded-md ${
+                                active
+                                  ? "bg-primary/20 border border-primary"
+                                  : "bg-muted border border-transparent"
+                              }`}
+                            />
+                          </td>
+                        );
+                      })}
+                    </tr>
+                  ))}
+                </tbody>
+              </table>
             </div>
-            <div>
-              <p className="text-sm text-muted-foreground">Preferred roles</p>
-              <p className="font-medium">
-                {form.preferredRoles || "Not provided"}
-              </p>
-            </div>
-          </div>
+          </CardContent>
+        </Card>
+      )}
 
-          <div>
-            <p className="text-sm text-muted-foreground">
-              Preferred tech stack
-            </p>
-            <p className="font-medium">
-              {form.preferredStack || "Not provided"}
-            </p>
-          </div>
-
-          <div className="grid gap-4 md:grid-cols-2">
-            <div>
-              <p className="text-sm text-muted-foreground">
-                Preferred commitment
-              </p>
-              <p className="font-medium">{form.commitmentLevel} hrs/week</p>
-              <p className="text-xs text-muted-foreground mt-1">
-                Your preferred commitment level
-              </p>
-            </div>
-            <div>
-              <p className="text-sm text-muted-foreground">
-                Timeline preference
-              </p>
-              <p className="font-medium">
-                {form.timelinePreference === "weekend"
-                  ? "This weekend"
-                  : form.timelinePreference === "1_week"
-                    ? "1 week"
-                    : form.timelinePreference === "1_month"
-                      ? "1 month"
-                      : "Ongoing"}
-              </p>
-            </div>
-          </div>
-        </CardContent>
-      </Card>
-
+      {/* Match Filters */}
       <Card>
         <CardHeader>
           <CardTitle>Match Filters</CardTitle>
@@ -224,17 +252,6 @@ export function ProfileView({ form }: { form: ProfileFormState }) {
                 Required languages
               </p>
               <p className="font-medium">{form.filterLanguages || "Any"}</p>
-            </div>
-          </div>
-
-          <div className="grid gap-4 md:grid-cols-2">
-            <div>
-              <p className="text-sm text-muted-foreground">Hours range</p>
-              <p className="font-medium">
-                {form.filterMinHours || form.filterMaxHours
-                  ? `${form.filterMinHours || "0"} - ${form.filterMaxHours || "\u221E"} hrs/week`
-                  : "Any"}
-              </p>
             </div>
           </div>
         </CardContent>

@@ -108,6 +108,7 @@ export default function ProfilePage() {
         <>
           <ProfileForm
             form={form}
+            setForm={setForm}
             isSaving={isSaving}
             onSubmit={handleSubmit}
             onChange={handleChange}
