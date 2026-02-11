@@ -1,34 +1,83 @@
 /**
- * GitHub Profile Analysis using OpenAI
+ * GitHub Profile Analysis using Gemini Flash
  * Analyzes extracted GitHub data to infer skills, interests, and coding style
  */
 
-import OpenAI from "openai";
+import { SchemaType, type Schema } from "@google/generative-ai";
+import { generateStructuredJSON, isGeminiConfigured } from "@/lib/ai/gemini";
 import type { GitHubAnalysisInput, GitHubAnalysisOutput } from "./types";
 
-const OPENAI_API_KEY = process.env.OPENAI_API_KEY;
-
-// Initialize OpenAI client
-const openai = OPENAI_API_KEY ? new OpenAI({ apiKey: OPENAI_API_KEY }) : null;
+const analysisSchema: Schema = {
+  type: SchemaType.OBJECT,
+  properties: {
+    inferredSkills: {
+      type: SchemaType.ARRAY,
+      items: { type: SchemaType.STRING },
+      description:
+        "List of technical skills inferred from code, commits, and repos. Include frameworks, tools, and practices beyond just languages.",
+    },
+    inferredInterests: {
+      type: SchemaType.ARRAY,
+      items: { type: SchemaType.STRING },
+      description:
+        'List of domain interests and areas of focus (e.g., "Machine Learning", "DevOps", "Mobile Apps", "API Design")',
+    },
+    codingStyle: {
+      type: SchemaType.STRING,
+      description:
+        'Brief description of coding style observed (e.g., "Clean code advocate with focus on readability", "Move fast with experimental approaches", "Test-driven with comprehensive documentation")',
+    },
+    collaborationStyle: {
+      type: SchemaType.STRING,
+      format: "enum",
+      enum: ["async", "sync", "hybrid"],
+      description:
+        "Inferred collaboration preference based on commit patterns and communication style in commits",
+    },
+    experienceLevel: {
+      type: SchemaType.STRING,
+      format: "enum",
+      enum: ["junior", "intermediate", "senior", "lead"],
+      description:
+        "Estimated experience level based on code complexity, project types, and patterns",
+    },
+    experienceSignals: {
+      type: SchemaType.ARRAY,
+      items: { type: SchemaType.STRING },
+      description:
+        'Specific observations that indicate experience level (e.g., "Uses advanced TypeScript patterns", "Maintains popular open source project", "Consistent architectural decisions")',
+    },
+    suggestedBio: {
+      type: SchemaType.STRING,
+      description:
+        "A 2-3 sentence professional bio suggestion based on the profile analysis. Make it engaging and highlight key strengths.",
+    },
+  },
+  required: [
+    "inferredSkills",
+    "inferredInterests",
+    "codingStyle",
+    "collaborationStyle",
+    "experienceLevel",
+    "experienceSignals",
+    "suggestedBio",
+  ],
+};
 
 /**
- * Analyze GitHub profile data using OpenAI
+ * Analyze GitHub profile data using Gemini
  */
 export async function analyzeGitHubProfile(
   input: GitHubAnalysisInput,
 ): Promise<GitHubAnalysisOutput> {
-  if (!openai) {
-    throw new Error("OPENAI_API_KEY environment variable is not set");
+  if (!isGeminiConfigured()) {
+    throw new Error("GEMINI_API_KEY environment variable is not set");
   }
 
   const prompt = buildAnalysisPrompt(input);
 
-  const completion = await openai.chat.completions.create({
-    model: "gpt-4o-mini",
-    messages: [
-      {
-        role: "system",
-        content: `You are an expert developer profile analyst. Your job is to analyze GitHub activity and infer:
+  const result = await generateStructuredJSON<GitHubAnalysisOutput>({
+    systemPrompt: `You are an expert developer profile analyst. Your job is to analyze GitHub activity and infer:
 1. Technical skills beyond just programming languages
 2. Domain interests and areas of expertise
 3. Coding style and practices
@@ -36,83 +85,10 @@ export async function analyzeGitHubProfile(
 5. Experience level with supporting evidence
 
 Be specific and actionable. Focus on patterns that indicate real expertise.`,
-      },
-      {
-        role: "user",
-        content: prompt,
-      },
-    ],
-    functions: [
-      {
-        name: "analyze_github_profile",
-        description: "Analyze GitHub profile and return structured insights",
-        parameters: {
-          type: "object",
-          properties: {
-            inferredSkills: {
-              type: "array",
-              items: { type: "string" },
-              description:
-                "List of technical skills inferred from code, commits, and repos. Include frameworks, tools, and practices beyond just languages.",
-            },
-            inferredInterests: {
-              type: "array",
-              items: { type: "string" },
-              description:
-                'List of domain interests and areas of focus (e.g., "Machine Learning", "DevOps", "Mobile Apps", "API Design")',
-            },
-            codingStyle: {
-              type: "string",
-              description:
-                'Brief description of coding style observed (e.g., "Clean code advocate with focus on readability", "Move fast with experimental approaches", "Test-driven with comprehensive documentation")',
-            },
-            collaborationStyle: {
-              type: "string",
-              enum: ["async", "sync", "hybrid"],
-              description:
-                "Inferred collaboration preference based on commit patterns and communication style in commits",
-            },
-            experienceLevel: {
-              type: "string",
-              enum: ["junior", "intermediate", "senior", "lead"],
-              description:
-                "Estimated experience level based on code complexity, project types, and patterns",
-            },
-            experienceSignals: {
-              type: "array",
-              items: { type: "string" },
-              description:
-                'Specific observations that indicate experience level (e.g., "Uses advanced TypeScript patterns", "Maintains popular open source project", "Consistent architectural decisions")',
-            },
-            suggestedBio: {
-              type: "string",
-              description:
-                "A 2-3 sentence professional bio suggestion based on the profile analysis. Make it engaging and highlight key strengths.",
-            },
-          },
-          required: [
-            "inferredSkills",
-            "inferredInterests",
-            "codingStyle",
-            "collaborationStyle",
-            "experienceLevel",
-            "experienceSignals",
-            "suggestedBio",
-          ],
-        },
-      },
-    ],
-    function_call: { name: "analyze_github_profile" },
+    userPrompt: prompt,
+    schema: analysisSchema,
     temperature: 0.3,
   });
-
-  const functionCall = completion.choices[0]?.message?.function_call;
-
-  if (!functionCall || functionCall.name !== "analyze_github_profile") {
-    throw new Error("Failed to get structured analysis from OpenAI");
-  }
-
-  const result = JSON.parse(functionCall.arguments);
 
   return {
     inferredSkills: result.inferredSkills || [],

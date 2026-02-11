@@ -1,64 +1,61 @@
 import { NextResponse } from "next/server";
 import { createClient } from "@/lib/supabase/server";
-
-const OPENAI_API_KEY = process.env.OPENAI_API_KEY;
+import { SchemaType, type Schema } from "@google/generative-ai";
+import { generateStructuredJSON, isGeminiConfigured } from "@/lib/ai/gemini";
 
 /**
- * Posting extraction schema for structured output
+ * Posting extraction schema for Gemini structured output
  */
-const postingSchema = {
-  type: "object",
+const postingSchema: Schema = {
+  type: SchemaType.OBJECT,
   properties: {
     title: {
-      type: "string",
+      type: SchemaType.STRING,
       description: "A concise posting title (max 100 characters)",
     },
     description: {
-      type: "string",
+      type: SchemaType.STRING,
       description:
         "A clear description explaining what the posting is about and what's being built",
     },
     skills: {
-      type: "array",
-      items: { type: "string" },
+      type: SchemaType.ARRAY,
+      items: { type: SchemaType.STRING },
       description:
         "List of required technical skills, programming languages, frameworks, and tools needed",
     },
     category: {
-      type: "string",
+      type: SchemaType.STRING,
+      format: "enum",
       enum: ["study", "hackathon", "personal", "professional", "social"],
       description: "Category of the posting",
     },
     estimated_time: {
-      type: "string",
+      type: SchemaType.STRING,
       description:
         "Estimated time to complete (e.g., '2 weeks', '3 months', 'ongoing')",
     },
     team_size_min: {
-      type: "number",
-      minimum: 1,
+      type: SchemaType.NUMBER,
       description: "Minimum number of people needed for the team",
     },
     team_size_max: {
-      type: "number",
-      minimum: 1,
+      type: SchemaType.NUMBER,
       description: "Maximum number of people needed for the team",
     },
     skill_level_min: {
-      type: "number",
-      minimum: 1,
-      maximum: 5,
+      type: SchemaType.NUMBER,
       description: "Minimum skill level required (1=beginner, 5=expert)",
     },
     tags: {
-      type: "array",
-      items: { type: "string" },
+      type: SchemaType.ARRAY,
+      items: { type: SchemaType.STRING },
       description:
         "Tags or keywords describing the posting (e.g., 'hackathon', 'open-source', 'MVP')",
     },
     goals: {
-      type: "array",
-      items: { type: "string" },
+      type: SchemaType.ARRAY,
+      items: { type: SchemaType.STRING },
       description: "Key goals or milestones for the posting",
     },
   },
@@ -67,13 +64,13 @@ const postingSchema = {
 
 /**
  * POST /api/extract/posting
- * Extracts posting information from unstructured text using OpenAI
+ * Extracts posting information from unstructured text using Gemini
  */
 export async function POST(request: Request) {
   try {
-    if (!OPENAI_API_KEY) {
+    if (!isGeminiConfigured()) {
       return NextResponse.json(
-        { error: "OpenAI API key not configured" },
+        { error: "Gemini API key not configured" },
         { status: 503 },
       );
     }
@@ -101,19 +98,8 @@ export async function POST(request: Request) {
       );
     }
 
-    // Use OpenAI function calling for structured extraction
-    const response = await fetch("https://api.openai.com/v1/chat/completions", {
-      method: "POST",
-      headers: {
-        "Content-Type": "application/json",
-        Authorization: `Bearer ${OPENAI_API_KEY}`,
-      },
-      body: JSON.stringify({
-        model: "gpt-4o-mini",
-        messages: [
-          {
-            role: "system",
-            content: `You are an expert at extracting posting requirements from unstructured text.
+    const extractedPosting = await generateStructuredJSON({
+      systemPrompt: `You are an expert at extracting posting requirements from unstructured text.
 Extract as much relevant information as possible from the provided text, which could be:
 - A Slack/Discord message looking for collaborators
 - A project idea description
@@ -126,44 +112,10 @@ Categorize the posting as study, hackathon, personal, professional, or social ba
 Infer team size range from context if not explicitly stated.
 Create a clear, concise title if one isn't provided.
 Return only the extracted data, do not make up information that cannot be inferred.`,
-          },
-          {
-            role: "user",
-            content: `Extract posting information from this text:\n\n${text}`,
-          },
-        ],
-        functions: [
-          {
-            name: "extract_posting",
-            description: "Extract posting requirements from text",
-            parameters: postingSchema,
-          },
-        ],
-        function_call: { name: "extract_posting" },
-        temperature: 0.3,
-      }),
+      userPrompt: `Extract posting information from this text:\n\n${text}`,
+      schema: postingSchema,
+      temperature: 0.3,
     });
-
-    if (!response.ok) {
-      const errorData = await response.json().catch(() => ({}));
-      console.error("OpenAI API error:", errorData);
-      return NextResponse.json(
-        { error: "Failed to process text. Please try again." },
-        { status: 500 },
-      );
-    }
-
-    const data = await response.json();
-    const functionCall = data.choices?.[0]?.message?.function_call;
-
-    if (!functionCall || functionCall.name !== "extract_posting") {
-      return NextResponse.json(
-        { error: "Failed to extract posting information" },
-        { status: 500 },
-      );
-    }
-
-    const extractedPosting = JSON.parse(functionCall.arguments);
 
     return NextResponse.json({
       success: true,

@@ -1,68 +1,69 @@
 import { NextResponse } from "next/server";
 import { createClient } from "@/lib/supabase/server";
-
-const OPENAI_API_KEY = process.env.OPENAI_API_KEY;
+import { SchemaType, type Schema } from "@google/generative-ai";
+import { generateStructuredJSON, isGeminiConfigured } from "@/lib/ai/gemini";
 
 /**
  * Extraction schema matching the post-redesign DB columns.
+ * Note: skill_levels is represented as a JSON string because Gemini SDK
+ * doesn't support additionalProperties on ObjectSchema.
  */
-const profileSchemaV2 = {
-  type: "object",
+const profileSchemaV2: Schema = {
+  type: SchemaType.OBJECT,
   properties: {
     updated_text: {
-      type: "string",
+      type: SchemaType.STRING,
       description:
         "The full updated source text with the update instruction applied. Preserve all original information unless explicitly contradicted.",
     },
     full_name: {
-      type: "string",
+      type: SchemaType.STRING,
       description: "The person's full name",
     },
     headline: {
-      type: "string",
+      type: SchemaType.STRING,
       description:
         "A short professional headline (e.g., 'Full-stack Developer')",
     },
     bio: {
-      type: "string",
+      type: SchemaType.STRING,
       description: "A brief bio or summary about the person",
     },
     location: {
-      type: "string",
+      type: SchemaType.STRING,
       description: "Location or timezone if mentioned",
     },
     skills: {
-      type: "array",
-      items: { type: "string" },
+      type: SchemaType.ARRAY,
+      items: { type: SchemaType.STRING },
       description:
         "List of technical skills, programming languages, frameworks, and tools",
     },
     interests: {
-      type: "array",
-      items: { type: "string" },
+      type: SchemaType.ARRAY,
+      items: { type: SchemaType.STRING },
       description: "Areas of interest (e.g., AI, fintech, gaming)",
     },
     languages: {
-      type: "array",
-      items: { type: "string" },
+      type: SchemaType.ARRAY,
+      items: { type: SchemaType.STRING },
       description: "Spoken languages as ISO codes (e.g., en, de, es)",
     },
     portfolio_url: {
-      type: "string",
+      type: SchemaType.STRING,
       description: "Portfolio website URL if mentioned",
     },
     github_url: {
-      type: "string",
+      type: SchemaType.STRING,
       description: "GitHub profile URL if mentioned",
     },
     skill_levels: {
-      type: "object",
-      additionalProperties: { type: "number" },
+      type: SchemaType.STRING,
       description:
-        "Map of domain to skill level (0-10). Example: { programming: 7, design: 4 }",
+        'JSON-encoded map of domain to skill level (0-10). Example: {"programming": 7, "design": 4}',
     },
     location_preference: {
-      type: "number",
+      type: SchemaType.NUMBER,
       description:
         "Location preference: 0.0 = in-person only, 0.5 = either, 1.0 = remote only",
     },
@@ -77,9 +78,9 @@ const profileSchemaV2 = {
  */
 export async function POST(request: Request) {
   try {
-    if (!OPENAI_API_KEY) {
+    if (!isGeminiConfigured()) {
       return NextResponse.json(
-        { error: "OpenAI API key not configured" },
+        { error: "Gemini API key not configured" },
         { status: 503 },
       );
     }
@@ -118,65 +119,30 @@ export async function POST(request: Request) {
       );
     }
 
-    const response = await fetch("https://api.openai.com/v1/chat/completions", {
-      method: "POST",
-      headers: {
-        "Content-Type": "application/json",
-        Authorization: `Bearer ${OPENAI_API_KEY}`,
-      },
-      body: JSON.stringify({
-        model: "gpt-4o-mini",
-        messages: [
-          {
-            role: "system",
-            content: `You are an expert at updating developer profile descriptions and extracting structured data.
+    const result = await generateStructuredJSON<Record<string, unknown>>({
+      systemPrompt: `You are an expert at updating developer profile descriptions and extracting structured data.
 
 You will receive a current profile description and an update instruction. Your job:
 1. Apply the update instruction to the profile text. Preserve all original information unless explicitly contradicted by the update. Integrate changes naturally into the text.
 2. Extract structured profile fields from the UPDATED text.
 
-Return both the updated text and extracted fields via the function call.`,
-          },
-          {
-            role: "user",
-            content: `Current profile description:\n\n${sourceText.trim()}\n\nUpdate instruction: ${updateInstruction.trim()}`,
-          },
-        ],
-        functions: [
-          {
-            name: "update_and_extract_profile",
-            description:
-              "Apply an update to the profile text and extract structured fields",
-            parameters: profileSchemaV2,
-          },
-        ],
-        function_call: { name: "update_and_extract_profile" },
-        temperature: 0.3,
-      }),
+For the skill_levels field, output a JSON-encoded string mapping domain names to numeric skill levels (0-10).
+
+Return both the updated text and extracted fields.`,
+      userPrompt: `Current profile description:\n\n${sourceText.trim()}\n\nUpdate instruction: ${updateInstruction.trim()}`,
+      schema: profileSchemaV2,
+      temperature: 0.3,
     });
 
-    if (!response.ok) {
-      console.error(
-        "OpenAI API error:",
-        await response.json().catch(() => ({})),
-      );
-      return NextResponse.json(
-        { error: "Failed to process update. Please try again." },
-        { status: 500 },
-      );
+    // Parse skill_levels from JSON string back to object
+    if (typeof result.skill_levels === "string") {
+      try {
+        result.skill_levels = JSON.parse(result.skill_levels as string);
+      } catch {
+        // If parsing fails, leave as-is — downstream code can handle it
+      }
     }
 
-    const data = await response.json();
-    const functionCall = data.choices?.[0]?.message?.function_call;
-
-    if (!functionCall || functionCall.name !== "update_and_extract_profile") {
-      return NextResponse.json(
-        { error: "Failed to extract profile information" },
-        { status: 500 },
-      );
-    }
-
-    const result = JSON.parse(functionCall.arguments);
     const { updated_text, ...extractedProfile } = result;
 
     return NextResponse.json({

@@ -3,13 +3,7 @@
  * Uses Gemini Flash to generate 2-3 sentence explanations of why a match is good
  */
 
-const GOOGLE_AI_API_KEY = process.env.GOOGLE_AI_API_KEY;
-
-if (!GOOGLE_AI_API_KEY) {
-  console.warn(
-    "GOOGLE_AI_API_KEY not set. Match explanation generation will fail.",
-  );
-}
+import { getGeminiModel, isGeminiConfigured } from "@/lib/ai/gemini";
 
 export interface ProfileData {
   skills: string[];
@@ -36,8 +30,8 @@ export async function generateMatchExplanation(
   posting: PostingData,
   score: number,
 ): Promise<string> {
-  if (!GOOGLE_AI_API_KEY) {
-    throw new Error("GOOGLE_AI_API_KEY environment variable is not set");
+  if (!isGeminiConfigured()) {
+    throw new Error("GEMINI_API_KEY environment variable is not set");
   }
 
   const scorePercent = Math.round(score * 100);
@@ -69,55 +63,25 @@ Match Score: ${scorePercent}%
 
 Explanation:`;
 
-  try {
-    const response = await fetch(
-      `https://generativelanguage.googleapis.com/v1beta/models/gemini-2.0-flash-exp:generateContent?key=${GOOGLE_AI_API_KEY}`,
-      {
-        method: "POST",
-        headers: {
-          "Content-Type": "application/json",
-        },
-        body: JSON.stringify({
-          contents: [
-            {
-              parts: [
-                {
-                  text: prompt,
-                },
-              ],
-            },
-          ],
-          generationConfig: {
-            temperature: 0.7,
-            topK: 40,
-            topP: 0.95,
-            maxOutputTokens: 200,
-          },
-        }),
-      },
-    );
+  const model = getGeminiModel();
 
-    if (!response.ok) {
-      const error = await response.json().catch(() => ({}));
-      throw new Error(
-        `Gemini API error: ${response.status} ${response.statusText}. ${JSON.stringify(error)}`,
-      );
-    }
+  const result = await model.generateContent({
+    contents: [{ role: "user", parts: [{ text: prompt }] }],
+    generationConfig: {
+      temperature: 0.7,
+      topK: 40,
+      topP: 0.95,
+      maxOutputTokens: 200,
+    },
+  });
 
-    const data = await response.json();
-    const explanation = data.candidates?.[0]?.content?.parts?.[0]?.text?.trim();
+  const explanation = result.response.text().trim();
 
-    if (!explanation) {
-      throw new Error("Invalid explanation response from Gemini API");
-    }
-
-    return explanation;
-  } catch (error) {
-    if (error instanceof Error) {
-      throw error;
-    }
-    throw new Error(`Failed to generate match explanation: ${String(error)}`);
+  if (!explanation) {
+    throw new Error("Invalid explanation response from Gemini API");
   }
+
+  return explanation;
 }
 
 /**
