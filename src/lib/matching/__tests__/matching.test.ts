@@ -172,7 +172,7 @@ describe("matchProfileToPostings", () => {
     );
 
     await expect(matchProfileToPostings("user-1")).rejects.toThrow(
-      "Could not generate profile embedding",
+      "Your profile embedding is still being generated",
     );
   });
 
@@ -371,7 +371,7 @@ describe("matchPostingToProfiles", () => {
     );
 
     await expect(matchPostingToProfiles("post-1")).rejects.toThrow(
-      "Could not generate posting embedding",
+      "The posting embedding is still being generated",
     );
   });
 });

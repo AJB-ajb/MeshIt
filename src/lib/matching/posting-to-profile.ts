@@ -5,7 +5,6 @@
 
 import { createClient } from "@/lib/supabase/server";
 import type { Profile, ScoreBreakdown } from "@/lib/supabase/types";
-import { generatePostingEmbedding } from "@/lib/ai/embeddings";
 import { getTestDataValue } from "@/lib/environment";
 
 export interface PostingToProfileMatch {
@@ -41,24 +40,13 @@ export async function matchPostingToProfiles(
     throw new Error(`Posting not found: ${postingId}`);
   }
 
-  // If no embedding exists, try to generate one
-  let embedding = posting.embedding;
+  // If no embedding exists, matching cannot proceed — embeddings are generated
+  // asynchronously via the batch processor after posting save
+  const embedding = posting.embedding;
   if (!embedding || !Array.isArray(embedding)) {
-    try {
-      embedding = await generatePostingEmbedding(
-        posting.title,
-        posting.description,
-        posting.skills,
-      );
-
-      // Save the generated embedding
-      await supabase.from("postings").update({ embedding }).eq("id", postingId);
-    } catch (embeddingError) {
-      console.warn("Could not generate posting embedding:", embeddingError);
-      throw new Error(
-        "Could not generate posting embedding. Please ensure the posting has a title and description.",
-      );
-    }
+    throw new Error(
+      "The posting embedding is still being generated. Please try again in a moment.",
+    );
   }
 
   // Call the database function to find matching profiles

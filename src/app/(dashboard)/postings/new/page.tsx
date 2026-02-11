@@ -220,6 +220,12 @@ export default function NewPostingPage() {
       return;
     }
 
+    // Trigger embedding generation (fire-and-forget, non-blocking)
+    fetch("/api/embeddings/process", {
+      method: "POST",
+      headers: { "x-internal-call": "true" },
+    }).catch(() => {});
+
     // Redirect to the new posting's page
     router.push(`/postings/${posting.id}`);
   };
