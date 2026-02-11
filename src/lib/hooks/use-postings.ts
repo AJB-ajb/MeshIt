@@ -44,10 +44,13 @@ type PostingsResult = {
   postings: PostingWithScore[];
   userId: string | null;
   isLoadingScores: boolean;
+  interestedPostingIds: string[];
 };
 
 async function fetchPostings(key: string): Promise<PostingsResult> {
-  const tab = key.split("/")[1] as TabId;
+  const parts = key.split("/");
+  const tab = parts[1] as TabId;
+  const category = parts[2] || null;
   const supabase = createClient();
 
   const {
@@ -78,6 +81,11 @@ async function fetchPostings(key: string): Promise<PostingsResult> {
     }
   }
 
+  // Category filter at query level
+  if (category) {
+    query = query.eq("category", category);
+  }
+
   const { data, error } = await query;
 
   if (error) {
@@ -85,6 +93,18 @@ async function fetchPostings(key: string): Promise<PostingsResult> {
   }
 
   const postings = (data || []) as PostingWithScore[];
+
+  // Fetch user's existing interested posting IDs
+  let interestedPostingIds: string[] = [];
+  if (user && tab === "discover") {
+    const { data: interests } = await supabase
+      .from("matches")
+      .select("posting_id")
+      .eq("user_id", user.id)
+      .in("status", ["interested", "applied", "accepted"]);
+
+    interestedPostingIds = (interests || []).map((i) => i.posting_id);
+  }
 
   // Compute compatibility scores for discover tab
   if (tab === "discover" && user) {
@@ -132,23 +152,36 @@ async function fetchPostings(key: string): Promise<PostingsResult> {
         postings: scored,
         userId: user?.id ?? null,
         isLoadingScores: false,
+        interestedPostingIds,
       };
     }
   }
 
-  return { postings, userId: user?.id ?? null, isLoadingScores: false };
+  return {
+    postings,
+    userId: user?.id ?? null,
+    isLoadingScores: false,
+    interestedPostingIds,
+  };
 }
 
-export function usePostings(tab: TabId) {
-  const { data, error, isLoading } = useSWR(`postings/${tab}`, fetchPostings, {
+export function usePostings(tab: TabId, category?: string) {
+  const key =
+    category && category !== "all"
+      ? `postings/${tab}/${category}`
+      : `postings/${tab}`;
+
+  const { data, error, isLoading, mutate } = useSWR(key, fetchPostings, {
     keepPreviousData: true,
   });
 
   return {
     postings: data?.postings ?? [],
     userId: data?.userId ?? null,
+    interestedPostingIds: data?.interestedPostingIds ?? [],
     error,
     isLoading,
+    mutate,
   };
 }
 
