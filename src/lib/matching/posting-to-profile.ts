@@ -107,6 +107,7 @@ export async function matchPostingToProfiles(
         location_preference: row.location_preference ?? null,
         availability_slots: row.availability_slots || null,
         embedding: null, // Don't return embedding in response
+        notification_preferences: row.notification_preferences || null,
         is_test_data: row.is_test_data || false,
         created_at: row.created_at || "",
         updated_at: row.updated_at || "",

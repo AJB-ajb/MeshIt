@@ -16,6 +16,11 @@ import {
   showBrowserNotification,
 } from "@/lib/supabase/realtime";
 import { useInboxData } from "@/lib/hooks/use-inbox";
+import { useNotificationPreferences } from "@/lib/hooks/use-notification-preferences";
+import {
+  type NotificationType,
+  shouldNotify,
+} from "@/lib/notifications/preferences";
 
 import { NotificationsList } from "@/components/inbox/notifications-list";
 import {
@@ -37,6 +42,8 @@ function InboxPageContent() {
     isLoading,
     mutate: mutateInbox,
   } = useInboxData();
+
+  const { preferences: notifPrefs } = useNotificationPreferences();
 
   const [activeTab, setActiveTab] = useState<Tab>(
     conversationParam ? "messages" : "notifications",
@@ -62,7 +69,14 @@ function InboxPageContent() {
       currentUserId,
       (notification) => {
         mutateInbox();
-        if (!notification.read) {
+        if (
+          !notification.read &&
+          shouldNotify(
+            notifPrefs,
+            notification.type as NotificationType,
+            "browser",
+          )
+        ) {
           showBrowserNotification(
             notification.title,
             notification.body || "",
@@ -86,7 +100,7 @@ function InboxPageContent() {
       unsubscribeChannel(notificationChannel);
       unsubscribeChannel(conversationChannel);
     };
-  }, [currentUserId, mutateInbox, router]);
+  }, [currentUserId, mutateInbox, router, notifPrefs]);
 
   const handleMarkAsRead = async (notificationId: string) => {
     const supabase = createClient();
