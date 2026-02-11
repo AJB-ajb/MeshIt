@@ -4,3 +4,4 @@ export { useMatches } from "./use-matches";
 export { useSettings } from "./use-settings";
 export { usePostings } from "./use-postings";
 export { useSearch } from "./use-search";
+export { usePostingDetail } from "./use-posting-detail";
