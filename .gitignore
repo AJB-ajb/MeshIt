@@ -84,7 +84,9 @@ logs/
 .env*.local
 .claude/
 .prompts/*
+!.prompts/Prompts.md
 .handoffs/*
+!.handoffs/README.md
 .pnpm-store/
 
 # Supabase
