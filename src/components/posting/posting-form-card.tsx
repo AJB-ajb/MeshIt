@@ -103,19 +103,21 @@ export function PostingFormCard({
 
 Example: Building a Minecraft-style collaborative IDE, need 2-3 people with WebGL or game dev experience, hackathon this weekend."
               />
-              <SpeechInput
-                className="absolute bottom-2 right-2 h-10 w-10 p-0"
-                size="icon"
-                variant="ghost"
-                type="button"
-                onAudioRecorded={transcribeAudio}
-                onTranscriptionChange={(text) =>
-                  onChange(
-                    "description",
-                    form.description ? form.description + " " + text : text,
-                  )
-                }
-              />
+              <div className="absolute bottom-2 right-2">
+                <SpeechInput
+                  className="h-10 w-10 p-0"
+                  size="icon"
+                  variant="ghost"
+                  type="button"
+                  onAudioRecorded={transcribeAudio}
+                  onTranscriptionChange={(text) =>
+                    onChange(
+                      "description",
+                      form.description ? form.description + " " + text : text,
+                    )
+                  }
+                />
+              </div>
             </div>
             <p className="text-xs text-muted-foreground">
               Our AI will extract skills, team size, and timeline from your

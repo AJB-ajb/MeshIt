@@ -62,15 +62,17 @@ Commitment: ~10 hrs over the weekend
 
 DM if interested!`}
           />
-          <SpeechInput
-            className="absolute bottom-2 right-2 h-10 w-10 p-0"
-            size="icon"
-            variant="ghost"
-            onAudioRecorded={transcribeAudio}
-            onTranscriptionChange={(text) =>
-              onAiTextChange(aiText ? aiText + " " + text : text)
-            }
-          />
+          <div className="absolute bottom-2 right-2">
+            <SpeechInput
+              className="h-10 w-10 p-0"
+              size="icon"
+              variant="ghost"
+              onAudioRecorded={transcribeAudio}
+              onTranscriptionChange={(text) =>
+                onAiTextChange(aiText ? aiText + " " + text : text)
+              }
+            />
+          </div>
         </div>
         <div className="flex gap-3">
           <Button
