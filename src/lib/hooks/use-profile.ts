@@ -7,6 +7,9 @@ import { createClient } from "@/lib/supabase/client";
 import {
   type ProfileFormState,
   type ExtractedProfileV2,
+  type SkillLevel,
+  type AvailabilitySlots,
+  type LocationMode,
   defaultFormState,
   parseList,
   mapExtractedToFormState,
@@ -28,6 +31,42 @@ type ProfileData = {
   sourceText: string | null;
   canUndo: boolean;
 };
+
+// ---------------------------------------------------------------------------
+// Helpers
+// ---------------------------------------------------------------------------
+
+function parseSkillLevels(raw: unknown): SkillLevel[] {
+  if (raw == null) return [];
+  // DB stores as { "domain": level } object or as SkillLevel[]
+  if (Array.isArray(raw)) {
+    return raw.filter(
+      (item) =>
+        typeof item === "object" &&
+        item !== null &&
+        "name" in item &&
+        "level" in item,
+    ) as SkillLevel[];
+  }
+  if (typeof raw === "object") {
+    return Object.entries(raw as Record<string, number>).map(
+      ([name, level]) => ({ name, level: Number(level) || 0 }),
+    );
+  }
+  return [];
+}
+
+function parseLocationMode(raw: unknown): LocationMode {
+  if (raw === "remote" || raw === "in_person" || raw === "either") return raw;
+  return "either";
+}
+
+function parseAvailabilitySlots(raw: unknown): AvailabilitySlots {
+  if (raw != null && typeof raw === "object" && !Array.isArray(raw)) {
+    return raw as AvailabilitySlots;
+  }
+  return {};
+}
 
 // ---------------------------------------------------------------------------
 // Fetcher
@@ -80,7 +119,6 @@ async function fetchProfile(): Promise<ProfileData> {
   if (data) {
     sourceText = data.source_text ?? null;
     canUndo = !!data.previous_source_text;
-    const preferences = data.project_preferences ?? {};
     const hardFilters = data.hard_filters ?? {};
     form = {
       fullName: data.full_name ?? "",
@@ -89,32 +127,23 @@ async function fetchProfile(): Promise<ProfileData> {
       location: data.location ?? "",
       locationLat: data.location_lat?.toString() ?? "",
       locationLng: data.location_lng?.toString() ?? "",
-      experienceLevel: data.experience_level ?? "intermediate",
-      collaborationStyle: data.collaboration_style ?? "async",
-      remotePreference: data.remote_preference?.toString() ?? "50",
-      availabilityHours: data.availability_hours?.toString() ?? "",
       skills: Array.isArray(data.skills) ? data.skills.join(", ") : "",
-      interests: Array.isArray(data.interests) ? data.interests.join(", ") : "",
-      languages: Array.isArray(data.languages) ? data.languages.join(", ") : "",
-      projectTypes: Array.isArray(preferences.project_types)
-        ? preferences.project_types.join(", ")
+      interests: Array.isArray(data.interests)
+        ? data.interests.join(", ")
         : "",
-      preferredRoles: Array.isArray(preferences.preferred_roles)
-        ? preferences.preferred_roles.join(", ")
+      languages: Array.isArray(data.languages)
+        ? data.languages.join(", ")
         : "",
-      preferredStack: Array.isArray(preferences.preferred_stack)
-        ? preferences.preferred_stack.join(", ")
-        : "",
-      commitmentLevel: preferences.commitment_level ?? "10",
-      timelinePreference: preferences.timeline_preference ?? "1_month",
       portfolioUrl: data.portfolio_url ?? "",
       githubUrl: data.github_url ?? "",
       filterMaxDistance: hardFilters.max_distance_km?.toString() ?? "",
-      filterMinHours: hardFilters.min_hours?.toString() ?? "",
-      filterMaxHours: hardFilters.max_hours?.toString() ?? "",
       filterLanguages: Array.isArray(hardFilters.languages)
         ? hardFilters.languages.join(", ")
         : "",
+      collaborationStyle: data.collaboration_style ?? "async",
+      skillLevels: parseSkillLevels(data.skill_levels),
+      locationMode: parseLocationMode(data.location_mode),
+      availabilitySlots: parseAvailabilitySlots(data.availability_slots),
     };
   }
 
@@ -198,6 +227,14 @@ export function useProfile() {
       const locationLat = Number(form.locationLat);
       const locationLng = Number(form.locationLng);
 
+      // Convert skillLevels array to DB format { domain: level }
+      const skillLevelsObj: Record<string, number> = {};
+      for (const sl of form.skillLevels) {
+        if (sl.name.trim()) {
+          skillLevelsObj[sl.name.trim()] = sl.level;
+        }
+      }
+
       const { error: upsertError } = await supabase.from("profiles").upsert(
         {
           user_id: user.id,
@@ -212,6 +249,9 @@ export function useProfile() {
           languages: parseList(form.languages),
           portfolio_url: form.portfolioUrl.trim(),
           github_url: form.githubUrl.trim(),
+          skill_levels: skillLevelsObj,
+          location_mode: form.locationMode,
+          availability_slots: form.availabilitySlots,
           updated_at: new Date().toISOString(),
         },
         { onConflict: "user_id" },
@@ -297,8 +337,8 @@ export function useProfile() {
           ...(extractedProfile.skill_levels != null && {
             skill_levels: extractedProfile.skill_levels,
           }),
-          ...(extractedProfile.location_preference != null && {
-            location_preference: extractedProfile.location_preference,
+          ...(extractedProfile.location_mode != null && {
+            location_mode: extractedProfile.location_mode,
           }),
           ...(extractedProfile.availability_slots != null && {
             availability_slots: extractedProfile.availability_slots,
