@@ -47,11 +47,13 @@ export default function PostingDetailPage() {
     description: "",
     skills: "",
     estimatedTime: "",
-    teamSizeMin: "2",
+    teamSizeMin: "1",
     teamSizeMax: "5",
+    lookingFor: "3",
     category: "personal",
     mode: "open",
     status: "open",
+    expiresAt: "",
   });
 
   // Application UI state
@@ -94,11 +96,13 @@ export default function PostingDetailPage() {
       description: posting.description,
       skills: posting.skills?.join(", ") || "",
       estimatedTime: posting.estimated_time || "",
-      teamSizeMin: posting.team_size_min?.toString() || "2",
+      teamSizeMin: "1",
       teamSizeMax: posting.team_size_max?.toString() || "5",
+      lookingFor: posting.team_size_max?.toString() || "3",
       category: posting.category || "personal",
       mode: posting.mode || "open",
       status: posting.status || "open",
+      expiresAt: posting.expires_at ? posting.expires_at.slice(0, 10) : "",
     });
     setIsEditing(true);
   };
@@ -108,6 +112,7 @@ export default function PostingDetailPage() {
     setIsSaving(true);
 
     const supabase = createClient();
+    const lookingFor = Math.max(1, Math.min(10, Number(form.lookingFor) || 3));
     const { error: updateError } = await supabase
       .from("postings")
       .update({
@@ -115,8 +120,8 @@ export default function PostingDetailPage() {
         description: form.description.trim(),
         skills: parseList(form.skills),
         estimated_time: form.estimatedTime || null,
-        team_size_min: Number(form.teamSizeMin),
-        team_size_max: Number(form.teamSizeMax),
+        team_size_min: 1,
+        team_size_max: lookingFor,
         category: form.category,
         mode: form.mode,
         status: form.status,
@@ -161,26 +166,26 @@ export default function PostingDetailPage() {
 
   const handleReactivate = async () => {
     setIsReactivating(true);
-    const supabase = createClient();
-    const newExpiresAt = new Date(Date.now() + 90 * 24 * 60 * 60 * 1000);
+    setError(null);
 
-    const { error: updateError } = await supabase
-      .from("postings")
-      .update({
-        status: "open",
-        expires_at: newExpiresAt.toISOString(),
-        updated_at: new Date().toISOString(),
-      })
-      .eq("id", postingId);
+    try {
+      const res = await fetch(`/api/postings/${postingId}/reactivate`, {
+        method: "PATCH",
+      });
 
-    if (updateError) {
+      if (!res.ok) {
+        const body = await res.json();
+        setError(body.error?.message || "Failed to reactivate posting.");
+        setIsReactivating(false);
+        return;
+      }
+
+      setIsReactivating(false);
+      mutate();
+    } catch {
       setError("Failed to reactivate posting. Please try again.");
       setIsReactivating(false);
-      return;
     }
-
-    setIsReactivating(false);
-    mutate();
   };
 
   const handleApply = async () => {

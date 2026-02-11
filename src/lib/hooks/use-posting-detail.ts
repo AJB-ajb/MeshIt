@@ -59,9 +59,11 @@ export type PostingFormState = {
   estimatedTime: string;
   teamSizeMin: string;
   teamSizeMax: string;
+  lookingFor: string;
   category: string;
   mode: string;
   status: string;
+  expiresAt: string;
 };
 
 type PostingDetailData = {

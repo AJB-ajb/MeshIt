@@ -62,6 +62,8 @@ export default function NewPostingPage() {
       const extracted = data.posting;
 
       // Map extracted data to form state
+      const extractedMax =
+        extracted.team_size_max?.toString() || form.lookingFor;
       setForm({
         title: extracted.title || form.title,
         description: extracted.description || form.description,
@@ -69,10 +71,12 @@ export default function NewPostingPage() {
           ? extracted.skills.join(", ")
           : form.skills,
         estimatedTime: extracted.estimated_time || form.estimatedTime,
-        teamSizeMin: extracted.team_size_min?.toString() || form.teamSizeMin,
-        teamSizeMax: extracted.team_size_max?.toString() || form.teamSizeMax,
+        teamSizeMin: "1",
+        teamSizeMax: extractedMax,
+        lookingFor: extractedMax,
         category: extracted.category || form.category,
         mode: extracted.mode || form.mode,
+        expiresAt: form.expiresAt,
       });
 
       setExtractionSuccess(true);
@@ -153,9 +157,11 @@ export default function NewPostingPage() {
       }
     }
 
-    // 90-day default expiry
-    const now = new Date();
-    const expiresAt = new Date(now.getTime() + 90 * 24 * 60 * 60 * 1000);
+    // Use the form's expiry date, falling back to 90 days from now
+    const lookingFor = Math.max(1, Math.min(10, Number(form.lookingFor) || 3));
+    const expiresAt = form.expiresAt
+      ? new Date(form.expiresAt + "T23:59:59")
+      : new Date(Date.now() + 90 * 24 * 60 * 60 * 1000);
 
     const { data: posting, error: insertError } = await supabase
       .from("postings")
@@ -165,8 +171,8 @@ export default function NewPostingPage() {
         description: form.description.trim(),
         skills: parseList(form.skills),
         estimated_time: form.estimatedTime || null,
-        team_size_min: Number(form.teamSizeMin),
-        team_size_max: Number(form.teamSizeMax),
+        team_size_min: 1,
+        team_size_max: lookingFor,
         category: form.category,
         mode: form.mode,
         status: "open",

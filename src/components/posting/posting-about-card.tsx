@@ -93,32 +93,15 @@ export function PostingAboutCard({
               </select>
             </div>
             <div className="space-y-2">
-              <label className="text-sm font-medium">Team Size Min</label>
-              <select
-                value={form.teamSizeMin}
-                onChange={(e) => onFormChange("teamSizeMin", e.target.value)}
-                className="flex h-10 w-full rounded-md border border-input bg-background px-3 py-2 text-sm"
-              >
-                <option value="1">1</option>
-                <option value="2">2</option>
-                <option value="3">3</option>
-                <option value="4">4</option>
-                <option value="5">5</option>
-              </select>
-            </div>
-            <div className="space-y-2">
-              <label className="text-sm font-medium">Team Size Max</label>
-              <select
-                value={form.teamSizeMax}
-                onChange={(e) => onFormChange("teamSizeMax", e.target.value)}
-                className="flex h-10 w-full rounded-md border border-input bg-background px-3 py-2 text-sm"
-              >
-                <option value="2">2</option>
-                <option value="3">3</option>
-                <option value="4">4</option>
-                <option value="5">5</option>
-                <option value="10">10</option>
-              </select>
+              <label className="text-sm font-medium">Looking for</label>
+              <Input
+                type="number"
+                min={1}
+                max={10}
+                value={form.lookingFor}
+                onChange={(e) => onFormChange("lookingFor", e.target.value)}
+                placeholder="Number of people (1-10)"
+              />
             </div>
             <div className="space-y-2">
               <label className="text-sm font-medium">Mode</label>
@@ -148,9 +131,10 @@ export function PostingAboutCard({
           <div className="grid gap-4 sm:grid-cols-3">
             <div className="rounded-lg border border-border p-4">
               <Users className="h-5 w-5 text-muted-foreground" />
-              <p className="mt-2 text-sm text-muted-foreground">Team Size</p>
+              <p className="mt-2 text-sm text-muted-foreground">Looking for</p>
               <p className="font-medium">
-                {posting.team_size_min}-{posting.team_size_max} people
+                {posting.team_size_max}{" "}
+                {posting.team_size_max === 1 ? "person" : "people"}
               </p>
             </div>
             <div className="rounded-lg border border-border p-4">
