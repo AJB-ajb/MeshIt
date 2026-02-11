@@ -31,6 +31,12 @@ import { formatScore } from "@/lib/matching/scoring";
 import { getInitials } from "@/lib/format";
 import { usePostings } from "@/lib/hooks/use-postings";
 import type { Posting, TabId } from "@/lib/hooks/use-postings";
+import type { PostingFilters } from "@/lib/types/filters";
+import { applyFilters } from "@/lib/filters/apply-filters";
+import {
+  filtersToFilterPills,
+  removeFilterByKey,
+} from "@/lib/filters/format-filters";
 
 const tabs: { id: TabId; label: string }[] = [
   { id: "discover", label: "Discover" },
@@ -94,14 +100,65 @@ export default function PostingsPage() {
   const [filterMode, setFilterMode] = useState<string>("all");
   const [interestingIds, setInterestingIds] = useState<Set<string>>(new Set());
   const [interestError, setInterestError] = useState<string | null>(null);
+  const [nlFilters, setNlFilters] = useState<PostingFilters>({});
+  const [nlQuery, setNlQuery] = useState("");
+  const [isTranslating, setIsTranslating] = useState(false);
 
   const { postings, userId, interestedPostingIds, isLoading, mutate } =
     usePostings(activeTab, filterCategory);
 
-  const hasActiveFilters = filterMode !== "all";
+  const nlFilterPills = filtersToFilterPills(nlFilters);
+  const hasActiveFilters = filterMode !== "all" || nlFilterPills.length > 0;
 
   const clearFilters = () => {
     setFilterMode("all");
+    setNlFilters({});
+    setNlQuery("");
+  };
+
+  const handleNlSearch = async (query: string) => {
+    const trimmed = query.trim();
+    if (!trimmed) return;
+
+    setIsTranslating(true);
+    try {
+      const response = await fetch("/api/filters/translate", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ query: trimmed }),
+      });
+
+      if (!response.ok) {
+        const data = await response.json();
+        throw new Error(data.error || "Failed to parse filters");
+      }
+
+      const data = await response.json();
+      if (data.filters) {
+        setNlFilters(data.filters);
+        if (data.filters.category) {
+          setFilterCategory(data.filters.category);
+        }
+        if (data.filters.mode) {
+          setFilterMode(data.filters.mode);
+        }
+      }
+    } catch {
+      // Fall back to text search on failure
+    } finally {
+      setIsTranslating(false);
+    }
+  };
+
+  const handleRemoveNlFilter = (key: string) => {
+    const updated = removeFilterByKey(nlFilters, key);
+    setNlFilters(updated);
+    if (key === "category") {
+      setFilterCategory("all");
+    }
+    if (key === "mode") {
+      setFilterMode("all");
+    }
   };
 
   const handleExpressInterest = async (postingId: string) => {
@@ -132,8 +189,8 @@ export default function PostingsPage() {
     }
   };
 
-  const filteredPostings = postings.filter((posting: Posting) => {
-    // Text search
+  // Apply text search and mode filter first
+  const textFiltered = postings.filter((posting: Posting) => {
     if (searchQuery) {
       const query = searchQuery.toLowerCase();
       const matchesSearch =
@@ -145,11 +202,13 @@ export default function PostingsPage() {
       if (!matchesSearch) return false;
     }
 
-    // Mode filter (category is now handled at the hook/query level)
     if (filterMode !== "all" && posting.mode !== filterMode) return false;
 
     return true;
   });
+
+  // Then apply NL-parsed structured filters
+  const filteredPostings = applyFilters(textFiltered, nlFilters);
 
   return (
     <div className="space-y-6">
@@ -190,22 +249,38 @@ export default function PostingsPage() {
 
         {/* Search and filter */}
         <div className="flex gap-2">
-          <div className="relative flex-1 sm:w-64">
+          <div className="relative flex-1 sm:w-80">
             <Search className="absolute left-3 top-1/2 h-4 w-4 -translate-y-1/2 text-muted-foreground" />
             <Input
               type="search"
-              placeholder="Search postings, skills..."
+              placeholder='Try "remote React, 10+ hours/week"...'
               className="pl-9 pr-10"
-              value={searchQuery}
-              onChange={(e) => setSearchQuery(e.target.value)}
+              value={nlQuery}
+              onChange={(e) => {
+                setNlQuery(e.target.value);
+                setSearchQuery(e.target.value);
+              }}
+              onKeyDown={(e) => {
+                if (e.key === "Enter") {
+                  handleNlSearch(nlQuery);
+                }
+              }}
             />
-            <SpeechInput
-              className="absolute right-1 top-1/2 -translate-y-1/2 h-8 w-8 p-0"
-              size="icon"
-              variant="ghost"
-              onAudioRecorded={transcribeAudio}
-              onTranscriptionChange={(text) => setSearchQuery(text)}
-            />
+            {isTranslating ? (
+              <Loader2 className="absolute right-3 top-1/2 h-4 w-4 -translate-y-1/2 animate-spin text-muted-foreground" />
+            ) : (
+              <SpeechInput
+                className="absolute right-1 top-1/2 -translate-y-1/2 h-8 w-8 p-0"
+                size="icon"
+                variant="ghost"
+                onAudioRecorded={transcribeAudio}
+                onTranscriptionChange={(text) => {
+                  setNlQuery(text);
+                  setSearchQuery(text);
+                  handleNlSearch(text);
+                }}
+              />
+            )}
           </div>
           <Button
             variant={hasActiveFilters ? "default" : "outline"}
@@ -217,6 +292,36 @@ export default function PostingsPage() {
           </Button>
         </div>
       </div>
+
+      {/* Active NL filter pills */}
+      {nlFilterPills.length > 0 && (
+        <div className="flex flex-wrap items-center gap-2">
+          {nlFilterPills.map((pill) => (
+            <Badge
+              key={pill.key}
+              variant="secondary"
+              className="flex items-center gap-1 pr-1"
+            >
+              {pill.label}
+              <button
+                onClick={() => handleRemoveNlFilter(pill.key)}
+                className="ml-1 rounded-full p-0.5 hover:bg-muted-foreground/20"
+              >
+                <X className="h-3 w-3" />
+                <span className="sr-only">Remove {pill.label}</span>
+              </button>
+            </Badge>
+          ))}
+          <Button
+            variant="ghost"
+            size="sm"
+            className="h-6 text-xs"
+            onClick={clearFilters}
+          >
+            Clear all
+          </Button>
+        </div>
+      )}
 
       {/* Category chips */}
       <div className="flex flex-wrap gap-2">
