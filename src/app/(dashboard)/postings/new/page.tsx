@@ -27,7 +27,7 @@ export default function NewPostingPage() {
   const [form, setForm] = useState<PostingFormState>(defaultFormState);
   const [isSaving, setIsSaving] = useState(false);
   const [error, setError] = useState<string | null>(null);
-  const [inputMode, setInputMode] = useState<InputMode>("form");
+  const [inputMode, setInputMode] = useState<InputMode>("ai");
   const [aiText, setAiText] = useState("");
   const [isExtracting, setIsExtracting] = useState(false);
   const [extractionSuccess, setExtractionSuccess] = useState(false);
@@ -94,15 +94,16 @@ export default function NewPostingPage() {
     event.preventDefault();
     setError(null);
 
-    if (!form.title.trim()) {
-      setError("Please enter a posting title.");
-      return;
-    }
-
     if (!form.description.trim()) {
       setError("Please enter a posting description.");
       return;
     }
+
+    // Auto-generate title from description if not provided
+    const title =
+      form.title.trim() ||
+      form.description.trim().split(/[.\n]/)[0].slice(0, 100) ||
+      "Untitled Posting";
 
     setIsSaving(true);
 
@@ -160,7 +161,7 @@ export default function NewPostingPage() {
       .from("postings")
       .insert({
         creator_id: user.id,
-        title: form.title.trim(),
+        title,
         description: form.description.trim(),
         skills: parseList(form.skills),
         estimated_time: form.estimatedTime || null,

@@ -10,8 +10,10 @@ import { createClient } from "@/lib/supabase/server";
 export default async function LandingPage() {
   // Check if user is already logged in
   const supabase = await createClient();
-  const { data: { user } } = await supabase.auth.getUser();
-  
+  const {
+    data: { user },
+  } = await supabase.auth.getUser();
+
   // If logged in, redirect to dashboard
   if (user) {
     redirect("/dashboard");
@@ -49,17 +51,23 @@ export default async function LandingPage() {
           </h1>
 
           {/* Subheadline */}
-          <p className="mt-6 max-w-2xl animate-slide-up text-lg text-muted-foreground sm:text-xl" style={{ animationDelay: "100ms" }}>
-            Stop posting &quot;looking for teammates&quot; in Slack. Describe your project in
-            plain language, and let AI find the 3-5 people most likely to be a
-            great fit.
+          <p
+            className="mt-6 max-w-2xl animate-slide-up text-lg text-muted-foreground sm:text-xl"
+            style={{ animationDelay: "100ms" }}
+          >
+            Stop posting &quot;looking for teammates&quot; in Slack. Describe
+            your project in plain language, and let AI find the 3-5 people most
+            likely to be a great fit.
           </p>
 
           {/* CTA Buttons */}
-          <div className="mt-10 flex flex-col items-center gap-4 animate-slide-up sm:flex-row" style={{ animationDelay: "200ms" }}>
+          <div
+            className="mt-10 flex flex-col items-center gap-4 animate-slide-up sm:flex-row"
+            style={{ animationDelay: "200ms" }}
+          >
             <Button size="lg" className="gap-2 px-8" asChild>
-              <Link href="/login">
-                Get started
+              <Link href="/login?next=/postings/new">
+                Post something
                 <ArrowRight className="h-4 w-4" />
               </Link>
             </Button>
@@ -109,7 +117,9 @@ export default async function LandingPage() {
                 <div className="mb-4 flex h-12 w-12 items-center justify-center rounded-xl bg-primary text-2xl font-bold text-primary-foreground">
                   3
                 </div>
-                <h3 className="text-xl font-semibold">Connect and collaborate</h3>
+                <h3 className="text-xl font-semibold">
+                  Connect and collaborate
+                </h3>
                 <p className="mt-2 text-muted-foreground">
                   See why you matched, message your team, and start building
                   together. Its that simple.

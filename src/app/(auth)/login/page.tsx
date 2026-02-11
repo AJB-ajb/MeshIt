@@ -8,7 +8,12 @@ import { Logo } from "@/components/layout/logo";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { createClient } from "@/lib/supabase/client";
-import { GoogleIcon, GitHubIcon, LinkedInIcon, LoaderIcon } from "@/components/icons/auth-icons";
+import {
+  GoogleIcon,
+  GitHubIcon,
+  LinkedInIcon,
+  LoaderIcon,
+} from "@/components/icons/auth-icons";
 
 type OAuthProvider = "google" | "github" | "linkedin" | null;
 
@@ -21,6 +26,10 @@ function LoginForm() {
   const [password, setPassword] = useState("");
   const [formError, setFormError] = useState<string | null>(null);
   const error = searchParams.get("error");
+  const next = searchParams.get("next");
+  const callbackUrl = next
+    ? `${window.location.origin}/callback?next=${encodeURIComponent(next)}`
+    : `${window.location.origin}/callback`;
 
   const handleEmailSignIn = async (e: React.FormEvent) => {
     e.preventDefault();
@@ -37,7 +46,7 @@ function LoginForm() {
       setFormError(signInError.message);
       setIsLoading(false);
     } else {
-      router.push("/dashboard");
+      router.push(next || "/dashboard");
     }
   };
 
@@ -48,7 +57,7 @@ function LoginForm() {
     const { error: signInError } = await supabase.auth.signInWithOAuth({
       provider: "google",
       options: {
-        redirectTo: `${window.location.origin}/callback`,
+        redirectTo: callbackUrl,
       },
     });
 
@@ -64,7 +73,7 @@ function LoginForm() {
     const { error: signInError } = await supabase.auth.signInWithOAuth({
       provider: "github",
       options: {
-        redirectTo: `${window.location.origin}/callback`,
+        redirectTo: callbackUrl,
       },
     });
 
@@ -80,7 +89,7 @@ function LoginForm() {
     const { error: signInError } = await supabase.auth.signInWithOAuth({
       provider: "linkedin_oidc",
       options: {
-        redirectTo: `${window.location.origin}/callback`,
+        redirectTo: callbackUrl,
       },
     });
 
@@ -143,7 +152,11 @@ function LoginForm() {
             disabled={isLoading || isOAuthLoading}
           />
         </div>
-        <Button type="submit" className="w-full" disabled={isLoading || isOAuthLoading}>
+        <Button
+          type="submit"
+          className="w-full"
+          disabled={isLoading || isOAuthLoading}
+        >
           {isLoading ? "Signing in..." : "Sign in"}
         </Button>
       </form>
@@ -153,7 +166,9 @@ function LoginForm() {
           <span className="w-full border-t border-border" />
         </div>
         <div className="relative flex justify-center text-xs uppercase">
-          <span className="bg-card px-2 text-muted-foreground">Or continue with</span>
+          <span className="bg-card px-2 text-muted-foreground">
+            Or continue with
+          </span>
         </div>
       </div>
 
@@ -201,7 +216,10 @@ function LoginForm() {
 
       <p className="mt-6 text-center text-sm text-muted-foreground">
         Don&apos;t have an account?{" "}
-        <Link href="/signup" className="text-primary hover:underline">
+        <Link
+          href={next ? `/signup?next=${encodeURIComponent(next)}` : "/signup"}
+          className="text-primary hover:underline"
+        >
           Sign up
         </Link>
       </p>

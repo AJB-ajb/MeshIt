@@ -65,13 +65,13 @@ export function PostingFormCard({
           {/* Title */}
           <div className="space-y-2">
             <label htmlFor="title" className="text-sm font-medium">
-              Posting Title <span className="text-destructive">*</span>
+              Posting Title
             </label>
             <Input
               id="title"
               value={form.title}
               onChange={(e) => onChange("title", e.target.value)}
-              placeholder="e.g., AI Recipe Generator"
+              placeholder="Optional — auto-generated from description"
               className="text-lg"
             />
           </div>

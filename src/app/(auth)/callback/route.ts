@@ -108,8 +108,9 @@ export async function GET(request: Request) {
       const profileCompleted = user.user_metadata?.profile_completed;
 
       if (!profileCompleted) {
-        // Brand new user - send directly to onboarding form
-        const destination = `/onboarding/developer?next=${encodeURIComponent(next)}`;
+        // Brand new user - send directly to posting creation for fast onboarding
+        // Profile will be auto-created when they submit their first posting
+        const destination = next === "/dashboard" ? "/postings/new" : next;
         return NextResponse.redirect(`${origin}${destination}`);
       }
 
