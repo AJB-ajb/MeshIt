@@ -54,6 +54,11 @@ export default function PostingDetailPage() {
     mode: "open",
     status: "open",
     expiresAt: "",
+    locationMode: "either",
+    locationName: "",
+    locationLat: "",
+    locationLng: "",
+    maxDistanceKm: "",
   });
 
   // Application UI state
@@ -103,6 +108,11 @@ export default function PostingDetailPage() {
       mode: posting.mode || "open",
       status: posting.status || "open",
       expiresAt: posting.expires_at ? posting.expires_at.slice(0, 10) : "",
+      locationMode: posting.location_mode || "either",
+      locationName: posting.location_name || "",
+      locationLat: posting.location_lat?.toString() || "",
+      locationLng: posting.location_lng?.toString() || "",
+      maxDistanceKm: posting.max_distance_km?.toString() || "",
     });
     setIsEditing(true);
   };
@@ -113,6 +123,10 @@ export default function PostingDetailPage() {
 
     const supabase = createClient();
     const lookingFor = Math.max(1, Math.min(10, Number(form.lookingFor) || 3));
+    const locationLat = parseFloat(form.locationLat);
+    const locationLng = parseFloat(form.locationLng);
+    const maxDistanceKm = parseInt(form.maxDistanceKm, 10);
+
     const { error: updateError } = await supabase
       .from("postings")
       .update({
@@ -128,6 +142,14 @@ export default function PostingDetailPage() {
         expires_at: form.expiresAt
           ? new Date(form.expiresAt + "T23:59:59").toISOString()
           : undefined,
+        location_mode: form.locationMode || "either",
+        location_name: form.locationName.trim() || null,
+        location_lat: Number.isFinite(locationLat) ? locationLat : null,
+        location_lng: Number.isFinite(locationLng) ? locationLng : null,
+        max_distance_km:
+          Number.isFinite(maxDistanceKm) && maxDistanceKm > 0
+            ? maxDistanceKm
+            : null,
         updated_at: new Date().toISOString(),
       })
       .eq("id", postingId);

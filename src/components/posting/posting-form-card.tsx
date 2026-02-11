@@ -1,9 +1,12 @@
 "use client";
 
+import { useState } from "react";
 import Link from "next/link";
-import { Loader2 } from "lucide-react";
+import { Loader2, MapPin, Search } from "lucide-react";
 import { SpeechInput } from "@/components/ai-elements/speech-input";
 import { transcribeAudio } from "@/lib/transcribe";
+import { LocationAutocomplete } from "@/components/location/location-autocomplete";
+import type { GeocodingResult } from "@/lib/geocoding";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import {
@@ -25,6 +28,11 @@ export type PostingFormState = {
   category: string;
   mode: string;
   expiresAt: string;
+  locationMode: string;
+  locationName: string;
+  locationLat: string;
+  locationLng: string;
+  maxDistanceKm: string;
 };
 
 // Default expiry: 90 days from now
@@ -45,6 +53,11 @@ export const defaultFormState: PostingFormState = {
   category: "personal",
   mode: "open",
   expiresAt: defaultExpiresAt(),
+  locationMode: "either",
+  locationName: "",
+  locationLat: "",
+  locationLng: "",
+  maxDistanceKm: "",
 };
 
 type PostingFormCardProps = {
@@ -54,6 +67,109 @@ type PostingFormCardProps = {
   isSaving: boolean;
   isExtracting: boolean;
 };
+
+function LocationSection({
+  form,
+  onChange,
+}: {
+  form: PostingFormState;
+  onChange: (field: keyof PostingFormState, value: string) => void;
+}) {
+  const [showAutocomplete, setShowAutocomplete] = useState(false);
+  const showLocation =
+    form.locationMode === "in_person" || form.locationMode === "either";
+  const showMaxDistance = form.locationMode === "in_person";
+
+  const handleLocationSelect = (result: GeocodingResult) => {
+    onChange("locationName", result.displayName);
+    onChange("locationLat", result.lat.toString());
+    onChange("locationLng", result.lng.toString());
+    setShowAutocomplete(false);
+  };
+
+  return (
+    <div className="space-y-4">
+      <div className="space-y-2">
+        <label htmlFor="location-mode" className="text-sm font-medium">
+          Location Mode
+        </label>
+        <select
+          id="location-mode"
+          value={form.locationMode}
+          onChange={(e) => onChange("locationMode", e.target.value)}
+          className="flex h-10 w-full rounded-md border border-input bg-background px-3 py-2 text-sm ring-offset-background focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring focus-visible:ring-offset-2"
+        >
+          <option value="either">Either (no preference)</option>
+          <option value="remote">Remote</option>
+          <option value="in_person">In-person</option>
+        </select>
+      </div>
+
+      {showLocation && (
+        <div className="space-y-2">
+          <label htmlFor="location-name" className="text-sm font-medium">
+            Location
+          </label>
+          {showAutocomplete ? (
+            <LocationAutocomplete
+              value={form.locationName}
+              onSelect={handleLocationSelect}
+              onChange={(value) => onChange("locationName", value)}
+              placeholder="Search for a location..."
+            />
+          ) : (
+            <Input
+              id="location-name"
+              value={form.locationName}
+              onChange={(e) => onChange("locationName", e.target.value)}
+              placeholder="e.g., Berlin, Germany"
+            />
+          )}
+          <div className="flex gap-2">
+            <Button
+              type="button"
+              variant="outline"
+              size="sm"
+              onClick={() => setShowAutocomplete(!showAutocomplete)}
+            >
+              {showAutocomplete ? (
+                <>
+                  <MapPin className="mr-1 h-3 w-3" />
+                  Manual entry
+                </>
+              ) : (
+                <>
+                  <Search className="mr-1 h-3 w-3" />
+                  Search location
+                </>
+              )}
+            </Button>
+          </div>
+        </div>
+      )}
+
+      {showMaxDistance && (
+        <div className="space-y-2">
+          <label htmlFor="max-distance" className="text-sm font-medium">
+            Max Distance (km)
+          </label>
+          <Input
+            id="max-distance"
+            type="number"
+            min={1}
+            value={form.maxDistanceKm}
+            onChange={(e) => onChange("maxDistanceKm", e.target.value)}
+            placeholder="e.g., 50"
+          />
+          <p className="text-xs text-muted-foreground">
+            Maximum distance for in-person collaboration. Used as a hard filter
+            in matching.
+          </p>
+        </div>
+      )}
+    </div>
+  );
+}
 
 export function PostingFormCard({
   form,
@@ -219,6 +335,9 @@ Example: Building a Minecraft-style collaborative IDE, need 2-3 people with WebG
               </p>
             </div>
           </div>
+
+          {/* Location */}
+          <LocationSection form={form} onChange={onChange} />
 
           {/* Submit */}
           <div className="flex gap-4 pt-4">

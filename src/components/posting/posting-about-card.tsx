@@ -1,10 +1,14 @@
 "use client";
 
-import { Users, Calendar, Clock } from "lucide-react";
+import { useState } from "react";
+import { Users, Calendar, Clock, MapPin, Search } from "lucide-react";
 
 import { Input } from "@/components/ui/input";
 import { Badge } from "@/components/ui/badge";
+import { Button } from "@/components/ui/button";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
+import { LocationAutocomplete } from "@/components/location/location-autocomplete";
+import type { GeocodingResult } from "@/lib/geocoding";
 import type {
   PostingDetail,
   PostingFormState,
@@ -17,12 +21,112 @@ type PostingAboutCardProps = {
   onFormChange: (field: keyof PostingFormState, value: string) => void;
 };
 
+function getLocationModeDisplay(mode: string | null) {
+  switch (mode) {
+    case "remote":
+      return { icon: "🏠", label: "Remote" };
+    case "in_person":
+      return { icon: "📍", label: "In-person" };
+    case "either":
+    default:
+      return { icon: "🌐", label: "Either" };
+  }
+}
+
+function LocationEditFields({
+  form,
+  onFormChange,
+}: {
+  form: PostingFormState;
+  onFormChange: (field: keyof PostingFormState, value: string) => void;
+}) {
+  const [showAutocomplete, setShowAutocomplete] = useState(false);
+  const showLocation =
+    form.locationMode === "in_person" || form.locationMode === "either";
+  const showMaxDistance = form.locationMode === "in_person";
+
+  const handleLocationSelect = (result: GeocodingResult) => {
+    onFormChange("locationName", result.displayName);
+    onFormChange("locationLat", result.lat.toString());
+    onFormChange("locationLng", result.lng.toString());
+    setShowAutocomplete(false);
+  };
+
+  return (
+    <>
+      <div className="space-y-2">
+        <label className="text-sm font-medium">Location Mode</label>
+        <select
+          value={form.locationMode}
+          onChange={(e) => onFormChange("locationMode", e.target.value)}
+          className="flex h-10 w-full rounded-md border border-input bg-background px-3 py-2 text-sm"
+        >
+          <option value="either">Either (no preference)</option>
+          <option value="remote">Remote</option>
+          <option value="in_person">In-person</option>
+        </select>
+      </div>
+      {showLocation && (
+        <div className="space-y-2">
+          <label className="text-sm font-medium">Location</label>
+          {showAutocomplete ? (
+            <LocationAutocomplete
+              value={form.locationName}
+              onSelect={handleLocationSelect}
+              onChange={(value) => onFormChange("locationName", value)}
+              placeholder="Search for a location..."
+            />
+          ) : (
+            <Input
+              value={form.locationName}
+              onChange={(e) => onFormChange("locationName", e.target.value)}
+              placeholder="e.g., Berlin, Germany"
+            />
+          )}
+          <Button
+            type="button"
+            variant="outline"
+            size="sm"
+            onClick={() => setShowAutocomplete(!showAutocomplete)}
+          >
+            {showAutocomplete ? (
+              <>
+                <MapPin className="mr-1 h-3 w-3" />
+                Manual entry
+              </>
+            ) : (
+              <>
+                <Search className="mr-1 h-3 w-3" />
+                Search location
+              </>
+            )}
+          </Button>
+        </div>
+      )}
+      {showMaxDistance && (
+        <div className="space-y-2">
+          <label className="text-sm font-medium">Max Distance (km)</label>
+          <Input
+            type="number"
+            min={1}
+            value={form.maxDistanceKm}
+            onChange={(e) => onFormChange("maxDistanceKm", e.target.value)}
+            placeholder="e.g., 50"
+          />
+        </div>
+      )}
+    </>
+  );
+}
+
 export function PostingAboutCard({
   posting,
   isEditing,
   form,
   onFormChange,
 }: PostingAboutCardProps) {
+  const locationDisplay = getLocationModeDisplay(posting.location_mode);
+
   return (
     <Card>
       <CardHeader>
@@ -135,9 +239,10 @@ export function PostingAboutCard({
                 <option value="closed">Closed</option>
               </select>
             </div>
+            <LocationEditFields form={form} onFormChange={onFormChange} />
           </div>
         ) : (
-          <div className="grid gap-4 sm:grid-cols-3">
+          <div className="grid gap-4 sm:grid-cols-2 lg:grid-cols-4">
             <div className="rounded-lg border border-border p-4">
               <Users className="h-5 w-5 text-muted-foreground" />
               <p className="mt-2 text-sm text-muted-foreground">Looking for</p>
@@ -161,6 +266,19 @@ export function PostingAboutCard({
               <p className="font-medium capitalize">
                 {posting.category || "Not specified"}
               </p>
+            </div>
+            <div className="rounded-lg border border-border p-4">
+              <MapPin className="h-5 w-5 text-muted-foreground" />
+              <p className="mt-2 text-sm text-muted-foreground">Location</p>
+              <p className="font-medium">
+                {locationDisplay.icon}{" "}
+                {posting.location_name || locationDisplay.label}
+              </p>
+              {posting.max_distance_km && (
+                <p className="text-xs text-muted-foreground mt-1">
+                  Within {posting.max_distance_km} km
+                </p>
+              )}
             </div>
           </div>
         )}

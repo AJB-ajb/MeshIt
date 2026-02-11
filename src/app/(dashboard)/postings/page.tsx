@@ -8,7 +8,7 @@ import {
   Filter,
   Users,
   Calendar,
-  Clock,
+  MapPin,
   Loader2,
   Sparkles,
   X,
@@ -45,6 +45,33 @@ const categories = [
   { value: "professional", label: "Professional" },
   { value: "social", label: "Social" },
 ] as const;
+
+const categoryStyles: Record<string, string> = {
+  study: "bg-blue-500/10 text-blue-700 border-blue-500/20 dark:text-blue-400",
+  hackathon:
+    "bg-purple-500/10 text-purple-700 border-purple-500/20 dark:text-purple-400",
+  personal:
+    "bg-green-500/10 text-green-700 border-green-500/20 dark:text-green-400",
+  professional:
+    "bg-orange-500/10 text-orange-700 border-orange-500/20 dark:text-orange-400",
+  social: "bg-pink-500/10 text-pink-700 border-pink-500/20 dark:text-pink-400",
+};
+
+function getLocationLabel(
+  locationMode: string | null,
+  locationName: string | null,
+) {
+  switch (locationMode) {
+    case "remote":
+      return "🏠 Remote";
+    case "in_person":
+      return `📍 ${locationName || "In-person"}`;
+    case "either":
+      return `🌐 ${locationName || "Either"}`;
+    default:
+      return null;
+  }
+}
 
 const formatDate = (dateString: string) => {
   const date = new Date(dateString);
@@ -307,6 +334,13 @@ export default function PostingsPage() {
                             {posting.title}
                           </Link>
                         </CardTitle>
+                        {posting.category && (
+                          <Badge
+                            className={categoryStyles[posting.category] || ""}
+                          >
+                            {posting.category}
+                          </Badge>
+                        )}
                         {posting.context_identifier && (
                           <Badge variant="secondary" className="text-xs">
                             {posting.context_identifier}
@@ -444,7 +478,8 @@ export default function PostingsPage() {
                   <div className="flex flex-wrap items-center gap-4 text-sm text-muted-foreground">
                     <span className="flex items-center gap-1.5">
                       <Users className="h-4 w-4" />
-                      {posting.team_size_min}-{posting.team_size_max} people
+                      Looking for {posting.team_size_max}{" "}
+                      {posting.team_size_max === 1 ? "person" : "people"}
                     </span>
                     {posting.estimated_time && (
                       <span className="flex items-center gap-1.5">
@@ -452,10 +487,16 @@ export default function PostingsPage() {
                         {posting.estimated_time}
                       </span>
                     )}
-                    {posting.category && (
+                    {getLocationLabel(
+                      posting.location_mode,
+                      posting.location_name,
+                    ) && (
                       <span className="flex items-center gap-1.5">
-                        <Clock className="h-4 w-4" />
-                        {posting.category}
+                        <MapPin className="h-4 w-4" />
+                        {getLocationLabel(
+                          posting.location_mode,
+                          posting.location_name,
+                        )}
                       </span>
                     )}
                   </div>

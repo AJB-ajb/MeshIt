@@ -1,5 +1,5 @@
 import Link from "next/link";
-import { Users, Calendar, Clock, ArrowRight } from "lucide-react";
+import { Users, Calendar, MapPin, ArrowRight } from "lucide-react";
 
 import { cn } from "@/lib/utils";
 import { getUrgencyBadge } from "@/lib/posting/urgency";
@@ -14,6 +14,46 @@ import {
   CardTitle,
 } from "@/components/ui/card";
 
+const categoryStyles: Record<string, string> = {
+  study: "bg-blue-500/10 text-blue-700 border-blue-500/20 dark:text-blue-400",
+  hackathon:
+    "bg-purple-500/10 text-purple-700 border-purple-500/20 dark:text-purple-400",
+  personal:
+    "bg-green-500/10 text-green-700 border-green-500/20 dark:text-green-400",
+  professional:
+    "bg-orange-500/10 text-orange-700 border-orange-500/20 dark:text-orange-400",
+  social: "bg-pink-500/10 text-pink-700 border-pink-500/20 dark:text-pink-400",
+};
+
+function getLocationDisplay(
+  locationMode?: string | null,
+  locationName?: string | null,
+) {
+  switch (locationMode) {
+    case "remote":
+      return "Remote";
+    case "in_person":
+      return locationName || "In-person";
+    case "either":
+      return locationName || "Either";
+    default:
+      return null;
+  }
+}
+
+function getLocationIcon(locationMode?: string | null) {
+  switch (locationMode) {
+    case "remote":
+      return "🏠";
+    case "in_person":
+      return "📍";
+    case "either":
+      return "🌐";
+    default:
+      return null;
+  }
+}
+
 export interface PostingCardProps {
   id: string;
   title: string;
@@ -24,6 +64,8 @@ export interface PostingCardProps {
   category: string;
   matchScore?: number;
   expiresAt?: string | null;
+  locationMode?: string | null;
+  locationName?: string | null;
   creator: {
     name: string;
     initials: string;
@@ -44,12 +86,18 @@ export function PostingCard({
   category,
   matchScore,
   expiresAt,
+  locationMode,
+  locationName,
   creator,
   createdAt,
   className,
   onApply,
 }: PostingCardProps) {
   const urgency = getUrgencyBadge(expiresAt);
+  const locationDisplay = getLocationDisplay(locationMode, locationName);
+  const locationIcon = getLocationIcon(locationMode);
+  const categoryStyle = categoryStyles[category] || "";
+
   return (
     <Card
       className={cn(
@@ -60,8 +108,9 @@ export function PostingCard({
       <CardHeader className="pb-4">
         <div className="flex items-start justify-between gap-4">
           <div className="space-y-1">
-            <div className="flex items-center gap-3">
+            <div className="flex items-center gap-3 flex-wrap">
               <CardTitle className="text-xl">{title}</CardTitle>
+              {category && <Badge className={categoryStyle}>{category}</Badge>}
               {matchScore !== undefined && (
                 <Badge variant="success">{matchScore}% match</Badge>
               )}
@@ -104,14 +153,18 @@ export function PostingCard({
             <Users className="h-4 w-4" />
             {teamSize}
           </span>
-          <span className="flex items-center gap-1.5">
-            <Calendar className="h-4 w-4" />
-            {estimatedTime}
-          </span>
-          <span className="flex items-center gap-1.5">
-            <Clock className="h-4 w-4" />
-            {category}
-          </span>
+          {estimatedTime && (
+            <span className="flex items-center gap-1.5">
+              <Calendar className="h-4 w-4" />
+              {estimatedTime}
+            </span>
+          )}
+          {locationDisplay && (
+            <span className="flex items-center gap-1.5">
+              <MapPin className="h-4 w-4" />
+              {locationIcon} {locationDisplay}
+            </span>
+          )}
         </div>
 
         {/* Creator */}
