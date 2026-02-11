@@ -6,3 +6,5 @@ export { usePostings } from "./use-postings";
 export { useSearch } from "./use-search";
 export { usePostingDetail } from "./use-posting-detail";
 export { useProfile } from "./use-profile";
+export { useFriendships } from "./use-friendships";
+export { useFriendAsks } from "./use-friend-ask";
