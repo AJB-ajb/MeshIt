@@ -66,6 +66,7 @@ export default function PostingsPage() {
   const [filterCategory, setFilterCategory] = useState<string>("all");
   const [filterMode, setFilterMode] = useState<string>("all");
   const [interestingIds, setInterestingIds] = useState<Set<string>>(new Set());
+  const [interestError, setInterestError] = useState<string | null>(null);
 
   const { postings, userId, interestedPostingIds, isLoading, mutate } =
     usePostings(activeTab, filterCategory);
@@ -78,6 +79,7 @@ export default function PostingsPage() {
 
   const handleExpressInterest = async (postingId: string) => {
     setInterestingIds((prev) => new Set(prev).add(postingId));
+    setInterestError(null);
     try {
       const response = await fetch("/api/matches/interest", {
         method: "POST",
@@ -97,7 +99,9 @@ export default function PostingsPage() {
         next.delete(postingId);
         return next;
       });
-      alert(err instanceof Error ? err.message : "Failed to express interest");
+      setInterestError(
+        err instanceof Error ? err.message : "Failed to express interest",
+      );
     }
   };
 
@@ -242,6 +246,12 @@ export default function PostingsPage() {
             </div>
           </CardContent>
         </Card>
+      )}
+
+      {interestError && (
+        <p className="rounded-md border border-destructive/30 bg-destructive/10 px-4 py-3 text-sm text-destructive">
+          {interestError}
+        </p>
       )}
 
       {/* Loading state */}

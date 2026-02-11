@@ -125,6 +125,9 @@ export default function PostingDetailPage() {
         category: form.category,
         mode: form.mode,
         status: form.status,
+        expires_at: form.expiresAt
+          ? new Date(form.expiresAt + "T23:59:59").toISOString()
+          : undefined,
         updated_at: new Date().toISOString(),
       })
       .eq("id", postingId);
