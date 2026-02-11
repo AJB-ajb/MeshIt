@@ -20,6 +20,11 @@ export type PostingDetail = {
   created_at: string;
   expires_at: string;
   creator_id: string;
+  location_mode: string | null;
+  location_name: string | null;
+  location_lat: number | null;
+  location_lng: number | null;
+  max_distance_km: number | null;
   profiles?: {
     full_name: string | null;
     headline: string | null;
@@ -64,6 +69,11 @@ export type PostingFormState = {
   mode: string;
   status: string;
   expiresAt: string;
+  locationMode: string;
+  locationName: string;
+  locationLat: string;
+  locationLng: string;
+  maxDistanceKm: string;
 };
 
 type PostingDetailData = {

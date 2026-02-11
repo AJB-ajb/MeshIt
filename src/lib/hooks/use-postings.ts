@@ -20,6 +20,8 @@ type Posting = {
   tags: string[];
   mode: "open" | "friend_ask";
   location_preference: number | null;
+  location_mode: string | null;
+  location_name: string | null;
   estimated_time: string | null;
   skill_level_min: number | null;
   context_identifier: string | null;

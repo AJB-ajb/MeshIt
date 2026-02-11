@@ -64,20 +64,20 @@ export default function NewPostingPage() {
       // Map extracted data to form state
       const extractedMax =
         extracted.team_size_max?.toString() || form.lookingFor;
-      setForm({
-        title: extracted.title || form.title,
-        description: extracted.description || form.description,
+      setForm((prev) => ({
+        ...prev,
+        title: extracted.title || prev.title,
+        description: extracted.description || prev.description,
         skills: Array.isArray(extracted.skills)
           ? extracted.skills.join(", ")
-          : form.skills,
-        estimatedTime: extracted.estimated_time || form.estimatedTime,
+          : prev.skills,
+        estimatedTime: extracted.estimated_time || prev.estimatedTime,
         teamSizeMin: "1",
         teamSizeMax: extractedMax,
         lookingFor: extractedMax,
-        category: extracted.category || form.category,
-        mode: extracted.mode || form.mode,
-        expiresAt: form.expiresAt,
-      });
+        category: extracted.category || prev.category,
+        mode: extracted.mode || prev.mode,
+      }));
 
       setExtractionSuccess(true);
       // Switch to form mode to review extracted data
@@ -163,6 +163,10 @@ export default function NewPostingPage() {
       ? new Date(form.expiresAt + "T23:59:59")
       : new Date(Date.now() + 90 * 24 * 60 * 60 * 1000);
 
+    const locationLat = parseFloat(form.locationLat);
+    const locationLng = parseFloat(form.locationLng);
+    const maxDistanceKm = parseInt(form.maxDistanceKm, 10);
+
     const { data: posting, error: insertError } = await supabase
       .from("postings")
       .insert({
@@ -178,6 +182,14 @@ export default function NewPostingPage() {
         status: "open",
         expires_at: expiresAt.toISOString(),
         is_test_data: getTestDataValue(),
+        location_mode: form.locationMode || "either",
+        location_name: form.locationName.trim() || null,
+        location_lat: Number.isFinite(locationLat) ? locationLat : null,
+        location_lng: Number.isFinite(locationLng) ? locationLng : null,
+        max_distance_km:
+          Number.isFinite(maxDistanceKm) && maxDistanceKm > 0
+            ? maxDistanceKm
+            : null,
       })
       .select()
       .single();
