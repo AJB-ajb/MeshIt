@@ -154,7 +154,6 @@ describe("useProfile", () => {
     expect(result.current.form.skills).toBe("React, TypeScript");
     expect(result.current.form.interests).toBe("AI, Web");
     expect(result.current.form.locationLat).toBe("37.7749");
-    expect(result.current.form.remotePreference).toBe("80");
     expect(result.current.form.filterMaxDistance).toBe("100");
     expect(result.current.form.filterLanguages).toBe("English, Spanish");
   });

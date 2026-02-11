@@ -128,12 +128,8 @@ async function fetchProfile(): Promise<ProfileData> {
       locationLat: data.location_lat?.toString() ?? "",
       locationLng: data.location_lng?.toString() ?? "",
       skills: Array.isArray(data.skills) ? data.skills.join(", ") : "",
-      interests: Array.isArray(data.interests)
-        ? data.interests.join(", ")
-        : "",
-      languages: Array.isArray(data.languages)
-        ? data.languages.join(", ")
-        : "",
+      interests: Array.isArray(data.interests) ? data.interests.join(", ") : "",
+      languages: Array.isArray(data.languages) ? data.languages.join(", ") : "",
       portfolioUrl: data.portfolio_url ?? "",
       githubUrl: data.github_url ?? "",
       filterMaxDistance: hardFilters.max_distance_km?.toString() ?? "",
@@ -299,6 +295,9 @@ export function useProfile() {
         languages: parseList(form.languages),
         portfolio_url: form.portfolioUrl,
         github_url: form.githubUrl,
+        skill_levels: form.skillLevels,
+        location_mode: form.locationMode,
+        availability_slots: form.availabilitySlots,
       };
 
       // Save updated profile + undo data to DB
@@ -417,6 +416,15 @@ export function useProfile() {
         ...(snapshot.github_url != null && {
           github_url: snapshot.github_url,
         }),
+        ...(snapshot.skill_levels != null && {
+          skill_levels: snapshot.skill_levels,
+        }),
+        ...(snapshot.location_mode != null && {
+          location_mode: snapshot.location_mode,
+        }),
+        ...(snapshot.availability_slots != null && {
+          availability_slots: snapshot.availability_slots,
+        }),
         updated_at: new Date().toISOString(),
       },
       { onConflict: "user_id" },
@@ -448,6 +456,18 @@ export function useProfile() {
           : prev.languages,
         portfolioUrl: (snapshot.portfolio_url as string) ?? prev.portfolioUrl,
         githubUrl: (snapshot.github_url as string) ?? prev.githubUrl,
+        skillLevels:
+          snapshot.skill_levels != null
+            ? parseSkillLevels(snapshot.skill_levels)
+            : prev.skillLevels,
+        locationMode:
+          snapshot.location_mode != null
+            ? parseLocationMode(snapshot.location_mode)
+            : prev.locationMode,
+        availabilitySlots:
+          snapshot.availability_slots != null
+            ? parseAvailabilitySlots(snapshot.availability_slots)
+            : prev.availabilitySlots,
       }));
     }
     setSuccess(true);
