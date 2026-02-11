@@ -3,51 +3,18 @@
 import { useState } from "react";
 import { useRouter } from "next/navigation";
 import Link from "next/link";
-import {
-  ArrowLeft,
-  Loader2,
-  Sparkles,
-  FileText,
-  CheckCircle,
-} from "lucide-react";
-import { SpeechInput } from "@/components/ai-elements/speech-input";
-import { transcribeAudio } from "@/lib/transcribe";
+import { ArrowLeft } from "lucide-react";
 
-import { Button } from "@/components/ui/button";
-import { Input } from "@/components/ui/input";
-import {
-  Card,
-  CardContent,
-  CardDescription,
-  CardHeader,
-  CardTitle,
-} from "@/components/ui/card";
 import { createClient } from "@/lib/supabase/client";
 import { getTestDataValue } from "@/lib/environment";
-
-type InputMode = "form" | "ai";
-
-type PostingFormState = {
-  title: string;
-  description: string;
-  skills: string;
-  estimatedTime: string;
-  teamSizeMin: string;
-  teamSizeMax: string;
-  category: string;
-  mode: string;
-};
-
-const defaultFormState: PostingFormState = {
-  title: "",
-  description: "",
-  skills: "",
-  estimatedTime: "",
-  teamSizeMin: "2",
-  teamSizeMax: "5",
-  category: "personal",
-  mode: "open",
-};
+import { InputModeToggle } from "@/components/posting/input-mode-toggle";
+import { AiExtractionCard } from "@/components/posting/ai-extraction-card";
+import {
+  PostingFormCard,
+  defaultFormState,
+} from "@/components/posting/posting-form-card";
+import type { InputMode } from "@/components/posting/input-mode-toggle";
+import type { PostingFormState } from "@/components/posting/posting-form-card";
 
 const parseList = (value: string) =>
   value
@@ -263,317 +230,27 @@ export default function NewPostingPage() {
         </p>
       )}
 
-      {/* Input Mode Toggle */}
-      <div className="flex items-center justify-center gap-2 rounded-lg border border-border bg-muted/30 p-1">
-        <button
-          type="button"
-          onClick={() => setInputMode("form")}
-          className={`flex items-center gap-2 rounded-md px-4 py-2 text-sm font-medium transition-colors ${
-            inputMode === "form"
-              ? "bg-background text-foreground shadow-sm"
-              : "text-muted-foreground hover:text-foreground"
-          }`}
-        >
-          <FileText className="h-4 w-4" />
-          Fill Form
-        </button>
-        <button
-          type="button"
-          onClick={() => setInputMode("ai")}
-          className={`flex items-center gap-2 rounded-md px-4 py-2 text-sm font-medium transition-colors ${
-            inputMode === "ai"
-              ? "bg-background text-foreground shadow-sm"
-              : "text-muted-foreground hover:text-foreground"
-          }`}
-        >
-          <Sparkles className="h-4 w-4" />
-          AI Extract
-        </button>
-      </div>
+      <InputModeToggle inputMode={inputMode} onModeChange={setInputMode} />
 
-      {/* AI Text Input Mode */}
       {inputMode === "ai" && (
-        <Card className="border-primary/20 bg-primary/5">
-          <CardHeader>
-            <CardTitle className="flex items-center gap-2">
-              <Sparkles className="h-5 w-5 text-primary" />
-              AI Posting Extraction
-            </CardTitle>
-            <CardDescription>
-              Paste your posting description from Slack, Discord, a GitHub
-              README, or use the mic to describe it. Our AI will automatically
-              extract posting details.
-            </CardDescription>
-          </CardHeader>
-          <CardContent className="space-y-4">
-            <div className="relative">
-              <textarea
-                rows={12}
-                value={aiText}
-                onChange={(e) => setAiText(e.target.value)}
-                className="flex w-full rounded-md border border-input bg-background px-3 py-2 text-sm ring-offset-background placeholder:text-muted-foreground focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring focus-visible:ring-offset-2"
-                placeholder={`Paste your posting text here, or use the mic to describe it...
-
-Example:
-Hey everyone! Looking for 2-3 devs to join my hackathon project this weekend 🚀
-
-Building an AI-powered recipe generator that suggests meals based on what's in your fridge. 
-
-Tech stack: React, TypeScript, OpenAI API, Supabase
-Need: Frontend dev + someone with AI/ML experience
-Commitment: ~10 hrs over the weekend
-
-DM if interested!`}
-              />
-              <SpeechInput
-                className="absolute bottom-2 right-2 h-10 w-10 p-0"
-                size="icon"
-                variant="ghost"
-                onAudioRecorded={transcribeAudio}
-                onTranscriptionChange={(text) =>
-                  setAiText((prev) => (prev ? prev + " " + text : text))
-                }
-              />
-            </div>
-            <div className="flex gap-3">
-              <Button
-                type="button"
-                onClick={handleAiExtract}
-                disabled={isExtracting || !aiText.trim()}
-                className="flex-1"
-              >
-                {isExtracting ? (
-                  <>
-                    <Loader2 className="h-4 w-4 animate-spin" />
-                    Extracting...
-                  </>
-                ) : extractionSuccess ? (
-                  <>
-                    <CheckCircle className="h-4 w-4" />
-                    Extracted!
-                  </>
-                ) : (
-                  <>
-                    <Sparkles className="h-4 w-4" />
-                    Extract Posting Details
-                  </>
-                )}
-              </Button>
-              <Button
-                type="button"
-                variant="outline"
-                onClick={() => setInputMode("form")}
-              >
-                Switch to Form
-              </Button>
-            </div>
-            <p className="text-xs text-muted-foreground">
-              After extraction, youll be able to review and edit the extracted
-              information before creating your posting.
-            </p>
-          </CardContent>
-        </Card>
+        <AiExtractionCard
+          aiText={aiText}
+          onAiTextChange={setAiText}
+          isExtracting={isExtracting}
+          extractionSuccess={extractionSuccess}
+          onExtract={handleAiExtract}
+          onSwitchToForm={() => setInputMode("form")}
+        />
       )}
 
-      {/* Form */}
       {inputMode === "form" && (
-        <form onSubmit={handleSubmit}>
-          <Card>
-            <CardHeader>
-              <CardTitle>Posting Details</CardTitle>
-              <CardDescription>
-                Tell us about your posting in plain language. You can paste from
-                Slack, Discord, or describe it yourself.
-              </CardDescription>
-            </CardHeader>
-            <CardContent className="space-y-6">
-              {/* Title */}
-              <div className="space-y-2">
-                <label htmlFor="title" className="text-sm font-medium">
-                  Posting Title <span className="text-destructive">*</span>
-                </label>
-                <Input
-                  id="title"
-                  value={form.title}
-                  onChange={(e) => handleChange("title", e.target.value)}
-                  placeholder="e.g., AI Recipe Generator"
-                  className="text-lg"
-                />
-              </div>
-
-              {/* Description */}
-              <div className="space-y-2">
-                <label htmlFor="description" className="text-sm font-medium">
-                  Description <span className="text-destructive">*</span>
-                </label>
-                <div className="relative">
-                  <textarea
-                    id="description"
-                    rows={6}
-                    value={form.description}
-                    onChange={(e) =>
-                      handleChange("description", e.target.value)
-                    }
-                    className="flex w-full rounded-md border border-input bg-background px-3 py-2 text-sm ring-offset-background placeholder:text-muted-foreground focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring focus-visible:ring-offset-2 disabled:cursor-not-allowed disabled:opacity-50"
-                    placeholder="Describe your project and what kind of collaborators you're looking for...
-
-Example: Building a Minecraft-style collaborative IDE, need 2-3 people with WebGL or game dev experience, hackathon this weekend."
-                  />
-                  <SpeechInput
-                    className="absolute bottom-2 right-2 h-10 w-10 p-0"
-                    size="icon"
-                    variant="ghost"
-                    type="button"
-                    onAudioRecorded={transcribeAudio}
-                    onTranscriptionChange={(text) =>
-                      handleChange(
-                        "description",
-                        form.description ? form.description + " " + text : text,
-                      )
-                    }
-                  />
-                </div>
-                <p className="text-xs text-muted-foreground">
-                  Our AI will extract skills, team size, and timeline from your
-                  description.
-                </p>
-              </div>
-
-              {/* Skills */}
-              <div className="space-y-2">
-                <label htmlFor="skills" className="text-sm font-medium">
-                  Skills (comma-separated)
-                </label>
-                <Input
-                  id="skills"
-                  value={form.skills}
-                  onChange={(e) => handleChange("skills", e.target.value)}
-                  placeholder="e.g., React, TypeScript, Node.js, AI/ML"
-                />
-              </div>
-
-              {/* Estimated Time and Category */}
-              <div className="grid gap-4 sm:grid-cols-2">
-                <div className="space-y-2">
-                  <label
-                    htmlFor="estimated-time"
-                    className="text-sm font-medium"
-                  >
-                    Estimated Time
-                  </label>
-                  <Input
-                    id="estimated-time"
-                    value={form.estimatedTime}
-                    onChange={(e) =>
-                      handleChange("estimatedTime", e.target.value)
-                    }
-                    placeholder="e.g., 2 weeks, 1 month"
-                  />
-                </div>
-                <div className="space-y-2">
-                  <label htmlFor="category" className="text-sm font-medium">
-                    Category
-                  </label>
-                  <select
-                    id="category"
-                    value={form.category}
-                    onChange={(e) => handleChange("category", e.target.value)}
-                    className="flex h-10 w-full rounded-md border border-input bg-background px-3 py-2 text-sm ring-offset-background focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring focus-visible:ring-offset-2"
-                  >
-                    <option value="study">Study</option>
-                    <option value="hackathon">Hackathon</option>
-                    <option value="personal">Personal</option>
-                    <option value="professional">Professional</option>
-                    <option value="social">Social</option>
-                  </select>
-                </div>
-              </div>
-
-              {/* Team size and Mode */}
-              <div className="grid gap-4 sm:grid-cols-3">
-                <div className="space-y-2">
-                  <label
-                    htmlFor="team-size-min"
-                    className="text-sm font-medium"
-                  >
-                    Team Size Min
-                  </label>
-                  <select
-                    id="team-size-min"
-                    value={form.teamSizeMin}
-                    onChange={(e) =>
-                      handleChange("teamSizeMin", e.target.value)
-                    }
-                    className="flex h-10 w-full rounded-md border border-input bg-background px-3 py-2 text-sm ring-offset-background focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring focus-visible:ring-offset-2"
-                  >
-                    <option value="1">1</option>
-                    <option value="2">2</option>
-                    <option value="3">3</option>
-                    <option value="4">4</option>
-                    <option value="5">5</option>
-                  </select>
-                </div>
-                <div className="space-y-2">
-                  <label
-                    htmlFor="team-size-max"
-                    className="text-sm font-medium"
-                  >
-                    Team Size Max
-                  </label>
-                  <select
-                    id="team-size-max"
-                    value={form.teamSizeMax}
-                    onChange={(e) =>
-                      handleChange("teamSizeMax", e.target.value)
-                    }
-                    className="flex h-10 w-full rounded-md border border-input bg-background px-3 py-2 text-sm ring-offset-background focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring focus-visible:ring-offset-2"
-                  >
-                    <option value="2">2</option>
-                    <option value="3">3</option>
-                    <option value="4">4</option>
-                    <option value="5">5</option>
-                    <option value="10">10</option>
-                  </select>
-                </div>
-                <div className="space-y-2">
-                  <label htmlFor="mode" className="text-sm font-medium">
-                    Mode
-                  </label>
-                  <select
-                    id="mode"
-                    value={form.mode}
-                    onChange={(e) => handleChange("mode", e.target.value)}
-                    className="flex h-10 w-full rounded-md border border-input bg-background px-3 py-2 text-sm ring-offset-background focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring focus-visible:ring-offset-2"
-                  >
-                    <option value="open">Open</option>
-                    <option value="friend_ask">Friend Ask</option>
-                  </select>
-                </div>
-              </div>
-
-              {/* Submit */}
-              <div className="flex gap-4 pt-4">
-                <Button
-                  type="submit"
-                  className="flex-1"
-                  disabled={isSaving || isExtracting}
-                >
-                  {isSaving ? (
-                    <>
-                      <Loader2 className="h-4 w-4 animate-spin" />
-                      Creating...
-                    </>
-                  ) : (
-                    "Create Posting"
-                  )}
-                </Button>
-                <Button type="button" variant="outline" asChild>
-                  <Link href="/postings">Cancel</Link>
-                </Button>
-              </div>
-            </CardContent>
-          </Card>
-        </form>
+        <PostingFormCard
+          form={form}
+          onChange={handleChange}
+          onSubmit={handleSubmit}
+          isSaving={isSaving}
+          isExtracting={isExtracting}
+        />
       )}
 
       {/* Info */}
