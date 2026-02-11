@@ -21,19 +21,30 @@ export type PostingFormState = {
   estimatedTime: string;
   teamSizeMin: string;
   teamSizeMax: string;
+  lookingFor: string;
   category: string;
   mode: string;
+  expiresAt: string;
 };
+
+// Default expiry: 90 days from now
+function defaultExpiresAt(): string {
+  const d = new Date();
+  d.setDate(d.getDate() + 90);
+  return d.toISOString().slice(0, 10);
+}
 
 export const defaultFormState: PostingFormState = {
   title: "",
   description: "",
   skills: "",
   estimatedTime: "",
-  teamSizeMin: "2",
+  teamSizeMin: "1",
   teamSizeMax: "5",
+  lookingFor: "3",
   category: "personal",
   mode: "open",
+  expiresAt: defaultExpiresAt(),
 };
 
 type PostingFormCardProps = {
@@ -157,41 +168,24 @@ Example: Building a Minecraft-style collaborative IDE, need 2-3 people with WebG
             </div>
           </div>
 
-          {/* Team size and Mode */}
+          {/* Looking for, Mode, and Expires */}
           <div className="grid gap-4 sm:grid-cols-3">
             <div className="space-y-2">
-              <label htmlFor="team-size-min" className="text-sm font-medium">
-                Team Size Min
+              <label htmlFor="looking-for" className="text-sm font-medium">
+                Looking for
               </label>
-              <select
-                id="team-size-min"
-                value={form.teamSizeMin}
-                onChange={(e) => onChange("teamSizeMin", e.target.value)}
-                className="flex h-10 w-full rounded-md border border-input bg-background px-3 py-2 text-sm ring-offset-background focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring focus-visible:ring-offset-2"
-              >
-                <option value="1">1</option>
-                <option value="2">2</option>
-                <option value="3">3</option>
-                <option value="4">4</option>
-                <option value="5">5</option>
-              </select>
-            </div>
-            <div className="space-y-2">
-              <label htmlFor="team-size-max" className="text-sm font-medium">
-                Team Size Max
-              </label>
-              <select
-                id="team-size-max"
-                value={form.teamSizeMax}
-                onChange={(e) => onChange("teamSizeMax", e.target.value)}
-                className="flex h-10 w-full rounded-md border border-input bg-background px-3 py-2 text-sm ring-offset-background focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring focus-visible:ring-offset-2"
-              >
-                <option value="2">2</option>
-                <option value="3">3</option>
-                <option value="4">4</option>
-                <option value="5">5</option>
-                <option value="10">10</option>
-              </select>
+              <Input
+                id="looking-for"
+                type="number"
+                min={1}
+                max={10}
+                value={form.lookingFor}
+                onChange={(e) => onChange("lookingFor", e.target.value)}
+                placeholder="e.g., 3"
+              />
+              <p className="text-xs text-muted-foreground">
+                Number of people (1-10)
+              </p>
             </div>
             <div className="space-y-2">
               <label htmlFor="mode" className="text-sm font-medium">
@@ -206,6 +200,21 @@ Example: Building a Minecraft-style collaborative IDE, need 2-3 people with WebG
                 <option value="open">Open</option>
                 <option value="friend_ask">Friend Ask</option>
               </select>
+            </div>
+            <div className="space-y-2">
+              <label htmlFor="expires-at" className="text-sm font-medium">
+                Expires on
+              </label>
+              <Input
+                id="expires-at"
+                type="date"
+                value={form.expiresAt}
+                onChange={(e) => onChange("expiresAt", e.target.value)}
+                min={new Date().toISOString().slice(0, 10)}
+              />
+              <p className="text-xs text-muted-foreground">
+                Default: 90 days from today
+              </p>
             </div>
           </div>
 

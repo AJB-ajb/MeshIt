@@ -135,6 +135,7 @@ export async function fetchRecommendedPostings(
         estimated_time,
         category,
         created_at,
+        expires_at,
         profiles:creator_id (
           full_name,
           user_id
@@ -170,6 +171,7 @@ export async function fetchRecommendedPostings(
           name: (profiles?.full_name as string) || "Unknown",
           initials: getInitials((profiles?.full_name as string) || null),
         },
+        expiresAt: (posting.expires_at as string) || null,
         createdAt: formatDate(posting.created_at as string),
       };
     })

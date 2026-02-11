@@ -12,6 +12,7 @@ export type RecommendedPosting = {
   estimatedTime: string;
   category: string;
   matchScore: number;
+  expiresAt?: string | null;
   creator: { name: string; initials: string };
   createdAt: string;
 };

@@ -2,6 +2,7 @@ import Link from "next/link";
 import { Users, Calendar, Clock, ArrowRight } from "lucide-react";
 
 import { cn } from "@/lib/utils";
+import { getUrgencyBadge } from "@/lib/posting/urgency";
 import { Button } from "@/components/ui/button";
 import { Badge } from "@/components/ui/badge";
 import { Avatar, AvatarFallback } from "@/components/ui/avatar";
@@ -22,6 +23,7 @@ export interface PostingCardProps {
   estimatedTime: string;
   category: string;
   matchScore?: number;
+  expiresAt?: string | null;
   creator: {
     name: string;
     initials: string;
@@ -41,11 +43,13 @@ export function PostingCard({
   estimatedTime,
   category,
   matchScore,
+  expiresAt,
   creator,
   createdAt,
   className,
   onApply,
 }: PostingCardProps) {
+  const urgency = getUrgencyBadge(expiresAt);
   return (
     <Card
       className={cn(
@@ -60,6 +64,9 @@ export function PostingCard({
               <CardTitle className="text-xl">{title}</CardTitle>
               {matchScore !== undefined && (
                 <Badge variant="success">{matchScore}% match</Badge>
+              )}
+              {urgency.variant && (
+                <Badge variant={urgency.variant}>{urgency.label}</Badge>
               )}
             </div>
           </div>
