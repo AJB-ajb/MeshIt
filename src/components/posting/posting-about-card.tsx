@@ -115,6 +115,15 @@ export function PostingAboutCard({
               </select>
             </div>
             <div className="space-y-2">
+              <label className="text-sm font-medium">Expires on</label>
+              <Input
+                type="date"
+                value={form.expiresAt}
+                onChange={(e) => onFormChange("expiresAt", e.target.value)}
+                min={new Date().toISOString().slice(0, 10)}
+              />
+            </div>
+            <div className="space-y-2">
               <label className="text-sm font-medium">Status</label>
               <select
                 value={form.status}
