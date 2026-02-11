@@ -12,6 +12,7 @@ import {
   Loader2,
   Sparkles,
   X,
+  Heart,
 } from "lucide-react";
 import { SpeechInput } from "@/components/ai-elements/speech-input";
 import { transcribeAudio } from "@/lib/transcribe";
@@ -36,6 +37,15 @@ const tabs: { id: TabId; label: string }[] = [
   { id: "my-postings", label: "My Postings" },
 ];
 
+const categories = [
+  { value: "all", label: "All" },
+  { value: "study", label: "Study" },
+  { value: "hackathon", label: "Hackathon" },
+  { value: "personal", label: "Personal" },
+  { value: "professional", label: "Professional" },
+  { value: "social", label: "Social" },
+] as const;
+
 const formatDate = (dateString: string) => {
   const date = new Date(dateString);
   const now = new Date();
@@ -55,13 +65,40 @@ export default function PostingsPage() {
   const [showFilters, setShowFilters] = useState(false);
   const [filterCategory, setFilterCategory] = useState<string>("all");
   const [filterMode, setFilterMode] = useState<string>("all");
-  const { postings, userId, isLoading } = usePostings(activeTab);
+  const [interestingIds, setInterestingIds] = useState<Set<string>>(new Set());
 
-  const hasActiveFilters = filterCategory !== "all" || filterMode !== "all";
+  const { postings, userId, interestedPostingIds, isLoading, mutate } =
+    usePostings(activeTab, filterCategory);
+
+  const hasActiveFilters = filterMode !== "all";
 
   const clearFilters = () => {
-    setFilterCategory("all");
     setFilterMode("all");
+  };
+
+  const handleExpressInterest = async (postingId: string) => {
+    setInterestingIds((prev) => new Set(prev).add(postingId));
+    try {
+      const response = await fetch("/api/matches/interest", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ posting_id: postingId }),
+      });
+
+      if (!response.ok) {
+        const data = await response.json();
+        throw new Error(data.error?.message || "Failed to express interest");
+      }
+
+      await mutate();
+    } catch (err) {
+      setInterestingIds((prev) => {
+        const next = new Set(prev);
+        next.delete(postingId);
+        return next;
+      });
+      alert(err instanceof Error ? err.message : "Failed to express interest");
+    }
   };
 
   const filteredPostings = postings.filter((posting: Posting) => {
@@ -77,10 +114,7 @@ export default function PostingsPage() {
       if (!matchesSearch) return false;
     }
 
-    // Category filter
-    if (filterCategory !== "all" && posting.category !== filterCategory) return false;
-
-    // Mode filter
+    // Mode filter (category is now handled at the hook/query level)
     if (filterMode !== "all" && posting.mode !== filterMode) return false;
 
     return true;
@@ -153,7 +187,24 @@ export default function PostingsPage() {
         </div>
       </div>
 
-      {/* Filter panel */}
+      {/* Category chips */}
+      <div className="flex flex-wrap gap-2">
+        {categories.map((cat) => (
+          <button
+            key={cat.value}
+            onClick={() => setFilterCategory(cat.value)}
+            className={`rounded-full px-3 py-1 text-sm font-medium transition-colors ${
+              filterCategory === cat.value
+                ? "bg-primary text-primary-foreground"
+                : "bg-muted text-muted-foreground hover:bg-muted/80 hover:text-foreground"
+            }`}
+          >
+            {cat.label}
+          </button>
+        ))}
+      </div>
+
+      {/* Filter panel (mode only — category handled by chips) */}
       {showFilters && (
         <Card>
           <CardContent className="pt-4 pb-4">
@@ -165,39 +216,29 @@ export default function PostingsPage() {
                     Clear all
                   </Button>
                 )}
-                <Button variant="ghost" size="icon" className="h-8 w-8" onClick={() => setShowFilters(false)}>
+                <Button
+                  variant="ghost"
+                  size="icon"
+                  className="h-8 w-8"
+                  onClick={() => setShowFilters(false)}
+                >
                   <X className="h-4 w-4" />
                 </Button>
               </div>
             </div>
-            <div className="grid gap-4 sm:grid-cols-2">
-              <div className="space-y-1.5">
-                <label className="text-xs font-medium text-muted-foreground">Category</label>
-                <select
-                  value={filterCategory}
-                  onChange={(e) => setFilterCategory(e.target.value)}
-                  className="flex h-9 w-full rounded-md border border-input bg-background px-3 py-1 text-sm"
-                >
-                  <option value="all">Any category</option>
-                  <option value="study">Study</option>
-                  <option value="hackathon">Hackathon</option>
-                  <option value="personal">Personal</option>
-                  <option value="professional">Professional</option>
-                  <option value="social">Social</option>
-                </select>
-              </div>
-              <div className="space-y-1.5">
-                <label className="text-xs font-medium text-muted-foreground">Mode</label>
-                <select
-                  value={filterMode}
-                  onChange={(e) => setFilterMode(e.target.value)}
-                  className="flex h-9 w-full rounded-md border border-input bg-background px-3 py-1 text-sm"
-                >
-                  <option value="all">Any mode</option>
-                  <option value="open">Open</option>
-                  <option value="friend_ask">Friend Ask</option>
-                </select>
-              </div>
+            <div className="space-y-1.5">
+              <label className="text-xs font-medium text-muted-foreground">
+                Mode
+              </label>
+              <select
+                value={filterMode}
+                onChange={(e) => setFilterMode(e.target.value)}
+                className="flex h-9 w-full rounded-md border border-input bg-background px-3 py-1 text-sm"
+              >
+                <option value="all">Any mode</option>
+                <option value="open">Open</option>
+                <option value="friend_ask">Friend Ask</option>
+              </select>
             </div>
           </CardContent>
         </Card>
@@ -232,6 +273,15 @@ export default function PostingsPage() {
           {filteredPostings.map((posting) => {
             const isOwner = userId === posting.creator_id;
             const creatorName = posting.profiles?.full_name || "Unknown";
+            const isAlreadyInterested = interestedPostingIds.includes(
+              posting.id,
+            );
+            const isInteresting = interestingIds.has(posting.id);
+            const showInterestButton =
+              !isOwner &&
+              activeTab === "discover" &&
+              posting.mode === "open" &&
+              !isAlreadyInterested;
 
             return (
               <Card key={posting.id} className="overflow-hidden">
@@ -277,14 +327,41 @@ export default function PostingsPage() {
                       </div>
                     </div>
                     <div className="flex gap-2 shrink-0">
+                      {/* "I'm Interested" button */}
+                      {showInterestButton && (
+                        <Button
+                          variant="outline"
+                          onClick={() => handleExpressInterest(posting.id)}
+                          disabled={isInteresting}
+                        >
+                          {isInteresting ? (
+                            <Loader2 className="h-4 w-4 animate-spin" />
+                          ) : (
+                            <Heart className="h-4 w-4" />
+                          )}
+                          {isInteresting
+                            ? "Expressing Interest..."
+                            : "I'm Interested"}
+                        </Button>
+                      )}
+                      {/* Already interested indicator */}
+                      {!isOwner &&
+                        activeTab === "discover" &&
+                        isAlreadyInterested && (
+                          <Button variant="secondary" disabled>
+                            <Heart className="h-4 w-4 fill-current" />
+                            Interested
+                          </Button>
+                        )}
                       <Button variant="outline" asChild>
                         <Link href={`/postings/${posting.id}`}>
                           {isOwner ? "Edit" : "View Details"}
                         </Link>
                       </Button>
-                      {!isOwner && posting.status === "open" && (
-                        <Button>Apply</Button>
-                      )}
+                      {!isOwner &&
+                        posting.status === "open" &&
+                        !isAlreadyInterested &&
+                        posting.mode !== "open" && <Button>Apply</Button>}
                     </div>
                   </div>
                 </CardHeader>
