@@ -70,6 +70,8 @@ export interface Profile {
   github_url: string | null;
   // Matching
   embedding: number[] | null;
+  // Notification preferences
+  notification_preferences: Json | null;
   // Data isolation
   is_test_data: boolean;
   // Timestamps
@@ -94,6 +96,7 @@ export interface ProfileInsert {
   portfolio_url?: string | null;
   github_url?: string | null;
   embedding?: number[] | null;
+  notification_preferences?: Json | null;
   is_test_data?: boolean;
   created_at?: string;
   updated_at?: string;
@@ -116,6 +119,7 @@ export interface ProfileUpdate {
   portfolio_url?: string | null;
   github_url?: string | null;
   embedding?: number[] | null;
+  notification_preferences?: Json | null;
   is_test_data?: boolean;
   created_at?: string;
   updated_at?: string;

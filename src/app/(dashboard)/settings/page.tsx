@@ -35,8 +35,17 @@ import {
   AlertDialogHeader,
   AlertDialogTitle,
 } from "@/components/ui/alert-dialog";
+import { Switch } from "@/components/ui/switch";
 import { useSettings } from "@/lib/hooks/use-settings";
 import type { Provider } from "@/lib/hooks/use-settings";
+import { useNotificationPreferences } from "@/lib/hooks/use-notification-preferences";
+import {
+  type NotificationType,
+  type NotificationChannel,
+  type NotificationPreferences,
+  allNotificationTypes,
+  notificationTypeLabels,
+} from "@/lib/notifications/preferences";
 
 function SettingsContent() {
   const router = useRouter();
@@ -50,6 +59,30 @@ function SettingsContent() {
     mutate,
     mutateGithubSync,
   } = useSettings();
+
+  const {
+    preferences: notifPrefs,
+    updatePreferences: updateNotifPrefs,
+  } = useNotificationPreferences();
+
+  const handleToggleNotification = async (
+    type: NotificationType,
+    channel: NotificationChannel,
+    checked: boolean,
+  ) => {
+    const updated: NotificationPreferences = {
+      ...notifPrefs,
+      [channel]: {
+        ...notifPrefs[channel],
+        [type]: checked,
+      },
+    };
+    try {
+      await updateNotifPrefs(updated);
+    } catch {
+      setError("Failed to save notification preferences.");
+    }
+  };
 
   const [linkingProvider, setLinkingProvider] = useState<Provider | null>(null);
   const [unlinkingProvider, setUnlinkingProvider] = useState<Provider | null>(
@@ -387,6 +420,62 @@ function SettingsContent() {
           </CardContent>
         </Card>
       )}
+
+      {/* Notification Preferences */}
+      <Card>
+        <CardHeader>
+          <CardTitle>Notification Preferences</CardTitle>
+          <CardDescription>
+            Choose which notifications you receive in-app and in the browser
+          </CardDescription>
+        </CardHeader>
+        <CardContent>
+          <div className="overflow-x-auto">
+            <table className="w-full text-sm">
+              <thead>
+                <tr className="border-b border-border">
+                  <th className="pb-2 text-left font-medium text-muted-foreground">
+                    Type
+                  </th>
+                  <th className="pb-2 text-center font-medium text-muted-foreground">
+                    In-App
+                  </th>
+                  <th className="pb-2 text-center font-medium text-muted-foreground">
+                    Browser
+                  </th>
+                </tr>
+              </thead>
+              <tbody>
+                {allNotificationTypes.map((type) => (
+                  <tr key={type} className="border-b border-border last:border-0">
+                    <td className="py-3 pr-4">
+                      {notificationTypeLabels[type]}
+                    </td>
+                    <td className="py-3 text-center">
+                      <Switch
+                        checked={notifPrefs.in_app[type]}
+                        onCheckedChange={(checked) =>
+                          handleToggleNotification(type, "in_app", checked)
+                        }
+                        aria-label={`${notificationTypeLabels[type]} in-app`}
+                      />
+                    </td>
+                    <td className="py-3 text-center">
+                      <Switch
+                        checked={notifPrefs.browser[type]}
+                        onCheckedChange={(checked) =>
+                          handleToggleNotification(type, "browser", checked)
+                        }
+                        aria-label={`${notificationTypeLabels[type]} browser`}
+                      />
+                    </td>
+                  </tr>
+                ))}
+              </tbody>
+            </table>
+          </div>
+        </CardContent>
+      </Card>
 
       <Card>
         <CardHeader>

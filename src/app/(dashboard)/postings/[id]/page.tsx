@@ -9,6 +9,10 @@ import { Button } from "@/components/ui/button";
 import { Card, CardContent } from "@/components/ui/card";
 import { createClient } from "@/lib/supabase/client";
 import { usePostingDetail } from "@/lib/hooks/use-posting-detail";
+import {
+  type NotificationPreferences,
+  shouldNotify,
+} from "@/lib/notifications/preferences";
 import type { PostingFormState } from "@/lib/hooks/use-posting-detail";
 import { PostingDetailHeader } from "@/components/posting/posting-detail-header";
 import { PostingAboutCard } from "@/components/posting/posting-about-card";
@@ -239,25 +243,34 @@ export default function PostingDetailPage() {
       return;
     }
 
-    // Create notification for posting owner
+    // Create notification for posting owner (if their preferences allow it)
     if (posting) {
-      const { data: profile } = await supabase
+      const { data: ownerProfile } = await supabase
+        .from("profiles")
+        .select("full_name, notification_preferences")
+        .eq("user_id", posting.creator_id)
+        .single();
+
+      const { data: applicantProfile } = await supabase
         .from("profiles")
         .select("full_name")
         .eq("user_id", currentUserId)
         .single();
 
-      const applicantName = profile?.full_name || "Someone";
+      const applicantName = applicantProfile?.full_name || "Someone";
+      const ownerPrefs = ownerProfile?.notification_preferences as NotificationPreferences | null;
 
-      await supabase.from("notifications").insert({
-        user_id: posting.creator_id,
-        type: "application_received",
-        title: "New Application Received",
-        body: `${applicantName} has applied to your posting "${posting.title}"`,
-        related_posting_id: postingId,
-        related_application_id: application.id,
-        related_user_id: currentUserId,
-      });
+      if (shouldNotify(ownerPrefs, "interest_received", "in_app")) {
+        await supabase.from("notifications").insert({
+          user_id: posting.creator_id,
+          type: "application_received",
+          title: "New Application Received",
+          body: `${applicantName} has applied to your posting "${posting.title}"`,
+          related_posting_id: postingId,
+          related_application_id: application.id,
+          related_user_id: currentUserId,
+        });
+      }
     }
 
     setLocalHasApplied(true);
@@ -308,24 +321,37 @@ export default function PostingDetailPage() {
     );
 
     if (application && posting) {
-      await supabase.from("notifications").insert({
-        user_id: application.applicant_id,
-        type:
-          newStatus === "accepted"
-            ? "application_accepted"
-            : "application_rejected",
-        title:
-          newStatus === "accepted"
-            ? "Application Accepted! \uD83C\uDF89"
-            : "Application Update",
-        body:
-          newStatus === "accepted"
-            ? `Your application to "${posting.title}" has been accepted!`
-            : `Your application to "${posting.title}" was not selected.`,
-        related_posting_id: postingId,
-        related_application_id: applicationId,
-        related_user_id: posting.creator_id,
-      });
+      const notifType =
+        newStatus === "accepted"
+          ? ("application_accepted" as const)
+          : ("application_rejected" as const);
+
+      // Check recipient preferences
+      const { data: recipientProfile } = await supabase
+        .from("profiles")
+        .select("notification_preferences")
+        .eq("user_id", application.applicant_id)
+        .single();
+
+      const recipientPrefs = recipientProfile?.notification_preferences as NotificationPreferences | null;
+
+      if (shouldNotify(recipientPrefs, notifType, "in_app")) {
+        await supabase.from("notifications").insert({
+          user_id: application.applicant_id,
+          type: notifType,
+          title:
+            newStatus === "accepted"
+              ? "Application Accepted! \uD83C\uDF89"
+              : "Application Update",
+          body:
+            newStatus === "accepted"
+              ? `Your application to "${posting.title}" has been accepted!`
+              : `Your application to "${posting.title}" was not selected.`,
+          related_posting_id: postingId,
+          related_application_id: applicationId,
+          related_user_id: posting.creator_id,
+        });
+      }
     }
 
     setLocalApplications((prev) =>

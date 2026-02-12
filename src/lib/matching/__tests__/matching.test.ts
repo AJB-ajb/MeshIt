@@ -540,6 +540,7 @@ describe("createMatchRecordsForPosting", () => {
           portfolio_url: null,
           github_url: null,
           embedding: null,
+          notification_preferences: null,
           is_test_data: false,
           created_at: "",
           updated_at: "",

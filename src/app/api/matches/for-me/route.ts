@@ -5,6 +5,10 @@ import {
 } from "@/lib/matching/profile-to-posting";
 import type { MatchResponse } from "@/lib/supabase/types";
 import { withAuth } from "@/lib/api/with-auth";
+import {
+  type NotificationPreferences,
+  shouldNotify,
+} from "@/lib/notifications/preferences";
 
 /**
  * GET /api/matches/for-me
@@ -14,7 +18,7 @@ export const GET = withAuth(async (_req, { user, supabase }) => {
   // Check if user has a profile first
   const { data: profile, error: profileError } = await supabase
     .from("profiles")
-    .select("bio, skills, headline")
+    .select("bio, skills, headline, notification_preferences")
     .eq("user_id", user.id)
     .single();
 
@@ -50,6 +54,21 @@ export const GET = withAuth(async (_req, { user, supabase }) => {
   // Create match records in database if they don't exist
   if (matches.length > 0) {
     await createMatchRecords(user.id, matches);
+
+    // Send match_found notification for top match if user has it enabled
+    const userPrefs =
+      profile.notification_preferences as NotificationPreferences | null;
+
+    if (shouldNotify(userPrefs, "match_found", "in_app")) {
+      const topMatch = matches[0];
+      await supabase.from("notifications").insert({
+        user_id: user.id,
+        type: "match_found",
+        title: "New Matches Found",
+        body: `We found ${matches.length} posting${matches.length > 1 ? "s" : ""} matching your profile, including "${topMatch.posting.title}"`,
+        related_posting_id: topMatch.posting.id,
+      });
+    }
   }
 
   // Transform to API response format
