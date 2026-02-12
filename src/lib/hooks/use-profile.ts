@@ -260,6 +260,12 @@ export function useProfile() {
         return;
       }
 
+      // Trigger embedding generation (fire-and-forget, non-blocking)
+      fetch("/api/embeddings/process", {
+        method: "POST",
+        headers: { "x-internal-call": "true" },
+      }).catch(() => {});
+
       setSuccess(true);
       setIsEditing(false);
       await mutate();
@@ -353,6 +359,12 @@ export function useProfile() {
         setError("Failed to save update. Please try again.");
         return;
       }
+
+      // Trigger embedding generation (fire-and-forget, non-blocking)
+      fetch("/api/embeddings/process", {
+        method: "POST",
+        headers: { "x-internal-call": "true" },
+      }).catch(() => {});
 
       // Optimistically update local form state
       setForm((prev) => mapExtractedToFormState(extractedProfile, prev));
