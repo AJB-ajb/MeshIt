@@ -72,10 +72,6 @@ const fakeProfileData = {
   location: "San Francisco",
   location_lat: 37.7749,
   location_lng: -122.4194,
-  experience_level: "senior",
-  collaboration_style: "sync",
-  remote_preference: 80,
-  availability_hours: 20,
   skills: ["React", "TypeScript"],
   interests: ["AI", "Web"],
   languages: ["English"],
@@ -83,19 +79,9 @@ const fakeProfileData = {
   github_url: "https://github.com/test",
   source_text: "I am a developer",
   previous_source_text: "I was a developer",
-  project_preferences: {
-    project_types: ["startup"],
-    preferred_roles: ["frontend"],
-    preferred_stack: ["React"],
-    commitment_level: "20",
-    timeline_preference: "3_months",
-  },
-  hard_filters: {
-    max_distance_km: 100,
-    min_hours: 5,
-    max_hours: 30,
-    languages: ["English", "Spanish"],
-  },
+  skill_levels: { React: 8, TypeScript: 7 },
+  location_mode: "remote",
+  availability_slots: { mon: ["morning", "afternoon"] },
 };
 
 // ---------------------------------------------------------------------------
@@ -154,8 +140,11 @@ describe("useProfile", () => {
     expect(result.current.form.skills).toBe("React, TypeScript");
     expect(result.current.form.interests).toBe("AI, Web");
     expect(result.current.form.locationLat).toBe("37.7749");
-    expect(result.current.form.filterMaxDistance).toBe("100");
-    expect(result.current.form.filterLanguages).toBe("English, Spanish");
+    expect(result.current.form.locationMode).toBe("remote");
+    expect(result.current.form.skillLevels).toEqual([
+      { name: "React", level: 8 },
+      { name: "TypeScript", level: 7 },
+    ]);
   });
 
   it("redirects to login on auth error", async () => {

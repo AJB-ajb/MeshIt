@@ -79,26 +79,12 @@ export function ProfileView({ form }: { form: ProfileFormState }) {
                 {LOCATION_MODE_DISPLAY[form.locationMode] ?? "Either"}
               </p>
             </div>
-            <div>
-              <p className="text-sm text-muted-foreground">
-                Collaboration style
-              </p>
-              <p className="font-medium capitalize">
-                {form.collaborationStyle === "async"
-                  ? "Mostly async"
-                  : form.collaborationStyle === "sync"
-                    ? "Mostly sync"
-                    : "Hybrid"}
-              </p>
-            </div>
           </div>
 
           {/* Skill levels */}
           {form.skillLevels.length > 0 && (
             <div>
-              <p className="mb-2 text-sm text-muted-foreground">
-                Skill Levels
-              </p>
+              <p className="mb-2 text-sm text-muted-foreground">Skill Levels</p>
               <div className="space-y-2">
                 {form.skillLevels.map((skill, i) => (
                   <div key={i} className="flex items-center gap-3">
@@ -231,31 +217,6 @@ export function ProfileView({ form }: { form: ProfileFormState }) {
           </CardContent>
         </Card>
       )}
-
-      {/* Match Filters */}
-      <Card>
-        <CardHeader>
-          <CardTitle>Match Filters</CardTitle>
-        </CardHeader>
-        <CardContent className="space-y-4">
-          <div className="grid gap-4 md:grid-cols-2">
-            <div>
-              <p className="text-sm text-muted-foreground">Max distance</p>
-              <p className="font-medium">
-                {form.filterMaxDistance
-                  ? `${form.filterMaxDistance} km`
-                  : "No limit"}
-              </p>
-            </div>
-            <div>
-              <p className="text-sm text-muted-foreground">
-                Required languages
-              </p>
-              <p className="font-medium">{form.filterLanguages || "Any"}</p>
-            </div>
-          </div>
-        </CardContent>
-      </Card>
     </div>
   );
 }

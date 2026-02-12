@@ -40,15 +40,7 @@ export type LocationMode = "remote" | "in_person" | "either";
 /** day key → array of time-of-day slots that are toggled on */
 export type AvailabilitySlots = Record<string, string[]>;
 
-export const DAYS = [
-  "mon",
-  "tue",
-  "wed",
-  "thu",
-  "fri",
-  "sat",
-  "sun",
-] as const;
+export const DAYS = ["mon", "tue", "wed", "thu", "fri", "sat", "sun"] as const;
 
 export const DAY_LABELS: Record<string, string> = {
   mon: "Mon",
@@ -84,9 +76,6 @@ export type ProfileFormState = {
   languages: string;
   portfolioUrl: string;
   githubUrl: string;
-  filterMaxDistance: string;
-  filterLanguages: string;
-  collaborationStyle: string;
   // Structured fields
   skillLevels: SkillLevel[];
   locationMode: LocationMode;
@@ -105,9 +94,6 @@ export const defaultFormState: ProfileFormState = {
   languages: "",
   portfolioUrl: "",
   githubUrl: "",
-  filterMaxDistance: "",
-  filterLanguages: "",
-  collaborationStyle: "async",
   skillLevels: [],
   locationMode: "either",
   availabilitySlots: {},

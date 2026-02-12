@@ -104,11 +104,6 @@ describe("ProfileForm", () => {
     expect(screen.getByText("Availability")).toBeInTheDocument();
   });
 
-  it("renders Match Filters section", () => {
-    renderForm();
-    expect(screen.getByText("Match Filters")).toBeInTheDocument();
-  });
-
   it("renders full name input with value", () => {
     renderForm({ fullName: "John Doe" });
     expect(screen.getByDisplayValue("John Doe")).toBeInTheDocument();
@@ -219,12 +214,5 @@ describe("ProfileForm", () => {
   it("shows geoError when present", () => {
     renderForm({}, { geoError: "Location not available" });
     expect(screen.getByText("Location not available")).toBeInTheDocument();
-  });
-
-  it("renders Collaboration Style section (collapsed)", () => {
-    renderForm();
-    expect(
-      screen.getByText("Collaboration Style (optional)"),
-    ).toBeInTheDocument();
   });
 });

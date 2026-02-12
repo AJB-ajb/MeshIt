@@ -119,7 +119,6 @@ async function fetchProfile(): Promise<ProfileData> {
   if (data) {
     sourceText = data.source_text ?? null;
     canUndo = !!data.previous_source_text;
-    const hardFilters = data.hard_filters ?? {};
     form = {
       fullName: data.full_name ?? "",
       headline: data.headline ?? "",
@@ -132,11 +131,6 @@ async function fetchProfile(): Promise<ProfileData> {
       languages: Array.isArray(data.languages) ? data.languages.join(", ") : "",
       portfolioUrl: data.portfolio_url ?? "",
       githubUrl: data.github_url ?? "",
-      filterMaxDistance: hardFilters.max_distance_km?.toString() ?? "",
-      filterLanguages: Array.isArray(hardFilters.languages)
-        ? hardFilters.languages.join(", ")
-        : "",
-      collaborationStyle: data.collaboration_style ?? "async",
       skillLevels: parseSkillLevels(data.skill_levels),
       locationMode: parseLocationMode(data.location_mode),
       availabilitySlots: parseAvailabilitySlots(data.availability_slots),

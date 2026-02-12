@@ -1,7 +1,7 @@
 "use client";
 
 import { useState } from "react";
-import { ChevronDown, Loader2, MapPin, Plus, Search, X } from "lucide-react";
+import { Loader2, MapPin, Plus, Search, X } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Slider } from "@/components/ui/slider";
@@ -76,8 +76,6 @@ export function ProfileForm({
     handleLocationInputChange: (value: string) => void;
   };
 }) {
-  const [showCollabStyle, setShowCollabStyle] = useState(false);
-
   // --- Skill levels handlers ---
   const addSkill = () => {
     setForm((prev) => ({
@@ -86,10 +84,7 @@ export function ProfileForm({
     }));
   };
 
-  const updateSkill = (
-    index: number,
-    update: Partial<SkillLevel>,
-  ) => {
+  const updateSkill = (index: number, update: Partial<SkillLevel>) => {
     setForm((prev) => ({
       ...prev,
       skillLevels: prev.skillLevels.map((s, i) =>
@@ -355,9 +350,7 @@ export function ProfileForm({
               <div className="flex items-center gap-2">
                 <Input
                   value={skill.name}
-                  onChange={(e) =>
-                    updateSkill(index, { name: e.target.value })
-                  }
+                  onChange={(e) => updateSkill(index, { name: e.target.value })}
                   placeholder="e.g., Frontend, Python, Design"
                   className="flex-1"
                 />
@@ -377,9 +370,7 @@ export function ProfileForm({
                   max={10}
                   step={1}
                   value={[skill.level]}
-                  onValueChange={([val]) =>
-                    updateSkill(index, { level: val })
-                  }
+                  onValueChange={([val]) => updateSkill(index, { level: val })}
                   className="flex-1"
                 />
                 <span className="w-20 text-right text-sm font-medium tabular-nums">
@@ -421,9 +412,7 @@ export function ProfileForm({
       <Card>
         <CardHeader>
           <CardTitle>Location Mode</CardTitle>
-          <CardDescription>
-            Where do you prefer to collaborate?
-          </CardDescription>
+          <CardDescription>Where do you prefer to collaborate?</CardDescription>
         </CardHeader>
         <CardContent>
           <div className="flex gap-2">
@@ -498,92 +487,6 @@ export function ProfileForm({
                 ))}
               </tbody>
             </table>
-          </div>
-        </CardContent>
-      </Card>
-
-      {/* ============================================ */}
-      {/* Collaboration Style (optional, collapsed) */}
-      {/* ============================================ */}
-      <Card>
-        <CardHeader className="cursor-pointer" onClick={() => setShowCollabStyle(!showCollabStyle)}>
-          <div className="flex items-center justify-between">
-            <div>
-              <CardTitle className="text-base">
-                Collaboration Style (optional)
-              </CardTitle>
-              <CardDescription>
-                How do you prefer to work with others?
-              </CardDescription>
-            </div>
-            <ChevronDown
-              className={`h-5 w-5 text-muted-foreground transition-transform ${
-                showCollabStyle ? "rotate-180" : ""
-              }`}
-            />
-          </div>
-        </CardHeader>
-        {showCollabStyle && (
-          <CardContent>
-            <select
-              id="collaborationStyle"
-              className="flex h-10 w-full rounded-md border border-input bg-background px-3 py-2 text-sm ring-offset-background focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring focus-visible:ring-offset-2"
-              value={form.collaborationStyle}
-              onChange={(e) => onChange("collaborationStyle", e.target.value)}
-            >
-              <option value="async">Mostly async</option>
-              <option value="sync">Mostly sync</option>
-              <option value="hybrid">Hybrid</option>
-            </select>
-          </CardContent>
-        )}
-      </Card>
-
-      {/* ============================================ */}
-      {/* Match Filters (simplified) */}
-      {/* ============================================ */}
-      <Card>
-        <CardHeader>
-          <CardTitle>Match Filters</CardTitle>
-          <CardDescription>
-            Set preferences for which postings rank higher in your matches.
-          </CardDescription>
-        </CardHeader>
-        <CardContent className="space-y-5">
-          <div className="grid gap-4 md:grid-cols-2">
-            <div className="space-y-2">
-              <label
-                htmlFor="filterMaxDistance"
-                className="text-sm font-medium"
-              >
-                Max distance (km)
-              </label>
-              <Input
-                id="filterMaxDistance"
-                type="number"
-                min="0"
-                value={form.filterMaxDistance}
-                onChange={(e) => onChange("filterMaxDistance", e.target.value)}
-                placeholder="e.g., 500"
-              />
-              <p className="text-xs text-muted-foreground">
-                Leave empty for no distance preference
-              </p>
-            </div>
-            <div className="space-y-2">
-              <label htmlFor="filterLanguages" className="text-sm font-medium">
-                Required languages
-              </label>
-              <Input
-                id="filterLanguages"
-                value={form.filterLanguages}
-                onChange={(e) => onChange("filterLanguages", e.target.value)}
-                placeholder="e.g., en, de"
-              />
-              <p className="text-xs text-muted-foreground">
-                Posting creators must speak these languages
-              </p>
-            </div>
           </div>
         </CardContent>
       </Card>
