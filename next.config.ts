@@ -1,6 +1,7 @@
 import { spawnSync } from "node:child_process";
 import type { NextConfig } from "next";
 import withSerwistInit from "@serwist/next";
+import { withSentryConfig } from "@sentry/nextjs";
 
 const nextConfig: NextConfig = {
   experimental: {
@@ -44,4 +45,14 @@ const createConfig = () => {
   return withSerwist(nextConfig);
 };
 
-export default createConfig();
+// Sentry must be the outermost wrapper
+export default withSentryConfig(createConfig(), {
+  org: process.env.SENTRY_ORG,
+  project: process.env.SENTRY_PROJECT,
+  authToken: process.env.SENTRY_AUTH_TOKEN,
+  silent: !process.env.CI,
+  tunnelRoute: "/monitoring",
+  sourcemaps: {
+    disable: !process.env.SENTRY_AUTH_TOKEN,
+  },
+});

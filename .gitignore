@@ -96,6 +96,9 @@ supabase/.temp/
 public/sw*
 public/swe-worker*
 
+# Sentry
+.sentryclirc
+
 # Test artifacts
 test-results/
 unit-test-results/
