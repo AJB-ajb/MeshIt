@@ -1,6 +1,6 @@
 "use client";
 
-import { useState } from "react";
+import { useState, useMemo } from "react";
 import Link from "next/link";
 import {
   Search,
@@ -9,6 +9,7 @@ import {
   MessageSquare,
   Loader2,
   Heart,
+  X,
 } from "lucide-react";
 
 import { Button } from "@/components/ui/button";
@@ -20,6 +21,12 @@ import { useMatches } from "@/lib/hooks/use-matches";
 import { useInterests } from "@/lib/hooks/use-interests";
 import type { Posting } from "@/lib/supabase/types";
 import { getInitials } from "@/lib/format";
+import type { PostingFilters } from "@/lib/types/filters";
+import { applyFilters } from "@/lib/filters/apply-filters";
+import {
+  filtersToFilterPills,
+  removeFilterByKey,
+} from "@/lib/filters/format-filters";
 
 const statusColors = {
   pending: "bg-warning/10 text-warning",
@@ -70,6 +77,9 @@ export default function MatchesPage() {
     isLoading: interestsLoading,
   } = useInterests();
   const [applyingMatchId, setApplyingMatchId] = useState<string | null>(null);
+  const [nlQuery, setNlQuery] = useState("");
+  const [nlFilters, setNlFilters] = useState<PostingFilters>({});
+  const [isTranslating, setIsTranslating] = useState(false);
 
   const isLoading = matchesLoading || interestsLoading;
 
@@ -78,6 +88,61 @@ export default function MatchesPage() {
       ? fetchError.message
       : "Failed to load matches"
     : apiError;
+
+  const nlFilterPills = filtersToFilterPills(nlFilters);
+  const hasActiveFilters = nlFilterPills.length > 0;
+
+  const handleNlSearch = async (query: string) => {
+    const trimmed = query.trim();
+    if (!trimmed) {
+      setNlFilters({});
+      return;
+    }
+
+    setIsTranslating(true);
+    try {
+      const response = await fetch("/api/filters/translate", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ query: trimmed }),
+      });
+
+      if (!response.ok) {
+        const data = await response.json();
+        throw new Error(data.error || "Failed to parse filters");
+      }
+
+      const data = await response.json();
+      if (data.filters) {
+        setNlFilters(data.filters);
+      }
+    } catch {
+      // Fall back silently
+    } finally {
+      setIsTranslating(false);
+    }
+  };
+
+  const handleRemoveNlFilter = (key: string) => {
+    setNlFilters(removeFilterByKey(nlFilters, key));
+  };
+
+  const clearFilters = () => {
+    setNlFilters({});
+    setNlQuery("");
+  };
+
+  // Filter matches by applying NL filters to the posting within each match
+  const filteredMatches = useMemo(() => {
+    if (!hasActiveFilters) return matches;
+    const postings = matches.map((m) => m.posting as Posting).filter(Boolean);
+    const filtered = applyFilters(postings, nlFilters);
+    const filteredIds = new Set(filtered.map((p) => p.id));
+    return matches.filter((m) => {
+      const posting = m.posting as Posting | undefined;
+      return posting && filteredIds.has(posting.id);
+    });
+  }, [matches, nlFilters, hasActiveFilters]);
 
   const handleApply = async (matchId: string) => {
     try {
@@ -165,15 +230,59 @@ export default function MatchesPage() {
           <Search className="absolute left-3 top-1/2 h-4 w-4 -translate-y-1/2 text-muted-foreground" />
           <Input
             type="search"
-            placeholder="Search matches..."
-            className="pl-9"
+            placeholder='Try "remote React, 10+ hours/week"...'
+            className="pl-9 pr-10"
+            value={nlQuery}
+            onChange={(e) => setNlQuery(e.target.value)}
+            onKeyDown={(e) => {
+              if (e.key === "Enter") {
+                handleNlSearch(nlQuery);
+              }
+            }}
           />
+          {isTranslating && (
+            <Loader2 className="absolute right-3 top-1/2 h-4 w-4 -translate-y-1/2 animate-spin text-muted-foreground" />
+          )}
         </div>
-        <Button variant="outline" size="icon">
+        <Button
+          variant={hasActiveFilters ? "default" : "outline"}
+          size="icon"
+          disabled
+        >
           <Filter className="h-4 w-4" />
           <span className="sr-only">Filter</span>
         </Button>
       </div>
+
+      {/* Active NL filter pills */}
+      {nlFilterPills.length > 0 && (
+        <div className="flex flex-wrap items-center gap-2">
+          {nlFilterPills.map((pill) => (
+            <Badge
+              key={pill.key}
+              variant="secondary"
+              className="flex items-center gap-1 pr-1"
+            >
+              {pill.label}
+              <button
+                onClick={() => handleRemoveNlFilter(pill.key)}
+                className="ml-1 rounded-full p-0.5 hover:bg-muted-foreground/20"
+              >
+                <X className="h-3 w-3" />
+                <span className="sr-only">Remove {pill.label}</span>
+              </button>
+            </Badge>
+          ))}
+          <Button
+            variant="ghost"
+            size="sm"
+            className="h-6 text-xs"
+            onClick={clearFilters}
+          >
+            Clear all
+          </Button>
+        </div>
+      )}
 
       {!hasAnyContent ? (
         <EmptyState
@@ -367,11 +476,11 @@ export default function MatchesPage() {
           )}
 
           {/* AI Matches section */}
-          {matches.length > 0 && (
+          {filteredMatches.length > 0 && (
             <div className="space-y-4">
               <h2 className="text-xl font-semibold">AI Matches</h2>
               <div className="space-y-4">
-                {matches.map((match) => {
+                {filteredMatches.map((match) => {
                   const posting = match.posting as Posting;
                   const matchScore = Math.round(match.score * 100);
                   const matchedAt = formatTimeAgo(match.created_at);
