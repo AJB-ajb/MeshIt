@@ -5,13 +5,7 @@ import { withSentryConfig } from "@sentry/nextjs";
 
 const nextConfig: NextConfig = {
   experimental: {
-    optimizePackageImports: [
-      "lucide-react",
-      "@radix-ui/react-alert-dialog",
-      "@radix-ui/react-avatar",
-      "@radix-ui/react-slot",
-      "@radix-ui/react-tabs",
-    ],
+    optimizePackageImports: ["lucide-react", "radix-ui"],
   },
 };
 
