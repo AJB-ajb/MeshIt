@@ -1,5 +1,5 @@
 import { describe, it, expect, vi, beforeEach } from "vitest";
-import { renderHook, waitFor, act } from "@testing-library/react";
+import { renderHook, waitFor } from "@testing-library/react";
 import { SWRConfig } from "swr";
 import type { ReactNode } from "react";
 
@@ -15,7 +15,6 @@ vi.mock("@/lib/supabase/client", () => ({
   createClient: () => ({
     auth: {
       getUser: mockGetUser,
-      linkIdentity: vi.fn().mockResolvedValue({ error: null }),
     },
     from: mockFrom,
   }),
@@ -29,7 +28,7 @@ vi.mock("next/navigation", () => ({
   }),
 }));
 
-import { useProfile } from "../use-profile";
+import { useProfileData } from "../use-profile-data";
 
 // ---------------------------------------------------------------------------
 // Helpers
@@ -48,7 +47,6 @@ function mockQuery(result: { data: unknown; error: unknown }) {
     select: vi.fn().mockReturnThis(),
     eq: vi.fn().mockReturnThis(),
     single: vi.fn().mockResolvedValue(result),
-    upsert: vi.fn().mockResolvedValue(result),
   };
   chain.then = vi.fn((resolve: (v: unknown) => void) => resolve(result));
   return chain;
@@ -88,7 +86,7 @@ const fakeProfileData = {
 // Tests
 // ---------------------------------------------------------------------------
 
-describe("useProfile", () => {
+describe("useProfileData", () => {
   beforeEach(() => {
     vi.clearAllMocks();
   });
@@ -96,7 +94,7 @@ describe("useProfile", () => {
   it("starts in loading state", () => {
     mockGetUser.mockReturnValue(new Promise(() => {}));
 
-    const { result } = renderHook(() => useProfile(), { wrapper });
+    const { result } = renderHook(() => useProfileData(), { wrapper });
 
     expect(result.current.isLoading).toBe(true);
   });
@@ -105,43 +103,42 @@ describe("useProfile", () => {
     mockGetUser.mockResolvedValue({ data: { user: fakeUser } });
     mockFrom.mockReturnValue(mockQuery({ data: fakeProfileData, error: null }));
 
-    const { result } = renderHook(() => useProfile(), { wrapper });
+    const { result } = renderHook(() => useProfileData(), { wrapper });
 
     await waitFor(() => {
       expect(result.current.isLoading).toBe(false);
     });
 
-    expect(result.current.userEmail).toBe("user@test.com");
-    expect(result.current.connectedProviders.github).toBe(true);
-    expect(result.current.connectedProviders.google).toBe(true);
-    expect(result.current.connectedProviders.linkedin).toBe(false);
-    expect(result.current.isGithubProvider).toBe(true);
-    expect(result.current.sourceText).toBe("I am a developer");
-    expect(result.current.canUndo).toBe(true);
+    expect(result.current.data?.userEmail).toBe("user@test.com");
+    expect(result.current.data?.connectedProviders.github).toBe(true);
+    expect(result.current.data?.connectedProviders.google).toBe(true);
+    expect(result.current.data?.connectedProviders.linkedin).toBe(false);
+    expect(result.current.data?.isGithubProvider).toBe(true);
+    expect(result.current.data?.sourceText).toBe("I am a developer");
+    expect(result.current.data?.canUndo).toBe(true);
   });
 
   it("maps profile data to form state", async () => {
     mockGetUser.mockResolvedValue({ data: { user: fakeUser } });
     mockFrom.mockReturnValue(mockQuery({ data: fakeProfileData, error: null }));
 
-    const { result } = renderHook(() => useProfile(), { wrapper });
+    const { result } = renderHook(() => useProfileData(), { wrapper });
 
     await waitFor(() => {
       expect(result.current.isLoading).toBe(false);
     });
 
-    // Wait for microtask form sync
     await waitFor(() => {
-      expect(result.current.form.fullName).toBe("Test User");
+      expect(result.current.data?.form.fullName).toBe("Test User");
     });
 
-    expect(result.current.form.headline).toBe("Developer");
-    expect(result.current.form.bio).toBe("I build things");
-    expect(result.current.form.skills).toBe("React, TypeScript");
-    expect(result.current.form.interests).toBe("AI, Web");
-    expect(result.current.form.locationLat).toBe("37.7749");
-    expect(result.current.form.locationMode).toBe("remote");
-    expect(result.current.form.skillLevels).toEqual([
+    expect(result.current.data?.form.headline).toBe("Developer");
+    expect(result.current.data?.form.bio).toBe("I build things");
+    expect(result.current.data?.form.skills).toBe("React, TypeScript");
+    expect(result.current.data?.form.interests).toBe("AI, Web");
+    expect(result.current.data?.form.locationLat).toBe("37.7749");
+    expect(result.current.data?.form.locationMode).toBe("remote");
+    expect(result.current.data?.form.skillLevels).toEqual([
       { name: "React", level: 8 },
       { name: "TypeScript", level: 7 },
     ]);
@@ -153,47 +150,27 @@ describe("useProfile", () => {
       error: { message: "Not authenticated" },
     });
 
-    renderHook(() => useProfile(), { wrapper });
+    renderHook(() => useProfileData(), { wrapper });
 
     await waitFor(() => {
       expect(mockReplace).toHaveBeenCalledWith("/login");
     });
   });
 
-  it("handles form change when editing", async () => {
-    mockGetUser.mockResolvedValue({ data: { user: fakeUser } });
-    mockFrom.mockReturnValue(mockQuery({ data: fakeProfileData, error: null }));
-
-    const { result } = renderHook(() => useProfile(), { wrapper });
-
-    await waitFor(() => {
-      expect(result.current.isLoading).toBe(false);
-    });
-
-    // Must enter editing mode first — form reads from SWR when not editing
-    act(() => {
-      result.current.setIsEditing(true);
-    });
-
-    act(() => {
-      result.current.handleChange("fullName", "New Name");
-    });
-
-    expect(result.current.form.fullName).toBe("New Name");
-  });
-
   it("returns default form when no profile data exists", async () => {
     mockGetUser.mockResolvedValue({ data: { user: fakeUser } });
     mockFrom.mockReturnValue(mockQuery({ data: null, error: null }));
 
-    const { result } = renderHook(() => useProfile(), { wrapper });
+    const { result } = renderHook(() => useProfileData(), { wrapper });
 
     await waitFor(() => {
       expect(result.current.isLoading).toBe(false);
     });
 
-    // canUndo is false when no profile exists
-    expect(result.current.canUndo).toBe(false);
-    expect(result.current.sourceText).toBeNull();
+    expect(result.current.data?.canUndo).toBe(false);
+    expect(result.current.data?.sourceText).toBeNull();
+    expect(result.current.data?.form.fullName).toBe("");
+    expect(result.current.data?.form.skills).toBe("");
+    expect(result.current.data?.form.locationMode).toBe("either");
   });
 });

@@ -17,8 +17,8 @@ import { Card, CardContent, CardHeader } from "@/components/ui/card";
 import { TypingIndicator } from "@/components/ui/typing-indicator";
 import { OnlineStatus, OnlineStatusBadge } from "@/components/ui/online-status";
 import { cn } from "@/lib/utils";
-import { createClient } from "@/lib/supabase/client";
 import { useRealtimeChat } from "@/lib/hooks/use-realtime-chat";
+import { useSendMessage } from "@/lib/hooks/use-send-message";
 import { usePresenceContext } from "@/components/providers/presence-provider";
 import { getInitials } from "@/lib/format";
 import { useConversationMessages } from "@/lib/hooks/use-inbox";
@@ -150,7 +150,6 @@ export function ChatPanel({
   const messagesEndRef = useRef<HTMLDivElement>(null);
   const [localMessages, setLocalMessages] = useState<Message[]>([]);
   const [newMessage, setNewMessage] = useState("");
-  const [isSendingMessage, setIsSendingMessage] = useState(false);
 
   const { messages: fetchedMessages, mutate: mutateMessages } =
     useConversationMessages(conversation.id, currentUserId);
@@ -181,61 +180,22 @@ export function ChatPanel({
     messagesEndRef.current?.scrollIntoView({ behavior: "smooth" });
   }, [localMessages]);
 
-  const handleSendMessage = useCallback(async () => {
-    if (!newMessage.trim() || !currentUserId) return;
-
-    setIsSendingMessage(true);
-    const supabase = createClient();
-
-    const { data: message, error } = await supabase
-      .from("messages")
-      .insert({
-        conversation_id: conversation.id,
-        sender_id: currentUserId,
-        content: newMessage.trim(),
-      })
-      .select()
-      .single();
-
-    if (error) {
-      console.error("Error sending message:", error);
-      setIsSendingMessage(false);
-      return;
-    }
-
-    // Optimistic update
+  const onOptimisticMessage = useCallback((message: Message) => {
     setLocalMessages((prev) => [...prev, message]);
     setNewMessage("");
+  }, []);
 
-    // Create notification for other user (fire and forget)
-    const otherUserId =
-      conversation.participant_1 === currentUserId
-        ? conversation.participant_2
-        : conversation.participant_1;
+  const { sendMessage, isSending: isSendingMessage } = useSendMessage(
+    conversation.id,
+    currentUserId,
+    conversation,
+    onOptimisticMessage,
+    mutateMessages,
+  );
 
-    const { data: profile } = await supabase
-      .from("profiles")
-      .select("full_name")
-      .eq("user_id", currentUserId)
-      .maybeSingle();
-
-    supabase
-      .from("notifications")
-      .insert({
-        user_id: otherUserId,
-        type: "new_message",
-        title: "New Message",
-        body: `${profile?.full_name || "Someone"}: ${newMessage.trim().slice(0, 50)}${newMessage.length > 50 ? "..." : ""}`,
-        related_user_id: currentUserId,
-      })
-      .then(({ error: notifError }) => {
-        if (notifError)
-          console.error("Error creating notification:", notifError);
-      });
-
-    setIsSendingMessage(false);
-    mutateMessages();
-  }, [newMessage, conversation, currentUserId, mutateMessages]);
+  const handleSendMessage = useCallback(() => {
+    sendMessage(newMessage);
+  }, [sendMessage, newMessage]);
 
   return (
     <Card className="flex flex-col h-[600px]">
