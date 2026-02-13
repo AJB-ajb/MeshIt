@@ -6,7 +6,6 @@ import Link from "next/link";
 import { ArrowLeft } from "lucide-react";
 
 import { createClient } from "@/lib/supabase/client";
-import { getTestDataValue } from "@/lib/environment";
 import { InputModeToggle } from "@/components/posting/input-mode-toggle";
 import { AiExtractionCard } from "@/components/posting/ai-extraction-card";
 import {
@@ -144,7 +143,6 @@ export default function NewPostingPage() {
         user_id: user.id,
         full_name:
           user.user_metadata?.full_name || user.email?.split("@")[0] || "User",
-        is_test_data: getTestDataValue(),
       });
 
       if (profileError) {
@@ -181,7 +179,6 @@ export default function NewPostingPage() {
         mode: form.mode,
         status: "open",
         expires_at: expiresAt.toISOString(),
-        is_test_data: getTestDataValue(),
         location_mode: form.locationMode || "either",
         location_name: form.locationName.trim() || null,
         location_lat: Number.isFinite(locationLat) ? locationLat : null,

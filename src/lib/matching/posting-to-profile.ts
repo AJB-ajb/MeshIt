@@ -5,7 +5,6 @@
 
 import { createClient } from "@/lib/supabase/server";
 import type { Profile, ScoreBreakdown } from "@/lib/supabase/types";
-import { getTestDataValue } from "@/lib/environment";
 
 export interface PostingToProfileMatch {
   profile: Profile;
@@ -33,7 +32,6 @@ export async function matchPostingToProfiles(
     .from("postings")
     .select("embedding, creator_id, title, description, skills")
     .eq("id", postingId)
-    .eq("is_test_data", getTestDataValue())
     .single();
 
   if (postingError || !posting) {
@@ -100,7 +98,6 @@ export async function matchPostingToProfiles(
         previous_profile_snapshot: null,
         embedding: null, // Don't return embedding in response
         notification_preferences: row.notification_preferences || null,
-        is_test_data: row.is_test_data || false,
         created_at: row.created_at || "",
         updated_at: row.updated_at || "",
       };

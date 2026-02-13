@@ -17,10 +17,6 @@ vi.mock("@/lib/supabase/client", () => ({
   }),
 }));
 
-vi.mock("@/lib/environment", () => ({
-  getTestDataValue: () => true,
-}));
-
 import { useInboxData, useConversationMessages } from "../use-inbox";
 
 // ---------------------------------------------------------------------------

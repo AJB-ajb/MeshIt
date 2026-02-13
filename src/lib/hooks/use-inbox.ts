@@ -1,6 +1,5 @@
 import useSWR from "swr";
 import { createClient } from "@/lib/supabase/client";
-import { getTestDataValue } from "@/lib/environment";
 import type {
   Notification as RealtimeNotification,
   Conversation as RealtimeConversation,
@@ -91,7 +90,6 @@ async function fetchInboxData(): Promise<InboxData> {
               .from("postings")
               .select("title")
               .eq("id", conv.posting_id)
-              .eq("is_test_data", getTestDataValue())
               .maybeSingle()
           : Promise.resolve({ data: null }),
         supabase

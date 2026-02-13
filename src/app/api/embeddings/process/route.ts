@@ -2,7 +2,7 @@
  * POST /api/embeddings/process
  *
  * Processes pending embedding generation in batches.
- * Protected by EMBEDDINGS_API_KEY or SUPABASE_SERVICE_ROLE_KEY header check.
+ * Protected by EMBEDDINGS_API_KEY or SUPABASE_SECRET_KEY header check.
  *
  * 1. Queries profiles/postings WHERE needs_embedding = true (LIMIT 50 each)
  * 2. Generates embeddings in batch via OpenAI
@@ -37,16 +37,16 @@ interface PostingRow {
 }
 
 function createServiceClient() {
-  const url = process.env.SUPABASE_URL ?? process.env.NEXT_PUBLIC_SUPABASE_URL;
-  const serviceKey = process.env.SUPABASE_SERVICE_ROLE_KEY;
+  const url = process.env.NEXT_PUBLIC_SUPABASE_URL;
+  const secretKey = process.env.SUPABASE_SECRET_KEY;
 
-  if (!url || !serviceKey) {
+  if (!url || !secretKey) {
     throw new Error(
-      "Missing SUPABASE_URL or SUPABASE_SERVICE_ROLE_KEY env vars",
+      "Missing NEXT_PUBLIC_SUPABASE_URL or SUPABASE_SECRET_KEY env vars",
     );
   }
 
-  return createSupabaseClient(url, serviceKey, {
+  return createSupabaseClient(url, secretKey, {
     auth: { autoRefreshToken: false, persistSession: false },
   });
 }
@@ -56,11 +56,11 @@ function verifyAuth(req: Request): boolean {
   if (!authHeader?.startsWith("Bearer ")) return false;
 
   const token = authHeader.slice(7);
-  const serviceKey = process.env.SUPABASE_SERVICE_ROLE_KEY;
+  const secretKey = process.env.SUPABASE_SECRET_KEY;
   const embeddingsKey = process.env.EMBEDDINGS_API_KEY;
 
   if (embeddingsKey && token === embeddingsKey) return true;
-  if (serviceKey && token === serviceKey) return true;
+  if (secretKey && token === secretKey) return true;
 
   return false;
 }

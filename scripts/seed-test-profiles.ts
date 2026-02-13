@@ -6,12 +6,22 @@
  */
 
 import { createClient } from "@supabase/supabase-js";
+import { config } from "dotenv";
 
-const supabaseUrl = "https://jirgkhjdxahfsgqxprhh.supabase.co";
-const supabaseServiceKey = "***REMOVED***";
+config(); // Load .env
 
-// Use service key for admin operations
-const supabase = createClient(supabaseUrl, supabaseServiceKey);
+const supabaseUrl = process.env.NEXT_PUBLIC_SUPABASE_URL;
+const supabaseSecretKey = process.env.SUPABASE_SECRET_KEY;
+
+if (!supabaseUrl || !supabaseSecretKey) {
+  console.error(
+    "Missing NEXT_PUBLIC_SUPABASE_URL or SUPABASE_SECRET_KEY in .env",
+  );
+  process.exit(1);
+}
+
+// Use secret key for admin operations
+const supabase = createClient(supabaseUrl, supabaseSecretKey);
 
 interface TestProfile {
   email: string;

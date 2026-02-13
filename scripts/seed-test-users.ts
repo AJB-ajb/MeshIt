@@ -4,7 +4,7 @@
  *
  * Usage: pnpm tsx scripts/seed-test-users.ts
  *
- * Requires SUPABASE_SERVICE_ROLE_KEY in .env
+ * Requires SUPABASE_SECRET_KEY in .env
  */
 
 import { createClient } from "@supabase/supabase-js";
@@ -13,11 +13,11 @@ import { config } from "dotenv";
 config(); // Load .env
 
 const url = process.env.NEXT_PUBLIC_SUPABASE_URL;
-const serviceRoleKey = process.env.SUPABASE_SERVICE_ROLE_KEY;
+const serviceRoleKey = process.env.SUPABASE_SECRET_KEY;
 
 if (!url || !serviceRoleKey) {
   console.error(
-    "Missing NEXT_PUBLIC_SUPABASE_URL or SUPABASE_SERVICE_ROLE_KEY in .env",
+    "Missing NEXT_PUBLIC_SUPABASE_URL or SUPABASE_SECRET_KEY in .env",
   );
   process.exit(1);
 }

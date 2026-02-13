@@ -21,7 +21,7 @@ export async function seedUser(
   options: { persona?: string } = {},
 ): Promise<{ userId: string; user: TestUser }> {
   if (!supabaseAdmin) {
-    throw new Error("SUPABASE_SERVICE_ROLE_KEY required for seedUser");
+    throw new Error("SUPABASE_SECRET_KEY required for seedUser");
   }
 
   const { data, error } = await supabaseAdmin.auth.admin.createUser({
@@ -46,7 +46,7 @@ export async function seedUser(
  */
 export async function seedProfile(profileData: TestProfile): Promise<void> {
   if (!supabaseAdmin) {
-    throw new Error("SUPABASE_SERVICE_ROLE_KEY required for seedProfile");
+    throw new Error("SUPABASE_SECRET_KEY required for seedProfile");
   }
 
   const { error } = await supabaseAdmin.from("profiles").upsert(profileData, {
@@ -65,7 +65,7 @@ export async function seedPostingDirect(
   postingData: Partial<TestPosting> & { creator_id: string; title: string },
 ): Promise<TestPosting> {
   if (!supabaseAdmin) {
-    throw new Error("SUPABASE_SERVICE_ROLE_KEY required for seedPostingDirect");
+    throw new Error("SUPABASE_SECRET_KEY required for seedPostingDirect");
   }
 
   const { data, error } = await supabaseAdmin
@@ -119,7 +119,7 @@ export async function seedMatch(
   },
 ): Promise<TestMatch> {
   if (!supabaseAdmin) {
-    throw new Error("SUPABASE_SERVICE_ROLE_KEY required for seedMatch");
+    throw new Error("SUPABASE_SECRET_KEY required for seedMatch");
   }
 
   const { data, error } = await supabaseAdmin
@@ -140,7 +140,7 @@ export async function seedMatch(
  */
 export async function cleanupTestData(userId: string): Promise<void> {
   if (!supabaseAdmin) {
-    console.warn("No SUPABASE_SERVICE_ROLE_KEY — skipping cleanup");
+    console.warn("No SUPABASE_SECRET_KEY — skipping cleanup");
     return;
   }
 

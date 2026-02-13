@@ -98,7 +98,6 @@ export async function matchProfileToPostings(
         skill_level_min: row.skill_level_min ?? null,
         embedding: null,
         status: "open",
-        is_test_data: row.is_test_data || false,
         created_at: row.created_at,
         updated_at: row.created_at,
         expires_at: row.expires_at,

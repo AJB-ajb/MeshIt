@@ -4,7 +4,6 @@ import {
   createMatchRecordsForPosting,
 } from "@/lib/matching/posting-to-profile";
 import type { MatchResponse } from "@/lib/supabase/types";
-import { getTestDataValue } from "@/lib/environment";
 import { withAuth } from "@/lib/api/with-auth";
 import { apiError } from "@/lib/errors";
 
@@ -20,7 +19,6 @@ export const GET = withAuth(async (_req, { user, supabase, params }) => {
     .from("postings")
     .select("creator_id")
     .eq("id", postingId)
-    .eq("is_test_data", getTestDataValue())
     .single();
 
   if (postingError || !posting) {

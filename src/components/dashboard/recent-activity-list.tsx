@@ -2,7 +2,6 @@ import Link from "next/link";
 import { FolderKanban, Users, MessageSquare, TrendingUp } from "lucide-react";
 
 import { createClient } from "@/lib/supabase/server";
-import { getTestDataValue } from "@/lib/environment";
 import { formatTimeAgo } from "@/lib/format";
 
 type Activity = {
@@ -31,8 +30,7 @@ export async function RecentActivityList({
     const { data: userPostings } = await supabase
       .from("postings")
       .select("id")
-      .eq("creator_id", userId)
-      .eq("is_test_data", getTestDataValue());
+      .eq("creator_id", userId);
 
     const postingIds = userPostings?.map((p) => p.id) || [];
 

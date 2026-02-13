@@ -157,25 +157,47 @@ CREATE POLICY "Users can update their matches"
   );
 
 -- ============================================
--- 4b. UPDATE applications TABLE
+-- 4b. UPDATE applications TABLE (if it exists)
 -- ============================================
 
--- Rename project_id → posting_id on applications
-ALTER TABLE public.applications RENAME COLUMN project_id TO posting_id;
+DO $$
+BEGIN
+  IF EXISTS (
+    SELECT 1 FROM pg_tables WHERE schemaname = 'public' AND tablename = 'applications'
+  ) THEN
+    -- Rename project_id → posting_id on applications
+    IF EXISTS (
+      SELECT 1 FROM information_schema.columns
+      WHERE table_schema = 'public' AND table_name = 'applications' AND column_name = 'project_id'
+    ) THEN
+      ALTER TABLE public.applications RENAME COLUMN project_id TO posting_id;
+    END IF;
 
--- Update FK constraint
-ALTER TABLE public.applications DROP CONSTRAINT IF EXISTS applications_project_id_fkey;
-ALTER TABLE public.applications ADD CONSTRAINT applications_posting_id_fkey
-  FOREIGN KEY (posting_id) REFERENCES public.postings(id) ON DELETE CASCADE;
+    -- Update FK constraint
+    ALTER TABLE public.applications DROP CONSTRAINT IF EXISTS applications_project_id_fkey;
+    IF NOT EXISTS (
+      SELECT 1 FROM information_schema.table_constraints
+      WHERE constraint_name = 'applications_posting_id_fkey' AND table_schema = 'public'
+    ) THEN
+      ALTER TABLE public.applications ADD CONSTRAINT applications_posting_id_fkey
+        FOREIGN KEY (posting_id) REFERENCES public.postings(id) ON DELETE CASCADE;
+    END IF;
 
--- Update unique constraint
-ALTER TABLE public.applications DROP CONSTRAINT IF EXISTS applications_project_id_applicant_id_key;
-ALTER TABLE public.applications ADD CONSTRAINT applications_posting_id_applicant_id_key
-  UNIQUE (posting_id, applicant_id);
+    -- Update unique constraint
+    ALTER TABLE public.applications DROP CONSTRAINT IF EXISTS applications_project_id_applicant_id_key;
+    IF NOT EXISTS (
+      SELECT 1 FROM information_schema.table_constraints
+      WHERE constraint_name = 'applications_posting_id_applicant_id_key' AND table_schema = 'public'
+    ) THEN
+      ALTER TABLE public.applications ADD CONSTRAINT applications_posting_id_applicant_id_key
+        UNIQUE (posting_id, applicant_id);
+    END IF;
 
--- Update index
-DROP INDEX IF EXISTS applications_project_id_idx;
-CREATE INDEX applications_posting_id_idx ON public.applications(posting_id);
+    -- Update index
+    DROP INDEX IF EXISTS applications_project_id_idx;
+    CREATE INDEX IF NOT EXISTS applications_posting_id_idx ON public.applications(posting_id);
+  END IF;
+END $$;
 
 -- ============================================
 -- 4c. UPDATE conversations TABLE (if project_id column exists)

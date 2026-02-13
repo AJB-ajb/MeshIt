@@ -1,7 +1,6 @@
 import { FolderKanban, Users, MessageSquare, TrendingUp } from "lucide-react";
 
 import { createClient } from "@/lib/supabase/server";
-import { getTestDataValue } from "@/lib/environment";
 import { formatDate, getInitials } from "@/lib/format";
 import type { StatItem } from "@/components/dashboard/stats-overview";
 import type { RecommendedPosting } from "@/components/dashboard/recommended-postings";
@@ -15,14 +14,12 @@ export async function fetchOwnerStats(
     .from("postings")
     .select("*", { count: "exact", head: true })
     .eq("creator_id", userId)
-    .eq("status", "open")
-    .eq("is_test_data", getTestDataValue());
+    .eq("status", "open");
 
   const { data: userPostings } = await supabase
     .from("postings")
     .select("id")
-    .eq("creator_id", userId)
-    .eq("is_test_data", getTestDataValue());
+    .eq("creator_id", userId);
 
   const postingIds = userPostings?.map((p) => p.id) || [];
 
@@ -187,7 +184,6 @@ export async function fetchOwnerPostingMetrics(
     .select("id, title, status")
     .eq("creator_id", userId)
     .eq("status", "open")
-    .eq("is_test_data", getTestDataValue())
     .limit(2);
 
   if (!userPostings) return [];

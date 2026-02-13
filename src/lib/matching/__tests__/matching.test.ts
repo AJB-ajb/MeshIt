@@ -5,10 +5,6 @@ vi.mock("@/lib/supabase/server", () => ({
   createClient: vi.fn(),
 }));
 
-vi.mock("@/lib/environment", () => ({
-  getTestDataValue: vi.fn(() => false),
-}));
-
 vi.mock("@/lib/ai/embeddings", () => ({
   generateProfileEmbedding: vi.fn(() => {
     throw new Error("API key not configured");
@@ -246,7 +242,7 @@ describe("matchPostingToProfiles", () => {
     const postingEmbedding = new Array(1536).fill(0.2);
     const { mockClient, mockFrom, mockRpc } = createMockSupabase();
 
-    // Mock posting fetch — the code chains .eq("id", ...).eq("is_test_data", ...).single()
+    // Mock posting fetch — the code chains .eq("id", ...).single()
     const mockSingle = vi.fn().mockResolvedValue({
       data: {
         embedding: postingEmbedding,
@@ -413,7 +409,7 @@ describe("createMatchRecords", () => {
           natural_language_criteria: null,
           embedding: null,
           status: "open",
-          is_test_data: false,
+
           created_at: "",
           updated_at: "",
           expires_at: "",
@@ -471,7 +467,7 @@ describe("createMatchRecords", () => {
           natural_language_criteria: null,
           embedding: null,
           status: "open",
-          is_test_data: false,
+
           created_at: "",
           updated_at: "",
           expires_at: "",
@@ -545,7 +541,7 @@ describe("createMatchRecordsForPosting", () => {
           previous_profile_snapshot: null,
           embedding: null,
           notification_preferences: null,
-          is_test_data: false,
+
           created_at: "",
           updated_at: "",
         },

@@ -23,10 +23,6 @@ vi.mock("@/lib/matching/posting-to-profile", () => ({
     mockCreateMatchRecordsForPosting(...args),
 }));
 
-vi.mock("@/lib/environment", () => ({
-  getTestDataValue: () => false,
-}));
-
 // Dynamic import for [id] path
 const { GET } = await import("@/app/api/matches/for-posting/[id]/route");
 

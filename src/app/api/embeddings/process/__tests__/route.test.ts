@@ -79,9 +79,8 @@ function makeRequest(headers: Record<string, string> = {}) {
 describe("POST /api/embeddings/process", () => {
   beforeEach(() => {
     vi.clearAllMocks();
-    vi.stubEnv("SUPABASE_URL", "http://localhost:54321");
     vi.stubEnv("NEXT_PUBLIC_SUPABASE_URL", "http://localhost:54321");
-    vi.stubEnv("SUPABASE_SERVICE_ROLE_KEY", "test-service-key");
+    vi.stubEnv("SUPABASE_SECRET_KEY", "test-service-key");
     vi.stubEnv("OPENAI_API_KEY", "test-openai-key");
   });
 
