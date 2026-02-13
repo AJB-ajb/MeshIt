@@ -33,7 +33,7 @@ Idea-based social platform for quickly finding people to do things with — proj
 - **Hackathons**: Finding aligned teammates; channels as shared context with QR codes
 - **Spontaneous activities**: Asking friends for quick plans with fast expiry and cascading invites
 
-See [Vision.md](Vision.md) for detailed analysis of each audience.
+See [vision.md](vision.md) for detailed analysis of each audience.
 
 ### Particular Use Cases
 
@@ -46,7 +46,7 @@ See [Vision.md](Vision.md) for detailed analysis of each audience.
 
 ## Features
 
-See [UX.md](UX.md) for design principles, pages, and interaction patterns.
+See [ux.md](ux.md) for design principles, pages, and interaction patterns.
 
 ### Use Cases
 
@@ -55,11 +55,11 @@ See [UX.md](UX.md) for design principles, pages, and interaction patterns.
 - Find a specific person from your friend list for a plan (sequential friend-ask)
 - Find someone suitable from a larger group without a specific person in mind
 
-See [UseCases.md](UseCases.md) for detailed examples and scenarios.
+See [use-cases.md](use-cases.md) for detailed examples and scenarios.
 
 ### Matching
 
-See [Matching.md](Matching.md) for the matching algorithm.
+See [matching.md](matching.md) for the matching algorithm.
 
 ### Core
 
@@ -88,7 +88,7 @@ See [Matching.md](Matching.md) for the matching algorithm.
 
 ## Design Principles
 
-See [UX.md](UX.md).
+See [ux.md](ux.md).
 
 ## Motivation
 
@@ -98,7 +98,7 @@ See [UX.md](UX.md).
 - Current tools (Slack, WhatsApp) don't scale for matching
 - Pair work is undervalued and underutilized
 
-See [Vision.md](Vision.md) for deeper philosophy, insights, and target audience analysis.
+See [vision.md](vision.md) for deeper philosophy, insights, and target audience analysis.
 
 ## Competitors
 

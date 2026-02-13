@@ -1,6 +1,6 @@
 # Vision & Philosophy
 
-This document captures the high-level product philosophy, motivations, and strategic insights behind Mesh. It complements the technical specs ([Mesh.md](Mesh.md), [UX.md](UX.md), [Matching.md](Matching.md), [UseCases.md](UseCases.md)) with subjective and motivational reasoning.
+This document captures the high-level product philosophy, motivations, and strategic insights behind Mesh. It complements the technical specs ([mesh.md](mesh.md), [ux.md](ux.md), [matching.md](matching.md), [use-cases.md](use-cases.md)) with subjective and motivational reasoning.
 
 ## Core Insight: Small Groups
 

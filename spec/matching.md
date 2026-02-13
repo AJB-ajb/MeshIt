@@ -55,7 +55,7 @@ Preferred collaboration mode (person-level default, can be overridden per postin
 - **Collaboration intensity** (0-10 scale): From fully independent to constant joint work
 - **Preferred activities**: Pair programming, whiteboarding, async review, brainstorming, etc.
 
-This is one of the most significant interpersonal differences in collaborative work (see [Vision.md](Vision.md)).
+This is one of the most significant interpersonal differences in collaborative work (see [vision.md](vision.md)).
 
 #### Location Mode
 

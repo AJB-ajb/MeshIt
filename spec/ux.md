@@ -49,7 +49,7 @@ Target: a not-yet-registered user with a written project description can post in
 3. Paste project description into free-form field
 4. Post
 
-Personal profile configuration is **not required** to create a posting. It can be completed later to improve matching quality. See [Vision.md](Vision.md) for the product reasoning behind this.
+Personal profile configuration is **not required** to create a posting. It can be completed later to improve matching quality. See [vision.md](vision.md) for the product reasoning behind this.
 
 ## Interaction Patterns
 

@@ -1,10 +1,13 @@
-# Redesign Plan — Next Steps
+# Roadmap
 
-Gap analysis between the [spec](../spec/Mesh.md), [UX spec](../spec/UX.md) and current implementation on the `dev` branch. Prioritized into actionable steps.
+> **Note**: Items below may need freshness review — priorities and completion status may have shifted since last update.
+
+Gap analysis between the [spec](mesh.md), [UX spec](ux.md) and current implementation on the `dev` branch. Prioritized into actionable steps.
 
 ## Current State (Feb 2026)
 
 The dev branch has completed Phase 1 of the redesign:
+
 - **Terminology**: projects -> postings
 - **Data model**: new schema with `postings` table (category, tags, mode, skill_level_min, context_identifier, etc.)
 - **Profile updates**: free-form AI extraction with undo
@@ -31,6 +34,7 @@ The dev branch has completed Phase 1 of the redesign:
 **Current state:** `mode: "friend_ask"` exists in the data model but there's no friend list, invite queue, or sequential invite flow.
 
 **Steps:**
+
 - [ ] Design friend list data model (connections between users)
 - [ ] Add DB table: `cascading_invites` (posting_id, ordered_user_ids[], current_index, status)
 - [ ] Build "Friend-Ask" mode UI on posting creation
@@ -45,6 +49,7 @@ The dev branch has completed Phase 1 of the redesign:
 **Current state:** `context_identifier` column exists in postings table but the creation form doesn't expose it.
 
 **Steps:**
+
 - [ ] Add context identifier field to new posting form
 - [ ] Show context_identifier as a badge on posting cards (done in browse, needed on detail page)
 - [ ] Use as a filter option
@@ -62,6 +67,7 @@ The dev branch has completed Phase 1 of the redesign:
 **Current state:** `availability_slots` column exists in profiles. Matching uses it in scoring. No UI for inputting availability.
 
 **Steps:**
+
 - [ ] Design availability input UI (weekly time grid or slot picker)
 - [ ] Add to profile editor
 - [ ] Add posting-level "when is this" input
@@ -74,6 +80,7 @@ The dev branch has completed Phase 1 of the redesign:
 **Spec ref:** "Users can adjust weights to reflect their priorities"
 
 **Steps:**
+
 - [ ] Add weight sliders to posting creation or profile settings
 - [ ] Store custom weights
 - [ ] Pass to scoring function
@@ -85,6 +92,7 @@ The dev branch has completed Phase 1 of the redesign:
 **Spec ref:** Two-stage matching — hard filters (pass/fail) then soft scoring.
 
 **Steps:**
+
 - [ ] Add explicit hard filter stage before scoring
 - [ ] Context identifier exact match
 - [ ] Category match
@@ -102,6 +110,7 @@ The dev branch has completed Phase 1 of the redesign:
 **UX spec:** `[planned]`
 
 **Steps:**
+
 - [ ] Set up cron job (Vercel Cron or Supabase Edge Function)
 - [ ] Aggregate new relevant postings per user
 - [ ] Generate and send digest email via Resend
@@ -118,13 +127,13 @@ The dev branch has completed Phase 1 of the redesign:
 
 ## Recommended Execution Order
 
-| Step | Feature | Rationale |
-|------|---------|-----------|
-| 1 | 1.2 Context Identifier Input | Trivial, column exists |
-| 2 | 2.1 Availability Input | Key matching dimension, schema ready |
-| 3 | 2.3 Hard Filter Enforcement | Aligns matching with spec |
-| 4 | 2.2 Configurable Weights | Empowers users |
-| 5 | 1.1 Cascading Invites | Headline feature, complex |
-| 6 | 3.1 Daily Digest | Nice-to-have |
-| 7 | 3.2 Thumbnails | Nice-to-have |
-| 8 | 3.3 Real-Time Voice | Infrastructure upgrade |
+| Step | Feature                      | Rationale                            |
+| ---- | ---------------------------- | ------------------------------------ |
+| 1    | 1.2 Context Identifier Input | Trivial, column exists               |
+| 2    | 2.1 Availability Input       | Key matching dimension, schema ready |
+| 3    | 2.3 Hard Filter Enforcement  | Aligns matching with spec            |
+| 4    | 2.2 Configurable Weights     | Empowers users                       |
+| 5    | 1.1 Cascading Invites        | Headline feature, complex            |
+| 6    | 3.1 Daily Digest             | Nice-to-have                         |
+| 7    | 3.2 Thumbnails               | Nice-to-have                         |
+| 8    | 3.3 Real-Time Voice          | Infrastructure upgrade               |

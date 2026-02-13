@@ -111,21 +111,21 @@ meshit/
 │   ├── e2e/                   # Playwright E2E tests
 │   └── fixtures/              # Test fixtures
 ├── public/                    # Static assets
-├── _bmad-output/              # Planning & implementation docs
-├── docs/                      # Project documentation
-└── spec/                      # Specifications
+├── docs/                      # Technical documentation
+└── spec/                      # Product specifications
 ```
 
 ### Deployment
 
-Deploy to [Vercel](https://vercel.com) (recommended). See [Vercel Deployment Guide](./docs/VERCEL_DEPLOYMENT.md) for detailed instructions.
+Deploy to [Vercel](https://vercel.com) (recommended). See [Vercel Deployment Guide](./docs/vercel-deployment.md) for detailed instructions.
 
 ### Documentation
 
-- [Vercel Deployment Guide](./docs/VERCEL_DEPLOYMENT.md)
-- [Architecture](./_bmad-output/planning-artifacts/architecture.md)
-- [PRD](./_bmad-output/planning-artifacts/prd.md)
-- [Epics & Stories](./_bmad-output/planning-artifacts/epics.md)
+- [Architecture Overview](./docs/architecture.md)
+- [Data Model](./docs/data-model.md)
+- [External Services](./docs/services.md)
+- [Vercel Deployment Guide](./docs/vercel-deployment.md)
+- [Product Spec](./spec/mesh.md)
 
 ## License
 

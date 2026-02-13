@@ -2,7 +2,7 @@
  * TypeScript types for Supabase database tables
  * These types match the database schema defined in migrations
  *
- * See docs/DATA_MODEL.md for full schema documentation
+ * See docs/data-model.md for full schema documentation
  */
 
 export type Json =

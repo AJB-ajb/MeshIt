@@ -6,25 +6,27 @@ This document describes the Model Context Protocol (MCP) servers configured for 
 
 MCP enables Cursor IDE to connect to external tools and data sources. This project uses the following MCP servers:
 
-| Server     | Type          | Purpose                                    |
-| ---------- | ------------- | ------------------------------------------ |
-| GitHub     | STDIO (local) | Repository management, issues, PRs         |
-| Playwright | STDIO (local) | Browser automation and testing             |
-| Sentry     | Remote (HTTP) | Error tracking and monitoring              |
-| PostHog    | Remote (HTTP) | Product analytics and feature flags        |
-| Supabase   | Remote (HTTP) | Database, auth, and backend services       |
-| ElevenLabs | STDIO (local) | Voice TTS for match explanations           |
-| n8n-mcp    | Remote (supergateway) | Automation workflows (daily digest, sync)  |
-| Discord    | Docker (local container) | Community bot workflows        |
+| Server     | Type                     | Purpose                                   |
+| ---------- | ------------------------ | ----------------------------------------- |
+| GitHub     | STDIO (local)            | Repository management, issues, PRs        |
+| Playwright | STDIO (local)            | Browser automation and testing            |
+| Sentry     | Remote (HTTP)            | Error tracking and monitoring             |
+| PostHog    | Remote (HTTP)            | Product analytics and feature flags       |
+| Supabase   | Remote (HTTP)            | Database, auth, and backend services      |
+| ElevenLabs | STDIO (local)            | Voice TTS for match explanations          |
+| n8n-mcp    | Remote (supergateway)    | Automation workflows (daily digest, sync) |
+| Discord    | Docker (local container) | Community bot workflows                   |
 
 ## Configuration Files
 
 ### Project-Level MCP Config
+
 Location: `.cursor/mcp.json`
 
 This file configures MCP servers specifically for this project. It's already in `.gitignore`.
 
 ### Environment Variables
+
 Location: `.env`
 
 Contains all API keys and tokens. **Never commit this file.**
@@ -42,6 +44,7 @@ cp .env.example .env
 ### 2. Configure Each Service
 
 #### GitHub
+
 1. Go to https://github.com/settings/tokens
 2. Generate a new token (classic) with scopes:
    - `repo` (Full control of private repositories)
@@ -53,6 +56,7 @@ cp .env.example .env
    ```
 
 #### Supabase
+
 1. Go to your Supabase project dashboard
 2. Navigate to Settings > API
 3. Copy the values to `.env`:
@@ -63,6 +67,7 @@ cp .env.example .env
    ```
 
 #### Sentry
+
 1. Go to https://sentry.io/settings/account/api/auth-tokens/
 2. Create a new auth token
 3. Add to `.env`:
@@ -74,6 +79,7 @@ cp .env.example .env
    ```
 
 #### PostHog
+
 1. Go to https://app.posthog.com/project/settings
 2. Copy your API key
 3. Add to `.env`:
@@ -84,6 +90,7 @@ cp .env.example .env
    Note: Use `https://eu.posthog.com` if on EU cloud.
 
 #### n8n-mcp
+
 1. Log in to your n8n Cloud workspace (or self-host) and open **Settings → API**.
 2. Create a JWT API key with workflow read/execute permissions.
 3. Copy your MCP endpoint URL (for Cloud this is usually `https://<workspace>.n8n.cloud/mcp-server/http`).
@@ -109,6 +116,7 @@ cp .env.example .env
 6. Restart Cursor so the n8n MCP server picks up the new configuration.
 
 #### Playwright
+
 No configuration needed - runs locally without credentials.
 
 ### 3. Restart Cursor
@@ -119,63 +127,14 @@ After configuring `.env`, restart Cursor IDE to load the MCP servers.
 
 When you first use Sentry, PostHog, or Supabase MCP tools, you'll be prompted to authenticate via OAuth in your browser.
 
-## MCP Server Capabilities
-
-### GitHub MCP
-- Create and manage issues
-- List and review pull requests
-- Search repositories
-- Access repository data and metadata
-- Manage branches and commits
-
-### Playwright MCP
-- Browser automation
-- Web page interaction
-- Screenshot capture
-- Form filling and navigation
-- E2E testing support
-
-### Sentry MCP
-- View error reports and issues
-- Access project data
-- Create DSNs
-- Query error analytics
-- Integrate with Seer AI for automated fixes
-
-### PostHog MCP
-- Manage feature flags
-- Query analytics data
-- Create A/B tests
-- Add annotations
-- Investigate errors
-
-### Supabase MCP
-- Query database
-- Manage tables and schemas
-- Access Edge Functions
-- Handle authentication
-- Manage storage
-
 ## Troubleshooting
 
-### MCP Server Not Connecting
-1. Check that `.env` file exists with correct values
-2. Restart Cursor IDE
-3. Check Cursor Settings > MCP for server status
-
-### GitHub Token Issues
-- Ensure token has required scopes
-- Regenerate token if expired
-- Check token is correctly set in `.env`
-
-### OAuth Authentication Failed
-- Clear browser cookies for the service
-- Try authenticating in an incognito window
-- Check your account has access to the organization/project
+- **MCP server not connecting**: Check `.env` exists with correct values, restart IDE, check Settings > MCP for server status
+- **GitHub token issues**: Ensure token has required scopes, regenerate if expired
+- **OAuth failed**: Clear browser cookies, try incognito, check org/project access
 
 ## Security Notes
 
-1. **Never commit `.env`** - It's in `.gitignore` but double-check
-2. **Use minimal scopes** - Only grant permissions that are needed
-3. **Rotate tokens regularly** - Especially for production environments
-4. **Use environment variables** - Never hardcode secrets in code
+- Never commit `.env` (it's in `.gitignore`)
+- Use minimal scopes — only grant permissions needed
+- Rotate tokens regularly
