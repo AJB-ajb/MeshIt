@@ -19,7 +19,7 @@ import {
 // Types
 // ---------------------------------------------------------------------------
 
-type ProfileData = {
+type ProfileFetchResult = {
   form: ProfileFormState;
   userEmail: string | null;
   connectedProviders: {
@@ -72,7 +72,7 @@ function parseAvailabilitySlots(raw: unknown): AvailabilitySlots {
 // Fetcher
 // ---------------------------------------------------------------------------
 
-async function fetchProfile(): Promise<ProfileData> {
+async function fetchProfile(): Promise<ProfileFetchResult> {
   const supabase = createClient();
 
   const {

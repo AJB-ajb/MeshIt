@@ -4,14 +4,12 @@
  */
 
 import { getGeminiModel, isGeminiConfigured } from "@/lib/ai/gemini";
+import type { Profile } from "@/lib/supabase/types";
 
-export interface ProfileData {
-  skills: string[];
-  skill_levels: Record<string, number> | null;
-  location_preference: number | null;
-  interests: string[] | null;
-  bio: string | null;
-}
+export type MatchExplanationProfile = Pick<
+  Profile,
+  "skills" | "skill_levels" | "location_preference" | "interests" | "bio"
+>;
 
 export interface PostingData {
   title: string;
@@ -26,7 +24,7 @@ export interface PostingData {
  * Creates a 2-3 sentence explanation of why the profile and posting are a good match
  */
 export async function generateMatchExplanation(
-  profile: ProfileData,
+  profile: MatchExplanationProfile,
   posting: PostingData,
   score: number,
 ): Promise<string> {
@@ -40,7 +38,7 @@ export async function generateMatchExplanation(
   const prompt = `Given this user profile and posting, explain in 2-3 sentences why they are a good match. Focus on specific skill overlaps and relevant experience. Be concise and friendly.
 
 User Profile:
-- Skills: ${profile.skills.join(", ") || "Not specified"}
+- Skills: ${profile.skills?.join(", ") || "Not specified"}
 - Skill Levels: ${
     profile.skill_levels
       ? Object.entries(profile.skill_levels)
@@ -90,7 +88,7 @@ Explanation:`;
  */
 export async function generateMatchExplanations(
   matches: Array<{
-    profile: ProfileData;
+    profile: MatchExplanationProfile;
     posting: PostingData;
     score: number;
   }>,

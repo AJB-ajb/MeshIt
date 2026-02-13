@@ -57,24 +57,9 @@ export type MatchedProfile = {
   breakdown: ScoreBreakdown;
 };
 
-export type PostingFormState = {
-  title: string;
-  description: string;
-  skills: string;
-  estimatedTime: string;
-  teamSizeMin: string;
-  teamSizeMax: string;
-  lookingFor: string;
-  category: string;
-  mode: string;
-  status: string;
-  expiresAt: string;
-  locationMode: string;
-  locationName: string;
-  locationLat: string;
-  locationLng: string;
-  maxDistanceKm: string;
-};
+// PostingFormState is re-exported from the canonical location
+import { type PostingFormState } from "@/lib/types/posting";
+export type { PostingFormState };
 
 type PostingDetailData = {
   posting: PostingDetail | null;
