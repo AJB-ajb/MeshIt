@@ -1,42 +1,21 @@
 "use client";
 
-import { useState } from "react";
+import { useState, useCallback } from "react";
 import Link from "next/link";
-import {
-  Plus,
-  Search,
-  Filter,
-  Users,
-  Calendar,
-  MapPin,
-  Loader2,
-  Sparkles,
-  X,
-  Heart,
-} from "lucide-react";
+import { Plus, Search, Filter, Loader2, X } from "lucide-react";
 import { SpeechInput } from "@/components/ai-elements/speech-input";
 import { transcribeAudio } from "@/lib/transcribe";
 
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Badge } from "@/components/ui/badge";
-import {
-  Card,
-  CardContent,
-  CardDescription,
-  CardHeader,
-  CardTitle,
-} from "@/components/ui/card";
-import { formatScore } from "@/lib/matching/scoring";
-import { getInitials } from "@/lib/format";
+import { Card, CardContent } from "@/components/ui/card";
 import { usePostings } from "@/lib/hooks/use-postings";
 import type { Posting, TabId } from "@/lib/hooks/use-postings";
-import type { PostingFilters } from "@/lib/types/filters";
+import { useNlFilter } from "@/lib/hooks/use-nl-filter";
+import { usePostingInterest } from "@/lib/hooks/use-posting-interest";
 import { applyFilters } from "@/lib/filters/apply-filters";
-import {
-  filtersToFilterPills,
-  removeFilterByKey,
-} from "@/lib/filters/format-filters";
+import { PostingDiscoverCard } from "@/components/posting/posting-discover-card";
 
 const tabs: { id: TabId; label: string }[] = [
   { id: "discover", label: "Discover" },
@@ -52,142 +31,46 @@ const categories = [
   { value: "social", label: "Social" },
 ] as const;
 
-const categoryStyles: Record<string, string> = {
-  study: "bg-blue-500/10 text-blue-700 border-blue-500/20 dark:text-blue-400",
-  hackathon:
-    "bg-purple-500/10 text-purple-700 border-purple-500/20 dark:text-purple-400",
-  personal:
-    "bg-green-500/10 text-green-700 border-green-500/20 dark:text-green-400",
-  professional:
-    "bg-orange-500/10 text-orange-700 border-orange-500/20 dark:text-orange-400",
-  social: "bg-pink-500/10 text-pink-700 border-pink-500/20 dark:text-pink-400",
-};
-
-function getLocationLabel(
-  locationMode: string | null,
-  locationName: string | null,
-) {
-  switch (locationMode) {
-    case "remote":
-      return "🏠 Remote";
-    case "in_person":
-      return `📍 ${locationName || "In-person"}`;
-    case "either":
-      return `🌐 ${locationName || "Either"}`;
-    default:
-      return null;
-  }
-}
-
-const formatDate = (dateString: string) => {
-  const date = new Date(dateString);
-  const now = new Date();
-  const diffMs = now.getTime() - date.getTime();
-  const diffDays = Math.floor(diffMs / (1000 * 60 * 60 * 24));
-
-  if (diffDays === 0) return "Today";
-  if (diffDays === 1) return "Yesterday";
-  if (diffDays < 7) return `${diffDays} days ago`;
-  if (diffDays < 30) return `${Math.floor(diffDays / 7)} weeks ago`;
-  return date.toLocaleDateString();
-};
-
 export default function PostingsPage() {
   const [activeTab, setActiveTab] = useState<TabId>("discover");
   const [searchQuery, setSearchQuery] = useState("");
   const [showFilters, setShowFilters] = useState(false);
   const [filterCategory, setFilterCategory] = useState<string>("all");
   const [filterMode, setFilterMode] = useState<string>("all");
-  const [interestingIds, setInterestingIds] = useState<Set<string>>(new Set());
-  const [interestError, setInterestError] = useState<string | null>(null);
-  const [nlFilters, setNlFilters] = useState<PostingFilters>({});
-  const [nlQuery, setNlQuery] = useState("");
-  const [isTranslating, setIsTranslating] = useState(false);
 
   const { postings, userId, interestedPostingIds, isLoading, mutate } =
     usePostings(activeTab, filterCategory);
 
-  const nlFilterPills = filtersToFilterPills(nlFilters);
-  const hasActiveFilters = filterMode !== "all" || nlFilterPills.length > 0;
+  const onCategoryChange = useCallback(
+    (cat: string | undefined) => setFilterCategory(cat ?? "all"),
+    [],
+  );
+  const onModeChange = useCallback(
+    (mode: string | undefined) => setFilterMode(mode ?? "all"),
+    [],
+  );
+
+  const {
+    nlQuery,
+    setNlQuery,
+    nlFilterPills,
+    nlFilters,
+    hasActiveFilters: hasNlFilters,
+    isTranslating,
+    handleNlSearch,
+    handleRemoveNlFilter,
+    clearFilters: clearNlFilters,
+  } = useNlFilter({ onCategoryChange, onModeChange });
+
+  const hasActiveFilters = filterMode !== "all" || hasNlFilters;
 
   const clearFilters = () => {
     setFilterMode("all");
-    setNlFilters({});
-    setNlQuery("");
+    clearNlFilters();
   };
 
-  const handleNlSearch = async (query: string) => {
-    const trimmed = query.trim();
-    if (!trimmed) return;
-
-    setIsTranslating(true);
-    try {
-      const response = await fetch("/api/filters/translate", {
-        method: "POST",
-        headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({ query: trimmed }),
-      });
-
-      if (!response.ok) {
-        const data = await response.json();
-        throw new Error(data.error || "Failed to parse filters");
-      }
-
-      const data = await response.json();
-      if (data.filters) {
-        setNlFilters(data.filters);
-        if (data.filters.category) {
-          setFilterCategory(data.filters.category);
-        }
-        if (data.filters.mode) {
-          setFilterMode(data.filters.mode);
-        }
-      }
-    } catch {
-      // Fall back to text search on failure
-    } finally {
-      setIsTranslating(false);
-    }
-  };
-
-  const handleRemoveNlFilter = (key: string) => {
-    const updated = removeFilterByKey(nlFilters, key);
-    setNlFilters(updated);
-    if (key === "category") {
-      setFilterCategory("all");
-    }
-    if (key === "mode") {
-      setFilterMode("all");
-    }
-  };
-
-  const handleExpressInterest = async (postingId: string) => {
-    setInterestingIds((prev) => new Set(prev).add(postingId));
-    setInterestError(null);
-    try {
-      const response = await fetch("/api/matches/interest", {
-        method: "POST",
-        headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({ posting_id: postingId }),
-      });
-
-      if (!response.ok) {
-        const data = await response.json();
-        throw new Error(data.error?.message || "Failed to express interest");
-      }
-
-      await mutate();
-    } catch (err) {
-      setInterestingIds((prev) => {
-        const next = new Set(prev);
-        next.delete(postingId);
-        return next;
-      });
-      setInterestError(
-        err instanceof Error ? err.message : "Failed to express interest",
-      );
-    }
-  };
+  const { interestingIds, interestError, handleExpressInterest } =
+    usePostingInterest(mutate);
 
   // Apply text search and mode filter first
   const textFiltered = postings.filter((posting: Posting) => {
@@ -414,7 +297,6 @@ export default function PostingsPage() {
         <div className="grid gap-6">
           {filteredPostings.map((posting) => {
             const isOwner = userId === posting.creator_id;
-            const creatorName = posting.profiles?.full_name || "Unknown";
             const isAlreadyInterested = interestedPostingIds.includes(
               posting.id,
             );
@@ -426,198 +308,16 @@ export default function PostingsPage() {
               !isAlreadyInterested;
 
             return (
-              <Card key={posting.id} className="overflow-hidden">
-                <CardHeader className="pb-4">
-                  <div className="flex items-start justify-between gap-4">
-                    <div className="space-y-1 flex-1">
-                      <div className="flex items-center gap-3 flex-wrap">
-                        <CardTitle className="text-xl">
-                          <Link
-                            href={`/postings/${posting.id}`}
-                            className="hover:underline cursor-pointer"
-                          >
-                            {posting.title}
-                          </Link>
-                        </CardTitle>
-                        {posting.category && (
-                          <Badge
-                            className={categoryStyles[posting.category] || ""}
-                          >
-                            {posting.category}
-                          </Badge>
-                        )}
-                        {posting.context_identifier && (
-                          <Badge variant="secondary" className="text-xs">
-                            {posting.context_identifier}
-                          </Badge>
-                        )}
-                        {posting.status !== "open" && (
-                          <Badge
-                            variant={
-                              posting.status === "filled"
-                                ? "default"
-                                : "secondary"
-                            }
-                          >
-                            {posting.status}
-                          </Badge>
-                        )}
-                        {/* Compatibility Score Badge */}
-                        {!isOwner &&
-                          posting.compatibility_score !== undefined && (
-                            <Badge
-                              variant="default"
-                              className="bg-green-500 hover:bg-green-600 flex items-center gap-1"
-                            >
-                              <Sparkles className="h-3 w-3" />
-                              {formatScore(posting.compatibility_score)} match
-                            </Badge>
-                          )}
-                      </div>
-                    </div>
-                    <div className="flex gap-2 shrink-0">
-                      {/* "I'm Interested" button */}
-                      {showInterestButton && (
-                        <Button
-                          variant="outline"
-                          onClick={() => handleExpressInterest(posting.id)}
-                          disabled={isInteresting}
-                        >
-                          {isInteresting ? (
-                            <Loader2 className="h-4 w-4 animate-spin" />
-                          ) : (
-                            <Heart className="h-4 w-4" />
-                          )}
-                          {isInteresting
-                            ? "Expressing Interest..."
-                            : "I'm Interested"}
-                        </Button>
-                      )}
-                      {/* Already interested indicator */}
-                      {!isOwner &&
-                        activeTab === "discover" &&
-                        isAlreadyInterested && (
-                          <Button variant="secondary" disabled>
-                            <Heart className="h-4 w-4 fill-current" />
-                            Interested
-                          </Button>
-                        )}
-                      <Button variant="outline" asChild>
-                        <Link href={`/postings/${posting.id}`}>
-                          {isOwner ? "Edit" : "View Details"}
-                        </Link>
-                      </Button>
-                      {!isOwner &&
-                        posting.status === "open" &&
-                        !isAlreadyInterested &&
-                        posting.mode !== "open" && <Button>Apply</Button>}
-                    </div>
-                  </div>
-                </CardHeader>
-                <CardContent className="space-y-4">
-                  <CardDescription className="text-sm line-clamp-2">
-                    {posting.description}
-                  </CardDescription>
-
-                  {/* Compatibility Breakdown - only for non-owners with scores */}
-                  {!isOwner && posting.score_breakdown && (
-                    <div className="rounded-lg border border-green-500/20 bg-green-50/50 dark:bg-green-950/20 p-3">
-                      <p className="text-xs font-medium text-green-700 dark:text-green-400 mb-2 flex items-center gap-1">
-                        <Sparkles className="h-3 w-3" />
-                        Your Compatibility Breakdown
-                      </p>
-                      <div className="grid grid-cols-2 sm:grid-cols-4 gap-2 text-xs">
-                        <div className="flex flex-col">
-                          <span className="text-muted-foreground">
-                            Semantic
-                          </span>
-                          <span className="font-medium text-foreground">
-                            {formatScore(posting.score_breakdown.semantic)}
-                          </span>
-                        </div>
-                        <div className="flex flex-col">
-                          <span className="text-muted-foreground">
-                            Availability
-                          </span>
-                          <span className="font-medium text-foreground">
-                            {formatScore(posting.score_breakdown.availability)}
-                          </span>
-                        </div>
-                        <div className="flex flex-col">
-                          <span className="text-muted-foreground">
-                            Skill Level
-                          </span>
-                          <span className="font-medium text-foreground">
-                            {formatScore(posting.score_breakdown.skill_level)}
-                          </span>
-                        </div>
-                        <div className="flex flex-col">
-                          <span className="text-muted-foreground">
-                            Location
-                          </span>
-                          <span className="font-medium text-foreground">
-                            {formatScore(posting.score_breakdown.location)}
-                          </span>
-                        </div>
-                      </div>
-                    </div>
-                  )}
-
-                  {/* Skills */}
-                  {posting.skills.length > 0 && (
-                    <div className="flex flex-wrap gap-2">
-                      {posting.skills.slice(0, 5).map((skill: string) => (
-                        <Badge key={skill} variant="secondary">
-                          {skill}
-                        </Badge>
-                      ))}
-                      {posting.skills.length > 5 && (
-                        <Badge variant="outline">
-                          +{posting.skills.length - 5}
-                        </Badge>
-                      )}
-                    </div>
-                  )}
-
-                  {/* Meta */}
-                  <div className="flex flex-wrap items-center gap-4 text-sm text-muted-foreground">
-                    <span className="flex items-center gap-1.5">
-                      <Users className="h-4 w-4" />
-                      Looking for {posting.team_size_max}{" "}
-                      {posting.team_size_max === 1 ? "person" : "people"}
-                    </span>
-                    {posting.estimated_time && (
-                      <span className="flex items-center gap-1.5">
-                        <Calendar className="h-4 w-4" />
-                        {posting.estimated_time}
-                      </span>
-                    )}
-                    {getLocationLabel(
-                      posting.location_mode,
-                      posting.location_name,
-                    ) && (
-                      <span className="flex items-center gap-1.5">
-                        <MapPin className="h-4 w-4" />
-                        {getLocationLabel(
-                          posting.location_mode,
-                          posting.location_name,
-                        )}
-                      </span>
-                    )}
-                  </div>
-
-                  {/* Creator */}
-                  <div className="flex items-center gap-2 border-t border-border pt-4">
-                    <div className="flex h-8 w-8 items-center justify-center rounded-full bg-muted text-xs font-medium">
-                      {getInitials(creatorName)}
-                    </div>
-                    <span className="text-sm text-muted-foreground">
-                      {isOwner ? "Created by you" : `Posted by ${creatorName}`}{" "}
-                      • {formatDate(posting.created_at)}
-                    </span>
-                  </div>
-                </CardContent>
-              </Card>
+              <PostingDiscoverCard
+                key={posting.id}
+                posting={posting}
+                isOwner={isOwner}
+                isAlreadyInterested={isAlreadyInterested}
+                isInteresting={isInteresting}
+                showInterestButton={showInterestButton}
+                onExpressInterest={handleExpressInterest}
+                activeTab={activeTab}
+              />
             );
           })}
         </div>

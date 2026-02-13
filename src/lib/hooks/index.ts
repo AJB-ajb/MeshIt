@@ -17,3 +17,5 @@ export { useSignOut } from "./use-sign-out";
 export { useSendMessage } from "./use-send-message";
 export { useFriendships } from "./use-friendships";
 export { useFriendAsks } from "./use-friend-ask";
+export { useNlFilter } from "./use-nl-filter";
+export { usePostingInterest } from "./use-posting-interest";
