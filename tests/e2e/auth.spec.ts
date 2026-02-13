@@ -101,7 +101,7 @@ test.describe("Authentication Flow", () => {
     await page.context().clearCookies();
 
     // Try to access protected routes
-    const protectedRoutes = ["/dashboard", "/profile", "/projects"];
+    const protectedRoutes = ["/dashboard", "/profile", "/postings"];
 
     for (const route of protectedRoutes) {
       await page.goto(route);

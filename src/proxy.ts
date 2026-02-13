@@ -7,7 +7,8 @@ const PROTECTED_ROUTES = [
   "/profile",
   "/postings",
   "/matches",
-  "/messages",
+  "/inbox",
+  "/settings",
   "/onboarding",
 ];
 const AUTH_ROUTES = ["/login", "/signup"];

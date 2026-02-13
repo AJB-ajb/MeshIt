@@ -27,9 +27,12 @@ function LoginForm() {
   const [formError, setFormError] = useState<string | null>(null);
   const error = searchParams.get("error");
   const next = searchParams.get("next");
-  const callbackUrl = next
-    ? `${window.location.origin}/callback?next=${encodeURIComponent(next)}`
-    : `${window.location.origin}/callback`;
+  const getCallbackUrl = () => {
+    const origin = window.location.origin;
+    return next
+      ? `${origin}/callback?next=${encodeURIComponent(next)}`
+      : `${origin}/callback`;
+  };
 
   const handleEmailSignIn = async (e: React.FormEvent) => {
     e.preventDefault();
@@ -57,7 +60,7 @@ function LoginForm() {
     const { error: signInError } = await supabase.auth.signInWithOAuth({
       provider: "google",
       options: {
-        redirectTo: callbackUrl,
+        redirectTo: getCallbackUrl(),
       },
     });
 
@@ -73,7 +76,7 @@ function LoginForm() {
     const { error: signInError } = await supabase.auth.signInWithOAuth({
       provider: "github",
       options: {
-        redirectTo: callbackUrl,
+        redirectTo: getCallbackUrl(),
       },
     });
 
@@ -89,7 +92,7 @@ function LoginForm() {
     const { error: signInError } = await supabase.auth.signInWithOAuth({
       provider: "linkedin_oidc",
       options: {
-        redirectTo: callbackUrl,
+        redirectTo: getCallbackUrl(),
       },
     });
 
