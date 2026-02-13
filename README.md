@@ -1,7 +1,9 @@
 # Mesh
 
-![CI](https://github.com/AJB-ajb/MeshIt/actions/workflows/ci.yml/badge.svg)
+[![CI](https://github.com/AJB-ajb/MeshIt/actions/workflows/ci.yml/badge.svg?branch=main)](https://github.com/AJB-ajb/MeshIt/actions/workflows/ci.yml)
 ![Coverage](https://img.shields.io/endpoint?url=https://gist.githubusercontent.com/AJB-ajb/25026facb8b1395138a5ab1a48d9c5f0/raw/meshit-coverage.json)
+![Node](https://img.shields.io/badge/node-%3E%3D18.17-brightgreen)
+![pnpm](https://img.shields.io/badge/pnpm-10.x-orange)
 
 > AI-powered project collaboration matching platform
 
@@ -58,8 +60,8 @@ Copy `.env.example` to `.env.local` and configure the following:
 **Required**:
 
 - `NEXT_PUBLIC_SUPABASE_URL` — Supabase project URL
-- `NEXT_PUBLIC_SUPABASE_ANON_KEY` — Supabase anonymous key
-- `SUPABASE_SERVICE_ROLE_KEY` — Supabase service role key (server-side only)
+- `NEXT_PUBLIC_SUPABASE_PUBLISHABLE_KEY` — Supabase publishable key
+- `SUPABASE_SECRET_KEY` — Supabase secret key (server-side only)
 - `GOOGLE_AI_API_KEY` — Google AI API key (Gemini)
 - `OPENAI_API_KEY` — OpenAI API key (Embeddings)
 - `RESEND_API_KEY` — Resend API key (email)

@@ -10,6 +10,7 @@ This document defines how users and postings are matched based on compatibility.
   - Enums need to be extended and predefined, which is inflexible and hard to maintain
 - **Principled categories**: Even if factor evaluation is subjective, we define reference points for consistent values across users
 - **Natural language input**: Most configuration can be done via natural language (transformed to structured values via AI)
+  - Handoff markdown available for fast exchange to other platforms
 - **Hierarchical defaults**: Most configuration is on the person-level, with posting-level overrides. Postings can also inherit defaults from other postings.
 - **Gradual scoring**: Extrema values are handled gracefully (e.g., strong in-person preference still matches reasonably with slight remote preference)
 - **Good enough matching**: We cover common cases well; edge cases can be handled manually or by AI. Looking through ten people is acceptable if the top matches are good enough.
