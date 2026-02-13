@@ -13,6 +13,12 @@ export type Json =
   | { [key: string]: Json | undefined }
   | Json[];
 
+/** Typed alias for Profile.skill_levels — { "domain": 0-10 } */
+export type SkillLevelsMap = Record<string, number>;
+
+/** Typed alias for Profile.availability_slots — { "mon": ["morning", "afternoon"] } */
+export type AvailabilitySlotsMap = Record<string, string[]>;
+
 export interface Database {
   public: {
     Tables: {
@@ -62,12 +68,17 @@ export interface Profile {
   skills: string[] | null;
   interests: string[] | null;
   languages: string[] | null;
-  skill_levels: Json | null; // {"domain": 0-10} map
+  skill_levels: SkillLevelsMap | null;
   location_preference: number | null; // 0-1 float (0=in-person, 0.5=either, 1=remote)
-  availability_slots: Json | null; // Week-based or block-based format
+  location_mode: "remote" | "in_person" | "either" | null;
+  availability_slots: AvailabilitySlotsMap | null;
   // Links
   portfolio_url: string | null;
   github_url: string | null;
+  // Free-form source text and undo
+  source_text: string | null;
+  previous_source_text: string | null;
+  previous_profile_snapshot: Json | null;
   // Matching
   embedding: number[] | null;
   // Notification preferences
@@ -90,11 +101,15 @@ export interface ProfileInsert {
   skills?: string[] | null;
   interests?: string[] | null;
   languages?: string[] | null;
-  skill_levels?: Json | null;
+  skill_levels?: SkillLevelsMap | null;
   location_preference?: number | null;
-  availability_slots?: Json | null;
+  location_mode?: "remote" | "in_person" | "either" | null;
+  availability_slots?: AvailabilitySlotsMap | null;
   portfolio_url?: string | null;
   github_url?: string | null;
+  source_text?: string | null;
+  previous_source_text?: string | null;
+  previous_profile_snapshot?: Json | null;
   embedding?: number[] | null;
   notification_preferences?: Json | null;
   is_test_data?: boolean;
@@ -113,11 +128,15 @@ export interface ProfileUpdate {
   skills?: string[] | null;
   interests?: string[] | null;
   languages?: string[] | null;
-  skill_levels?: Json | null;
+  skill_levels?: SkillLevelsMap | null;
   location_preference?: number | null;
-  availability_slots?: Json | null;
+  location_mode?: "remote" | "in_person" | "either" | null;
+  availability_slots?: AvailabilitySlotsMap | null;
   portfolio_url?: string | null;
   github_url?: string | null;
+  source_text?: string | null;
+  previous_source_text?: string | null;
+  previous_profile_snapshot?: Json | null;
   embedding?: number[] | null;
   notification_preferences?: Json | null;
   is_test_data?: boolean;

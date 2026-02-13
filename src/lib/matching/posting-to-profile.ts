@@ -93,7 +93,11 @@ export async function matchPostingToProfiles(
         portfolio_url: row.portfolio_url || null,
         github_url: row.github_url || null,
         location_preference: row.location_preference ?? null,
+        location_mode: row.location_mode ?? null,
         availability_slots: row.availability_slots || null,
+        source_text: null,
+        previous_source_text: null,
+        previous_profile_snapshot: null,
         embedding: null, // Don't return embedding in response
         notification_preferences: row.notification_preferences || null,
         is_test_data: row.is_test_data || false,
