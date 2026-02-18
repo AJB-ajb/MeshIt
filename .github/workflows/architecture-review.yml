@@ -2,8 +2,8 @@ name: Architecture Review
 
 on:
   schedule:
-    # Every Monday at 9am UTC
-    - cron: "0 9 * * 1"
+    # Monday 2am UTC = 3am CET (Berlin winter) / 4am CEST (Berlin summer)
+    - cron: "0 2 * * 1"
   workflow_dispatch:
 
 jobs:
