@@ -2,50 +2,24 @@ name: Architecture Review
 
 on:
   schedule:
-    # Monday 2am UTC = 3am CET (Berlin winter) / 4am CEST (Berlin summer)
-    - cron: '0 2 * * 1'
-  workflow_dispatch: # Allow manual triggers
+    # Every Monday at 9am UTC
+    - cron: "0 9 * * 1"
+  workflow_dispatch:
 
 jobs:
-  review:
+  arch-review:
     runs-on: ubuntu-latest
     permissions:
       contents: read
       issues: write
-    timeout-minutes: 30
+      pull-requests: read
     steps:
       - uses: actions/checkout@v4
-
-      - uses: pnpm/action-setup@v4
-
-      - uses: actions/setup-node@v4
         with:
-          node-version: 20
-          cache: pnpm
+          fetch-depth: 0
 
-      - run: pnpm install --frozen-lockfile
-
-      - name: Install Claude Code
-        run: npm install -g @anthropic-ai/claude-code
-
-      - name: Run architecture review
-        env:
-          ANTHROPIC_API_KEY: ${{ secrets.ANTHROPIC_API_KEY }}
-        run: |
-          PROMPT=$(cat .github/prompts/architecture-review.md)
-          claude -p "$PROMPT" \
-            --model claude-opus-4-6 \
-            --output-format text \
-            --max-turns 30 \
-            > review-output.md
-
-      - name: Create GitHub issue
-        env:
-          GH_TOKEN: ${{ github.token }}
-        run: |
-          DATE=$(date -u +"%Y-%m-%d")
-          BODY=$(head -c 60000 review-output.md)
-          gh issue create \
-            --title "Architecture Review — $DATE" \
-            --label "architecture-review" \
-            --body "$BODY"
+      - uses: anthropics/claude-code-action@v1
+        with:
+          claude_code_oauth_token: ${{ secrets.CLAUDE_CODE_OAUTH_TOKEN }}
+          claude_args: --model claude-sonnet-4-6
+          prompt_file: .github/prompts/architecture-review.md
