@@ -99,7 +99,7 @@ See [availability-calendar.md](availability-calendar.md) for the full availabili
 
 ### Waitlist
 
-When a posting is filled (accepted count >= `team_size_max`), additional users can join a waitlist. Always available on filled postings — no per-posting toggle.
+When a posting is filled (accepted count + creator >= `team_size_max`), additional users can join a waitlist. Always available on filled postings — no per-posting toggle.
 
 #### Behavior
 

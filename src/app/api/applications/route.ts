@@ -152,7 +152,7 @@ export const POST = withAuth(async (req, { user, supabase }) => {
       .eq("posting_id", posting_id)
       .eq("status", "accepted");
 
-    if (count && count >= posting.team_size_max) {
+    if (count && count + 1 >= posting.team_size_max) {
       await supabase
         .from("postings")
         .update({ status: "filled" })

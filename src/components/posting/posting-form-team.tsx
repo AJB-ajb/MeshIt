@@ -61,7 +61,7 @@ export function PostingFormTeam({ form, onChange }: PostingFormTeamProps) {
           <Input
             id="team-size-min"
             type="number"
-            min={1}
+            min={2}
             max={10}
             value={form.teamSizeMin}
             onChange={(e) => onChange("teamSizeMin", e.target.value)}
@@ -78,7 +78,7 @@ export function PostingFormTeam({ form, onChange }: PostingFormTeamProps) {
           <Input
             id="looking-for"
             type="number"
-            min={1}
+            min={2}
             max={10}
             value={form.lookingFor}
             onChange={(e) => onChange("lookingFor", e.target.value)}

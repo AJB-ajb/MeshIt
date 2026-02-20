@@ -86,9 +86,20 @@ export function GroupChatPanel({
     currentUserId,
   );
 
-  // Sync fetched messages to local state
+  // Sync fetched messages to local state (content-aware to avoid re-render loops)
   useEffect(() => {
-    setLocalMessages(fetchedMessages);
+    queueMicrotask(() => {
+      setLocalMessages((prev) => {
+        if (prev.length === fetchedMessages.length) {
+          const lastPrev = prev[prev.length - 1];
+          const lastFetched = fetchedMessages[fetchedMessages.length - 1];
+          if (prev.length === 0 || lastPrev?.id === lastFetched?.id) {
+            return prev;
+          }
+        }
+        return fetchedMessages;
+      });
+    });
   }, [fetchedMessages]);
 
   // Handle incoming realtime messages

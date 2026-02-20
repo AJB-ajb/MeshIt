@@ -105,7 +105,7 @@ export function SequentialInviteStatus({
             : status === "completed"
               ? labels.invite.completedSummary(ordered_friend_list.length)
               : status === "cancelled"
-                ? labels.invite.cancelledSummary
+                ? `${labels.invite.cancelledSummary} \u00b7 ${new Date(friendAsk.updated_at).toLocaleDateString()}`
                 : labels.invite.parallelWaitingSummary(
                     respondedCount,
                     ordered_friend_list.length,
@@ -193,7 +193,7 @@ export function SequentialInviteStatus({
           : status === "completed"
             ? labels.invite.completedSummary(ordered_friend_list.length)
             : status === "cancelled"
-              ? labels.invite.cancelledSummary
+              ? `${labels.invite.cancelledSummary} \u00b7 ${new Date(friendAsk.updated_at).toLocaleDateString()}`
               : labels.invite.waitingSummary(
                   current_request_index + 1,
                   ordered_friend_list.length,

@@ -104,7 +104,7 @@ export const PATCH = withAuth(async (req, { user, supabase, params }) => {
       .eq("posting_id", posting.id)
       .eq("status", "accepted");
 
-    if (count && count >= posting.team_size_max) {
+    if (count && count + 1 >= posting.team_size_max) {
       await supabase
         .from("postings")
         .update({ status: "filled" })

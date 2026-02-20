@@ -58,7 +58,7 @@ export function ActivePostingCard({ posting }: ActivePostingCardProps) {
           <div className="mt-3 flex flex-wrap items-center gap-3 text-sm text-muted-foreground">
             <span className="flex items-center gap-1">
               <Users className="h-4 w-4" />
-              {posting.acceptedCount} / min {posting.team_size_min} (max{" "}
+              {posting.acceptedCount + 1} / min {posting.team_size_min} (max{" "}
               {posting.team_size_max})
             </span>
             <Badge variant="outline" className="text-xs capitalize">

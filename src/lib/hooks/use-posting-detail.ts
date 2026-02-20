@@ -163,6 +163,48 @@ async function fetchPostingDetail(key: string): Promise<PostingDetailData> {
 
   const isOwner = currentUserId === posting.creator_id;
 
+  // Private posting access guard: only owner, invited users, or accepted applicants
+  if (
+    (posting.visibility === "private" || posting.mode === "friend_ask") &&
+    user &&
+    !isOwner
+  ) {
+    // Check if user is invited (in friend_asks.ordered_friend_list)
+    const { data: friendAskRows } = await supabase
+      .from("friend_asks")
+      .select("ordered_friend_list")
+      .eq("posting_id", postingId);
+
+    const isInvited = (friendAskRows ?? []).some((row) =>
+      (row.ordered_friend_list as string[]).includes(user.id),
+    );
+
+    // Check if user has an accepted application
+    const { data: acceptedApp } = await supabase
+      .from("applications")
+      .select("id")
+      .eq("posting_id", postingId)
+      .eq("applicant_id", user.id)
+      .eq("status", "accepted")
+      .maybeSingle();
+
+    if (!isInvited && !acceptedApp) {
+      return {
+        posting: null,
+        isOwner: false,
+        currentUserId,
+        currentUserProfile: null,
+        matchBreakdown: null,
+        applications: [],
+        matchedProfiles: [],
+        myApplication: null,
+        hasApplied: false,
+        waitlistPosition: null,
+        acceptedCount: null,
+      };
+    }
+  }
+
   let myApplication: Application | null = null;
   let hasApplied = false;
   let waitlistPosition: number | null = null;
@@ -173,25 +215,53 @@ async function fetchPostingDetail(key: string): Promise<PostingDetailData> {
   let acceptedCount: number | null = null;
 
   if (user && !isOwner) {
-    // Non-owner: check application, fetch profile, compute match, count accepted
-    const [applicationResult, profileResult, acceptedCountResult] =
-      await Promise.all([
-        supabase
-          .from("applications")
-          .select("*")
-          .eq("posting_id", postingId)
-          .eq("applicant_id", user.id)
-          .maybeSingle(),
-        supabase.from("profiles").select("*").eq("user_id", user.id).single(),
-        supabase
-          .from("applications")
-          .select("*", { count: "exact" })
-          .eq("posting_id", postingId)
-          .eq("status", "accepted")
-          .limit(0),
-      ]);
+    // Non-owner: check application, fetch profile, compute match, count accepted, fetch accepted apps
+    const [
+      applicationResult,
+      profileResult,
+      acceptedCountResult,
+      acceptedAppsResult,
+    ] = await Promise.all([
+      supabase
+        .from("applications")
+        .select("*")
+        .eq("posting_id", postingId)
+        .eq("applicant_id", user.id)
+        .maybeSingle(),
+      supabase.from("profiles").select("*").eq("user_id", user.id).single(),
+      supabase
+        .from("applications")
+        .select("*", { count: "exact" })
+        .eq("posting_id", postingId)
+        .eq("status", "accepted")
+        .limit(0),
+      supabase
+        .from("applications")
+        .select("*")
+        .eq("posting_id", postingId)
+        .eq("status", "accepted"),
+    ]);
 
     acceptedCount = acceptedCountResult.count ?? 0;
+
+    // Enrich accepted applications with profiles
+    if (acceptedAppsResult.data && acceptedAppsResult.data.length > 0) {
+      const applicantIds = acceptedAppsResult.data.map((a) => a.applicant_id);
+      const { data: profilesData } = await supabase
+        .from("profiles")
+        .select("full_name, headline, user_id")
+        .in("user_id", applicantIds);
+
+      applications = acceptedAppsResult.data.map((app) => {
+        const profile = profilesData?.find(
+          (p) => p.user_id === app.applicant_id,
+        );
+        return {
+          ...app,
+          profiles: profile ? { ...profile } : undefined,
+        };
+      });
+    }
 
     if (applicationResult.data && !applicationResult.error) {
       const appData = applicationResult.data;

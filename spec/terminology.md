@@ -128,6 +128,16 @@ When a posting is filled, users can join a waitlist for automatic or manual prom
 
 ---
 
+### Team size
+
+Team size always includes the posting creator. Minimum team size is 2 (creator + at least one other person).
+
+- **`team_size_min`**: Minimum total members including the creator. The Project tab unlocks when `accepted_count + 1 >= team_size_min`.
+- **`team_size_max`**: Maximum total members including the creator. The posting is marked "filled" when `accepted_count + 1 >= team_size_max`.
+- Display: show `accepted_count + 1` (to include the creator) in team fill indicators.
+
+---
+
 ## Open Questions
 
 - **Persona selection** ("developer" / "posting creator"): Unclear what these mean. Contradicts "no required configuration" principle if required during onboarding. Needs clarification or removal.

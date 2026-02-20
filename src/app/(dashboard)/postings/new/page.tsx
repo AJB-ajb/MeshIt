@@ -78,9 +78,12 @@ export default function NewPostingPage() {
           ? extracted.skills.join(", ")
           : prev.skills,
         estimatedTime: extracted.estimated_time || prev.estimatedTime,
-        teamSizeMin: extracted.team_size_min?.toString() || prev.teamSizeMin,
-        teamSizeMax: extractedMax,
-        lookingFor: extractedMax,
+        teamSizeMin: Math.max(
+          2,
+          extracted.team_size_min ?? Number(prev.teamSizeMin),
+        ).toString(),
+        teamSizeMax: Math.max(2, Number(extractedMax)).toString(),
+        lookingFor: Math.max(2, Number(extractedMax)).toString(),
         category: extracted.category || prev.category,
         visibility:
           extracted.visibility ||

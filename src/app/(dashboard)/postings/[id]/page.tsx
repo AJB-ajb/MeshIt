@@ -124,7 +124,7 @@ function PostingDetailInner() {
 
   // Project tab disabled when min team not reached
   const projectEnabled =
-    posting != null && acceptedCount >= posting.team_size_min;
+    posting != null && acceptedCount + 1 >= posting.team_size_min;
 
   // --- Render ---
 

@@ -65,7 +65,7 @@ export const PATCH = withAuth(async (_req, { user, supabase, params }) => {
     .eq("project_id", postingId)
     .eq("status", "accepted");
 
-  if (acceptedCount !== null && acceptedCount >= teamSizeMax) {
+  if (acceptedCount !== null && acceptedCount + 1 >= teamSizeMax) {
     await supabase
       .from("postings")
       .update({ status: "filled", updated_at: new Date().toISOString() })

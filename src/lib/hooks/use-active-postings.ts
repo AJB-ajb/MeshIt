@@ -103,7 +103,7 @@ async function fetchActivePostings(): Promise<ActivePostingsData> {
   const activePostingIds: string[] = [];
   for (const [id, { posting, role }] of allPostings) {
     const acceptedCount = countByPosting.get(id) ?? 0;
-    if (acceptedCount >= posting.team_size_min) {
+    if (acceptedCount + 1 >= posting.team_size_min) {
       activePostingIds.push(id);
       result.push({
         id: posting.id,

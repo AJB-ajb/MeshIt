@@ -93,7 +93,7 @@ Flat list of the user's own postings, sorted by recency. Recruitment-focused.
 
 Three-tab view for any posting the user owns. Entry point determines default tab (My Postings → Manage, Active → Project).
 
-- **Edit tab:** title, description, category, visibility (public/private toggle), team size, skills, location, settings
+- **Edit tab:** title, description, category, visibility (public/private toggle), team size (always includes the creator, min=2), skills, location, settings
 - **Manage tab:** applicants list with accept/decline, invite controls (sequential or parallel mode, available on any posting), AI-matched profiles, waitlist
 - **Project tab:** group chat, team members, posting details. Disabled (greyed out) until min team size reached.
 
@@ -101,7 +101,7 @@ Tabs that are not yet relevant are shown but disabled.
 
 ### Active (`/active`)
 
-List of projects where min team size has been reached — both created and joined.
+List of projects where min team size (including creator) has been reached — both created and joined.
 
 - **Project cards** showing:
   - Title, team fill `current / min (max)`

@@ -18,7 +18,7 @@ const basePosting: PostingDetail = {
   title: "Test Posting",
   description: "A collaborative coding project",
   skills: ["React", "TypeScript"],
-  team_size_min: 1,
+  team_size_min: 2,
   team_size_max: 3,
   estimated_time: "2 weeks",
   category: "hackathon",
@@ -41,7 +41,7 @@ const baseForm: PostingFormState = {
   description: "",
   skills: "",
   estimatedTime: "",
-  teamSizeMin: "1",
+  teamSizeMin: "2",
   teamSizeMax: "3",
   lookingFor: "3",
   category: "hackathon",
@@ -129,7 +129,7 @@ describe("PostingAboutCard", () => {
         onFormChange={onFormChange}
       />,
     );
-    expect(screen.getByText(/Min 1 · Looking for 3/)).toBeInTheDocument();
+    expect(screen.getByText(/Min 2 · Looking for 3/)).toBeInTheDocument();
   });
 
   it("renders team size with different min/max values", () => {

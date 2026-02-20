@@ -12,6 +12,7 @@ import { PostingAboutCard } from "./posting-about-card";
 import { PostingCompatibilityCard } from "./posting-compatibility-card";
 import { PostingSidebar } from "./posting-sidebar";
 import { PostingTeamCard } from "./posting-team-card";
+import { TeamSchedulingSection } from "./team-scheduling-section";
 import { SequentialInviteResponseCard } from "./sequential-invite-response-card";
 import { GroupChatPanel } from "./group-chat-panel";
 
@@ -145,6 +146,12 @@ export function PostingVisitorView({
                 creatorName={posting.profiles?.full_name ?? null}
                 teamSizeMin={posting.team_size_min}
                 teamSizeMax={posting.team_size_max}
+              />
+              <TeamSchedulingSection
+                postingId={postingId}
+                postingTitle={posting.title}
+                isOwner={false}
+                currentUserId={currentUserId}
               />
               <GroupChatPanel
                 postingId={postingId}

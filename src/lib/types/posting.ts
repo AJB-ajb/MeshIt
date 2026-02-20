@@ -76,7 +76,7 @@ export const defaultPostingFormState: PostingFormState = {
   description: "",
   skills: "",
   estimatedTime: "",
-  teamSizeMin: "1",
+  teamSizeMin: "2",
   teamSizeMax: "5",
   lookingFor: "3",
   category: "personal",
