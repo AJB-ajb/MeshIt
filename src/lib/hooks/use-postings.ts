@@ -26,7 +26,7 @@ type Posting = {
   location_name: string | null;
   estimated_time: string | null;
   context_identifier: string | null;
-  natural_language_criteria: string | null;
+  natural_language_criteria?: string | null;
   status: string;
   created_at: string;
   creator_id: string;
@@ -82,7 +82,28 @@ async function fetchPostings(key: string): Promise<PostingsResult> {
     .from("postings")
     .select(
       `
-      *,
+      id,
+      creator_id,
+      title,
+      description,
+      category,
+      context_identifier,
+      tags,
+      team_size_min,
+      team_size_max,
+      mode,
+      visibility,
+      location_preference,
+      location_mode,
+      location_name,
+      estimated_time,
+      auto_accept,
+      availability_mode,
+      timezone,
+      status,
+      created_at,
+      updated_at,
+      expires_at,
       profiles:creator_id (
         full_name,
         user_id
@@ -90,7 +111,8 @@ async function fetchPostings(key: string): Promise<PostingsResult> {
       ${skillJoin}
     `,
     )
-    .order("created_at", { ascending: false });
+    .order("created_at", { ascending: false })
+    .limit(50);
 
   if (tab === "my-postings" && user) {
     query = query.eq("creator_id", user.id);
@@ -145,7 +167,7 @@ async function fetchPostings(key: string): Promise<PostingsResult> {
       ...row,
       skills: joinSkills,
     };
-  }) as PostingWithScore[];
+  }) as unknown as PostingWithScore[];
 
   // Fetch user's existing application posting IDs (from applications table)
   let interestedPostingIds: string[] = [];
